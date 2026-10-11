@@ -1,0 +1,55 @@
+# Coreness for DeepSeek Harness
+
+**A face, a memory and a brake for a DeepSeek Harness profile.**
+
+Coreness is one package a profile lives by. It brings the profile a page of its own in the application, keeps the journal of what the profile and its sessions do, gives the profile's MCP servers a face, holds a request the vendor would otherwise refuse, and adds a route to the Qoder models.
+
+It installs as it is: the halves the browser loads are plain files, served where they lie — nothing is built, nothing is compiled, and what is installed is what runs.
+
+## ⚡ Install
+
+**The application installs its own plugins.** *Plugins* → *Add plugin* takes a package name, a tarball, a git address or a local path, and the package goes into the profile the application is running — one door for the desktop application and for the web one, and no profile to name:
+
+```
+github:Vensus137/Coreness-DSH
+```
+
+The same page switches the package off without removing it, and takes it off again.
+
+That address follows the newest release, and what stands published is a release — so the address and the newest release are one thing here. A fixed release is named by its own tag — `…Coreness-DSH#v0.3.0` — and a released tag is never moved: that line gives the same code whenever it is run.
+
+**By command line the profile is named**, because the platform's launcher requires it — it is the profile the application runs, and naming one that does not stand yet creates it:
+
+```
+dsh plugin --profile <profile> add github:Vensus137/Coreness-DSH
+```
+
+`dsh web` boots the profile of the web surface; the desktop application is opened as any other.
+
+The profile's composition is read when the application starts, so the package becomes live at the next start, and the platform says itself when a change it made needs a restart. Nothing is built on the way in and no permission for install scripts is asked: the package is plain files, and the install takes the directories its manifest names and nothing else.
+
+## ✨ What a profile gets
+
+- 🗂 **A page of its own** — the profile's overview: what it carries, which bundles and rows stand and which are off, and the settings a session or a plugin has to be told.
+- 🔌 **The MCP servers, seen and edited** — one card per server: its kind, its address, the environment it needs, and switches whose effect lands in the profile rather than in a copy.
+- 📓 **The journal** — the environment's memory: what changed in the profile and what a participant did, kept as records that carry a kind, an area, a name and an author.
+- 🚦 **A limiter that waits instead of refusing** — a call over the limit takes its turn in a queue; nothing is limited as the package ships.
+- 🧠 **A route to the Qoder models** — the account's own models, each with the reasoning levels it accepts and the output budget it allows. The account's token is entered once, on the page, and kept by the platform's own store; no value of it stands in the package.
+
+## 🧩 What it needs
+
+- **DeepSeek Harness.** The version this package was built against is declared in the manifest, and the application compares that declaration with its own before a profile imports a plugin: a mismatch leaves the plugin out and says so, instead of failing quietly later.
+
+## 📦 What lands
+
+Exactly the list the package's manifest names — the assembly and the plugins, each with its own README beside its code. No part of the workshop they are built in: the contracts, the checks and the notes of this project stay where the work is done.
+
+## 🧭 What it deliberately does not do
+
+- It is not a second door to the platform's own acts: enabling, disabling, installing and removing belong to the application's Plugins page, and this package reports what stands rather than competing with it.
+- It does not own the MCP side: the platform owns the servers, the connection and the registry, while this package owns the picture and the form.
+- It limits nothing until a limit is declared.
+
+## 📄 License
+
+MIT.

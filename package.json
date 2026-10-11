@@ -1,0 +1,70 @@
+{
+  "name": "@coreness/dsh",
+  "version": "0.3.0",
+  "description": "The Coreness kit for DeepSeek Harness: a page of its own, the journal, the picture and the form of the profile's MCP servers, and the Qoder route — one bundle for a profile.",
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "cordis",
+    "plugin-bundle",
+    "profile",
+    "mcp",
+    "journal",
+    "qoder"
+  ],
+  "license": "MIT",
+  "author": "Vensus137 <vensus137@yandex.ru>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vensus137/Coreness-DSH.git"
+  },
+  "homepage": "https://github.com/Vensus137/Coreness-DSH#readme",
+  "bugs": {
+    "url": "https://github.com/Vensus137/Coreness-DSH/issues"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./plugins/page/index.js",
+    "./client": "./plugins/page/client.js",
+    "./plugins/journal": "./plugins/journal/index.js",
+    "./plugins/mcp": "./plugins/mcp/index.js",
+    "./plugins/rate-gate": "./plugins/rate-gate/index.js",
+    "./plugins/provider/qoder": "./plugins/provider/qoder/index.js"
+  },
+  "files": [
+    "bundles/",
+    "plugins/",
+    "!plugins/**/test/"
+  ],
+  "dependencies": {
+    "@deepseek-ai/schemastery": "~3.18.4",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "~4.0.4",
+    "@deepseek-ai/dsh-client-connection": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-plugin-manager": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-storage-domain": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-timeout": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.0-rc.2",
+    "yaml": "^2.9.1"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.0.4",
+    "@deepseek-ai/dsh-client-connection": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-plugin-manager": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-storage-domain": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-timeout": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.0-rc.2"
+  },
+  "dsh": {
+    "bundle": { "patch": "./bundles/coreness.patch.yml" },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ]
+    }
+  }
+}
