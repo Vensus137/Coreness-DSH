@@ -24,9 +24,9 @@
  * fixed in the component would name the first of them to every reader that asks for it by name, and a driver
  * pressing the level control would press the id's.
  *
- * The stylesheet goes in when this chunk is materialised, which is the platform's own place for a chunk's side
- * effects, and the loader claims the tag for this package and takes it away with the package's other sheets.
- * The section that draws the control needs no style of its own for it.
+ * The stylesheet goes in when the component that draws the control stands — the effect puts it in on mount and
+ * puts it back if the platform takes the package's tags away while the component is still there — so the
+ * section that draws the control needs no style of its own for it.
  */
 window.__ModuleLoader__.load({
   id: '@coreness/dsh/client.picker.js',

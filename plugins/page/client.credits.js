@@ -286,7 +286,7 @@ window.__ModuleLoader__.load({
      * showing a zero — a zero left is a fact, and nothing has been read.
      *
      * A reading that failed keeps that third form: the line draws the **state**, and the host's own
-     * sentence — the reason, which is content — stands in the popover a person opens. A face carries a
+     * sentence — the reason, which is content — stands in the popover a user opens. A face carries a
      * state and a bounded word; the sentence that names why the read failed is read where it is asked for,
      * and the row the popover draws for a failure is where it stands.
      */
@@ -381,7 +381,7 @@ window.__ModuleLoader__.load({
       const picture = view.picture;
       const failed = view.failed;
       /* The vendor's own body of a failed reading: content, drawn in the popover's failed row beside the reason.
-         It was read as a bare name here, so the row raised `vendor is not defined` the moment a person opened the
+         It was read as a bare name here, so the row raised `vendor is not defined` the moment a user opened the
          popover on a failure — a route through which no check had ever walked. */
       const vendor = view.vendor;
       const running = view.busy === true;

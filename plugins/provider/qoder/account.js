@@ -150,7 +150,7 @@ export function createAccount({ credits, everyMs, autoClaim, now = defaults.now,
       }
     } catch (error) {
       /* The vendor's own body, kept verbatim and bounded by the reader that took it: the popover shows it
-         beside the state, because the person who opens that row is asking what the contour said and wants
+         beside the state, because the user who opens that row is asking what the contour said and wants
          the thing itself — its code, its message and any id it carried, ready to hand on. The other road
          builds a sentence instead (the vendor's words with its id marked), which is what a reader in the
          flow needs and not what a support question is answered with. Two contents, two shapes, each read

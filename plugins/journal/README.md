@@ -8,7 +8,7 @@ The environment's memory: what changed in the profile and what a participant did
 - **One storage root for the whole home, not for one profile.** The base bundle points the storages at `dshHomePath('storages')`, so every profile of a home meets the same file and a run of one writes the memory the other reads. The dev profile of this repository therefore carries a redirect in its own patch — `root: !!js dshHomePath('profiles/coreness-dev/storages')` — and a run of it writes nothing the live profile reads. Any other run keeps a store to itself the same way — the recipe is in `## Check`. Every record the journal writes carries the name of the profile that wrote it — the one field `profile`, stamped at the single door every record passes (`journal.js`, `write`) — so the shared file can still be read per profile; the records written before the field existed carry none and are read as they were stored.
 - **`tools`**: `defineTool` from `@deepseek-ai/dsh-tools` compiles the argument schema of the two tools and validates what a model sends, so a refusal of a wrong argument is the platform's own.
 - **The logger, as a channel and not only a pen.** A failure the platform keeps to itself is caught and continued with one warning — `step compaction failed: …; continuing the turn`, with two overflow variants of the same failure — and no event and no session record carries it. An exporter on `ctx.logger` (`LoggerService.exporter`) is the channel the platform offers for exactly this: one logger service for the whole tree, inherited by every child context, so a plugin hears what another plugin logged. The exporter is registered in an effect of its own, so the watch is disposed with the plugin.
-- **`connection`**: `ctx.connection.fetch.register` — the door the plugin opens outward. It is the route rather than the platform's Remote (Typert) door, and the reason is measured rather than preferred: a Remote needs a generated descriptor on each face and nothing in the installed application regenerates one — the archive ships the loader, the registry and the protocol, while the generator the registry's own documentation points at is not there — so a capability of ours would need an edit of a platform package. The route needs nothing generated, which is why the platform's own packages read their page's data through it.
+- **`connection`**: `ctx.connection.fetch.register` — the door the plugin opens outward. It is the route rather than the platform's Remote (Typert) door, and the reason is measured rather than preferred: a Remote needs a generated descriptor on each face and nothing in the installed application regenerates one — the archive ships the Loader, the registry and the protocol, while the generator the registry's own documentation points at is not there — so a capability of ours would need an edit of a platform package. The route needs nothing generated, which is why the platform's own packages read their page's data through it.
 - **What the browser side of that door is.** The path is absolute under `/api` on the host and document-relative in the browser; the connection service owns the `/api` route, the fetch bridge and the browser's authentication as a whole, and a path nobody claimed answers 404. Authentication is the page's own cookie: the launch token is exchanged at `GET /` for an authority-bound signed cookie, and a request without it is refused before dispatch — there is no method-specific loopback tier and no authorization header, and the body handling of a route is declared before a byte of it is read.
 - **No push of our own, and what follows from it.** The legal key set of `ctx.remote.$on` is the application assembly's forwarded-event list, so a new key means editing a platform package, and ordinary one-way notifications are best-effort deliveries that are not replayed. A journal that must survive a re-connect is therefore read rather than pushed: a reader asks again on its own demand, and the page's remote service emits `connection/reset` when it re-connects.
 - **`pluginManager`** for the bundles and the rows of the composition print and for `plugin-manager/changed`, and **`profileContext`** for the profile's directory, its name and its files. The print covers the profile's own `package.json`, `cordis.patch.yml` and `compatibility.json` together with the live composition as the manager sees it, and it compares a row by its module and its enablement rather than by the Loader's address — that address is random where a row was declared without a name, so a comparison by address would record an edit that never happened (`fingerprint.js`). The baseline of a comparison is the last record carrying a print rather than the previous start, because an edit of a profile file by hand is announced by nobody.
@@ -29,12 +29,12 @@ The plugin draws nothing and takes no seat: it stands in the composition as one 
 
   ```json
   {"ok": true, "value": {"summary": {
-    "window": {"since": null, "until": "2026-10-06T19:29:04.919Z"},
-    "total": 70, "bytes": 238826,
-    "byKind": [{"kind": "задача", "count": 19, "first": "…", "last": "…", "bytes": 19983}],
+    "window": {"since": null, "until": …},
+    "total": …, "bytes": …,
+    "byKind": [{"kind": "задача", "count": …, "first": "…", "last": "…", "bytes": …}],
     "last": [{"time": "…", "kind": "состав", "area": "профиль", "id": "база", "author": "среда",
               "profile": "coreness-dev", "line": "changed: first print"}],
-    "refusals": [], "steps": {"count": 8, "ms": 4329304, "rereads": 1}}, "faults": []}}
+    "refusals": [], "steps": {"count": …, "ms": …, "rereads": …}}, "faults": []}}
   ```
 
   A journal that is not open answers with its refusal in words rather than with an empty page:
@@ -43,7 +43,7 @@ The plugin draws nothing and takes no seat: it stands in the composition as one 
   {"ok": false, "error": {"code": "journal-unavailable", "message": "the journal is not open — …"}}
   ```
 
-  The status is `200` in both cases: the refusal is the answer's own content, and the reader draws it as a state rather than as an empty page. The answer leaves by the same guard as an answer of a tool — a value that does not survive the transfer is refused in words instead of losing its fields on the way.
+  The answer leaves by the same guard as an answer of a tool — a value that does not survive the transfer is refused in words instead of losing its fields on the way.
 
 ## Changing this
 
@@ -70,7 +70,7 @@ node --test "plugins/journal/test/*.test.mjs"
 node scripts/accept.mjs                           # the repository's acceptance — all green
 ```
 
-The door's facts below were read out of the installed application's archive by the repository's own reader, so a reader of this file does not have to trust them:
+The door's facts below were read out of the installed application's archive by the repository's own reader, `node scripts/harness.mjs` (`probe`, `grep`, `grepfile`, `cat`, `json`), so a reader of this file does not have to trust them:
 
 - the client assembly's fixed list of build-time imports, and what is not replayed;
 - the browser session, the cookie, and there being no method-specific tier;

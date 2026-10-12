@@ -29,7 +29,7 @@ const WORDS = {
   'bad-action': 'the page asked for a save this route does not take',
   'bad-name': 'a server name is 1 to 32 characters of letters, digits, underscore or hyphen',
   'name-taken': 'another row of this file already takes that name',
-  'bad-transport': 'a row is either streamable-http or stdio, and the two branches do not mix',
+  'bad-transport': 'a row carries one kind, and the fields of another branch do not travel with it',
   'bad-url': 'the address must parse as an http or https URL',
   'bad-command': 'a stdio row needs the command it starts',
   'bad-timeout': 'the call timeout is a whole number of milliseconds',

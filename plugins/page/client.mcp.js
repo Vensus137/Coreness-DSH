@@ -40,15 +40,16 @@ window.__ModuleLoader__.load({
     const PACKAGE = '@coreness/dsh';
 
     /**
-     * The transports the form offers, and the words for them.
+     * The kinds the form offers, and the words for them — the same three the host's own row reader
+     * names under `KINDS`.
      *
      * The value is the platform's own spelling — it is what the row carries and what the route reads —
      * while the label is the page's: `streamable-http` and `stdio` are wire words, and the corporate
      * kind is not the platform's at all, it is the internal platform's own CLI started as a local
-     * process, declared in the host's own row reader under `KINDS`.
+     * process.
      */
-    const TRANSPORTS = ['streamable-http', 'stdio', 'corporate'];
-    const TRANSPORT_LABELS = {
+    const KINDS = ['streamable-http', 'stdio', 'corporate'];
+    const KIND_LABELS = {
       'streamable-http': 'kind.http',
       'stdio': 'kind.stdio',
       'corporate': 'kind.corporate',
@@ -125,8 +126,6 @@ window.__ModuleLoader__.load({
       'target.none': 'no address yet',
       'target.stdio': '{command} {args}',
       'tools.none': 'no tools yet',
-      'tools.label': 'Tools:',
-      'tools.count': 'Tools ({count})',
       'actions': 'Row actions',
       'open': 'Show the details',
       'close': 'Hide the details',
@@ -134,7 +133,6 @@ window.__ModuleLoader__.load({
       'trouble.hint': 'the platform\'s own MCP client on this row',
       'editor.kept': 'This form writes the fields it shows; a field of the row it does not show stands as your own file has it',
       'refs': 'The file holds an expression in {names}; this form does not write over it',
-      'tag.foreign': 'not an MCP row',
       'field.name': 'Name',
       'field.nameFixed': 'Name — the row id, and a rename is a new row plus a removal',
       'field.transport': 'Transport',
@@ -176,7 +174,7 @@ window.__ModuleLoader__.load({
       'fault.no-file': 'This composition declares no servers file',
       'fault.no-row': 'The servers file holds no such row',
       'fault.not-an-mcp-row': 'This row is not an MCP client row, so this form does not shape it',
-      'fault.bad-transport': 'A row is either streamable-http or stdio, and the two branches do not mix',
+      'fault.bad-transport': 'A row carries one kind — streamable-http, stdio or corporate — and the fields of another branch do not travel with it',
       'fault.bad-url': 'The address must be an http or https URL',
       'fault.bad-command': 'A stdio row needs the command it starts',
       'fault.bad-timeout': 'The call timeout is a whole number of milliseconds',
@@ -787,7 +785,7 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
             value: draft.transport,
             disabled: busy,
             'aria-label': t('field.transport'),
-            options: TRANSPORTS.map((name) => ({ value: name, words: t(TRANSPORT_LABELS[name]) })),
+            options: KINDS.map((name) => ({ value: name, words: t(KIND_LABELS[name]) })),
             onChoose: (next) => act.patch({ transport: next }),
           }),
         ]),

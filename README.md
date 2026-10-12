@@ -42,6 +42,7 @@ The profile's composition is read when the application starts, so the package be
 - 📓 **The journal** — the environment's memory: what changed in the profile and what a participant did, kept as records that carry a kind, an area, a name and an author.
 - 🚦 **A limiter that waits instead of refusing** — a call over the limit takes its turn in a queue; nothing is limited as the package ships.
 - 🧠 **A route to the Qoder models** — the account's own models, each with the reasoning levels it accepts and the output budget it allows. The account's token is entered once, on the page, and kept by the platform's own store; no value of it stands in the package.
+- 📜 **The rules of its own tree, in force** — one prompt section, registered through the platform's own prompt registry and read from `plugins/rules/section.md`, so a session of the profile carries them in every request and no compaction can take them out of the model's sight. They are paid for by every request — 243 tokens by the platform's own accounting — and a profile that does not want them drops that row from the bundle.
 
 ## 🧩 What it needs
 
@@ -49,7 +50,7 @@ The profile's composition is read when the application starts, so the package be
 
 ## 📦 What lands
 
-Exactly the list the package's manifest names — the assembly and the plugins, each with its own README beside its code. No part of the workshop they are built in: the contracts, the checks and the notes of this project stay where the work is done.
+Exactly the list the package's manifest names — the assembly and the plugins, each with its own README beside its code. No part of the workshop they are built in: the contracts, the checks and the notes of this project stay where the work is done — with one deliberate exception, the section of rules this tree wants in force, which ships because a rule that must be in force has no other structurally safe home.
 
 ## 🧭 What it deliberately does not do
 

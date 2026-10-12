@@ -129,3 +129,18 @@
         credits:
           sweepMs: 600000
           autoClaim: true
+
+    # The rules' row: host-only, like the journal's — it registers one prompt section carrying the
+    # rules of this project that must hold without a reader acting, and it has no browser half.
+    #
+    # Its one setting is the section's placement, and the shipped number is the plugin's own schema
+    # default: the row deliberately does NOT restate it, because one number has one owner and the
+    # number was read where it stands — the platform's own scale, in the slot left free between its
+    # plan and team policies (500, 600) and its first tool guide (800). A profile that wants the
+    # section elsewhere writes `order` in its own patch.
+    #
+    # The rules themselves are not a knob: their text is one file of the plugin, and this row carries
+    # none of it. A plugin mounted where the platform's prompt service is absent stays pending — the
+    # launcher names it among the entries that did not activate — rather than mounting over nothing.
+    - id: coreness-rules
+      name: '@coreness/dsh/plugins/rules'

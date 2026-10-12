@@ -92,7 +92,6 @@ window.__ModuleLoader__.load({
       section: 'Rate limiter',
       title: 'Rate limiter',
       caption: 'A ceiling in tokens per minute, attached to a model: the gate holds a request the window cannot take and lets it go marked forced when the wait bound is spent.',
-      'state.loading': 'Reading the gate…',
       /* The whole sentence, in the user's own choice: the two facts that cost money and the one that saves a surprise,
          and no mechanics. "Of this run alone" says whose count it is without the word "process", which read as the
           page's. The window's being per provider and model, and its living in memory, are mechanics: they stand outside this room. */
@@ -111,13 +110,6 @@ window.__ModuleLoader__.load({
       'reason.conflict': 'The row changed elsewhere: the draft was not written, and the values below are the row as it now stands.',
       'fault.write': 'The write did not go through',
       'card.limit': 'The limit',
-      'card.limitEffective.dry': ', watching only',
-      'card.rows': 'Models under a limit',
-      'card.rows.empty': 'No model is named, so nothing is wrapped.',
-      'outcome.sent': 'sent at once',
-      'outcome.watching': 'watched only, nothing held',
-      'outcome.forced': 'forced over the window',
-      'outcome.cancelled': 'cancelled while waiting',
       'field.window': 'Window',
       'field.window.unit': 'ms',
       'field.window.hint': 'The stretch the ceiling is counted over: a sliding window, not a calendar minute.',
@@ -126,7 +118,7 @@ window.__ModuleLoader__.load({
       'field.maxWait.hint': 'How long a request may be held for room before it goes over the window marked forced. Zero sends it at once.',
       'field.ratio': 'Caution',
       'field.ratio.hint': 'How full a window may look before the gate starts a reservation. One is the honest number.',
-      /* One sentence for the three boxes a person may empty. An empty box is not a value the row's schema
+      /* One sentence for the three boxes a user may empty. An empty box is not a value the row's schema
          takes — the three are numbers with a default — so it travels as an `unset` and the row falls back to
          the gate's own default (the op is built in `scalarOp`). The words stand here once and the three hints
          point at this entry rather than repeating it, which is the page's own rule for every element it draws. */
@@ -136,7 +128,7 @@ window.__ModuleLoader__.load({
          three section numbers' case, which have defaults the schema declares and fall back to them. A row's ceiling
          has no default to fall back to — the gate's resolver refuses the row and writes nothing for it — so an
          empty box here would leave a row
-         that limits nothing while the page said it saved. The word names the field a person typed in. */
+         that limits nothing while the page said it saved. The word names the field a user typed in. */
       'field.ceiling.problem': 'Tokens per window must be a positive number.',
       'field.provider': 'Provider',
       'field.model': 'Model',
@@ -145,11 +137,8 @@ window.__ModuleLoader__.load({
          box grew with its word would move the label row, and a label row that moves is a press moving the
          surface under the reader. */
       'control.apply': 'Apply',
-      'control.cancel': 'Cancel',
       'control.add': 'Add a model',
       'control.remove': 'Remove',
-      'control.open': 'Show what this model has done',
-      'control.close': 'Hide what this model has done',
       'add.reading': 'Reading the catalogue…',
       'add.none': 'This profile’s catalogue carries no model to name.',
     };
@@ -303,6 +292,9 @@ window.__ModuleLoader__.load({
      * A refusal is read, never guessed from a status: the route answers `{"ok": false, "error": …}` with
      * status 200 for a payload it could not build, and a section that drew an empty table there would be
      * showing "nothing is limited" for a failure.
+     *
+     * The route's own code for that failure is not drawn: the face's word for a read that failed is the
+     * section's own (`state.error`), and the route's sentence stands beside it as the reason.
      */
     async function readPicture() {
       const answer = await fetch(ROUTE, { method: 'GET' });
@@ -332,7 +324,7 @@ window.__ModuleLoader__.load({
      * The conflict is the platform's own refusal and it means the row moved under the draft — a hand's
      * edit of the profile's patch and another page's write are the same event to the service — so the
      * caller re-reads instead of writing again, and the draft is dropped rather than re-applied over a
-     * value the person never saw.
+     * value the user never saw.
      */
     async function writeSettings(remote, settings, ops) {
       const written = await remote.settings.mutate(settings.ns, ops, settings.revision);
@@ -362,11 +354,10 @@ window.__ModuleLoader__.load({
     const scalarOp = (name, value) => (value === null ? { op: 'unset', path: [name] } : { op: 'set', path: [name], value });
 
     /**
-    /**
      * The whole list in one op, and the only write this section has for `limits`: a volatile field
      * *inside* a row is refused by the schema itself, so the array travels whole.
      */
-    /* The rows as the file takes them: a row a person added carries a marker a draft needs and the schema does not
+    /* The rows as the file takes them: a row a user added carries a marker a draft needs and the schema does not
        know (the page writes the fields it shows, and a marker is not one of them), so it is taken off here — the one
        road out of this section. */
     const rowsOp = (rows) => ({
@@ -375,7 +366,7 @@ window.__ModuleLoader__.load({
       value: rows.map(({ fresh, ...row }) => row),
     });
 
-    /** The values the card reads: the scalars a person may write, and the rows as the row holds them. */
+    /** The values the card reads: the scalars a user may write, and the rows as the row holds them. */
     function valuesOf(settings) {
       const value = settings?.value ?? {};
       const rows = Array.isArray(value.limits) ? value.limits : [];
@@ -432,7 +423,7 @@ window.__ModuleLoader__.load({
      * The rule is the gate's own, mirrored rather than guessed: every value handed in from a row is read through
      * `finite` and a row whose ceiling is not a positive number is **refused** — the row is dropped and limits
      * nothing. So a `null`, an empty box, a `NaN`, a zero and a value that is not a
-     * number at all are one and the same thing to the runtime, and none of them is what a person who typed into a
+     * number at all are one and the same thing to the runtime, and none of them is what a user who typed into a
      * limit's box meant. The section's three numbers keep their own road and are not this: they have defaults the
      * schema declares, and an empty box there unsets them.
      */
@@ -452,10 +443,10 @@ window.__ModuleLoader__.load({
      * The rows that stand, as the drawing reads them: the **record's** own list, and the picture's only where
      * there is no record to read.
      *
-     * The record is the file a person writes and the picture is the route's own late view of the runtime, so
+     * The record is the file a user writes and the picture is the route's own late view of the runtime, so
      * the list comes from the first and the counters from the second by pair. Read in one place because two
      * readers depend on the same answer: the drawing, and the place a press's word is put — a word addressed
-     * to a card that is not drawn stands nowhere, which is the silence that sent the row a person saved out
+     * to a card that is not drawn stands nowhere, which is the silence that sent the row a user saved out
      * of the page while the strip said it was saved.
      */
     const rowsStanding = (view) => view.read?.rows ?? view.picture?.rows ?? [];
@@ -562,7 +553,7 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * The card of the limit itself: the four numbers a person may write, one draft, and the two controls
+     * The card of the limit itself: the four numbers a user may write, one draft, and the two controls
      * that end it. Nothing here writes on a keystroke — a number typed digit by digit would be four writes,
      * and three of them are values nobody asked for.
      */
@@ -626,7 +617,7 @@ window.__ModuleLoader__.load({
                  removal is not high enough to need a cancelling press beside it, and he said the same about the row.
                  What it costs is a real loss: this card carries no
                  `Reset to defaults`, so a draft of this section can only be applied — the way back is a fresh read
-                 of the file (reloading the section), not a press. A person who typed a wrong number and has not
+                 of the file (reloading the section), not a press. A user who typed a wrong number and has not
                  pressed `Apply` yet still has the field to fix it in; once pressed, the file holds it. */
               h('button', {
                 key: 'apply',
@@ -765,7 +756,7 @@ window.__ModuleLoader__.load({
       const note = noteOf(view);
       const listed = view.picture?.rows ?? [];
       /* A draft stands for the rows as well as for the numbers: a row added or dropped is drawn at once,
-         with the counters of a pair the picture knows read from it. Without this the row a person adds
+         with the counters of a pair the picture knows read from it. Without this the row a user adds
          would stand nowhere until it is written, and the press would look like it did nothing. */
       /* Which rows stand is the record's answer, and the picture's is what is known about a pair. The picture is
          the route's view of the gate's runtime rows and arrives later: drawn as the list it would drop the row a
@@ -893,7 +884,7 @@ window.__ModuleLoader__.load({
        * The read: the picture, then the row's own namespace and revision.
        *
        * It merges into whatever the section holds by then — the state updater is the only reader of the
-       * current view, so a beat that lands while a person is typing never overwrites the draft.
+       * current view, so a beat that lands while a user is typing never overwrites the draft.
        */
       async function read() {
         try {
@@ -954,7 +945,7 @@ window.__ModuleLoader__.load({
         })),
         patchRow: (index, fields) => {
           /* The guard's reason leaves the face where the value is typed: the strip keeps the word alone, so the
-             sentence a person would have read under the box goes out through this page's one door for reasons
+             sentence a user would have read under the box goes out through this page's one door for reasons
              (`statusDetail`), read off the row as it will stand rather than as it stands. Only a patch that carries
              the ceiling is answered here: a pair chosen while the box is empty leaves the status as it already is. */
           const draft = view.draft ?? view.read;
@@ -1038,7 +1029,7 @@ window.__ModuleLoader__.load({
           const about = place?.at === null || place?.at === undefined ? null : carried[place.at] ?? null;
           /* A row's ceiling is the row's own point, and a row without one is a row the gate's resolver refuses and
              writes nothing for — so the press is refused **before** the write rather than refused after it: the
-             draft stays, because the box a person emptied is still there to be filled, and the reason travels where
+             draft stays, because the box a user emptied is still there to be filled, and the reason travels where
              this page keeps reasons (`statusDetail`) while the face keeps the word. The whole list travels even for
              a press made in one row's foot (`rowsOps`), so any row's missing ceiling is every press's problem, and
              the section's own press carries it as well as the row's. */
@@ -1081,7 +1072,7 @@ window.__ModuleLoader__.load({
               return;
             }
             /* Any other refusal is the platform's word about this write and not about the row: the draft
-               stays, so the value a person typed is still there to be fixed — and the word stands in the card
+               stays, so the value a user typed is still there to be fixed — and the word stands in the card
                that draws the pair the press was about, or in the section's strip where no card draws it. */
             setState((now) => ({ view: { ...now.view, busy: false, note: { tone: 'fault', text: t('state.refused'), at: cardOfPair(now.view, about) } } }));
             statusDetail(about ?? t('card.limit'), written.reason ?? written.fault);

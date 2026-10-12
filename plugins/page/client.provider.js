@@ -542,7 +542,7 @@ window.__ModuleLoader__.load({
           /* The face draws the state and the reason, and nothing of the route's own vocabulary: a code is what a
              caller routes on, and the vendor's fresh detail — its sentence, the id it traces by — differs between
              two runs of a page that did not move, so it is not drawn here the way this chunk keeps it off the
-             verdict's own line. What a person needs stands in the card's own state word and in this reason. */
+             verdict's own line. What a user needs stands in the card's own state word and in this reason. */
           return { models: null, message: `${t('models.catalogDown')} (${payload?.error?.message ?? 'refused'})`, at: null };
         }
         const models = new Map();

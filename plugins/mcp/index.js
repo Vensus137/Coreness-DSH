@@ -107,9 +107,8 @@ const reasonOf = (error) => (error instanceof Error ? error.message : String(err
 /**
  * The answer of one request: the picture, or the outcome of a save and the picture it left behind.
  *
- * Every answer is a 200 with its own statement of what happened — `{ok:true, value}` or
- * `{ok:false, error:{code, message}}` — because a refusal here is a sentence the user must read, not
- * a transport error: the page draws the code's own words and the host's detail beside them.
+ * `json` answers 200 whatever happened — `{ok:true, value}` or `{ok:false, error:{code, message}}` — and
+ * the page draws the code's own words and the host's detail beside them.
  * @param {object} ctx the plugin's context
  * @param {object} trouble the host's own lines about the servers
  * @param {Request} request the request

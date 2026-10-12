@@ -153,7 +153,7 @@ const VENDOR_WORDS_LIMIT = 160
  * The vendor's own words out of a refusal body, for the shape that carries no request id.
  *
  * The second measured shape of the same door — `403 {"code":"105","message":"Login expired"}`, a dead
- * credential — where the message is the whole of what a person can act on and there is no id at all.
+ * credential — where the message is the whole of what a user can act on and there is no id at all.
  * They are read only where the id is absent: a body that carries **both** shows the id alone, because an
  * id is the vendor asking for a request to be traced while its message is a formality (`Bad request` is
  * the measured one). That is the price of the rule, and it is revisited on a measurement rather than
@@ -266,14 +266,14 @@ export function sessionExpired(text) {
  * vendor refused this token" — and a face carries the **state**: what failed and the status. The
  * vendor's own sentence and its request id do not stand on it: a value fresh on every call is not a
  * state, and the row that draws this message would differ between two runs of a page that did not
- * move. What lets a person act stays: the status is what a dead credential is met by, and the code
+ * move. What lets a user act stays: the status is what a dead credential is met by, and the code
  * `codeFor` read of the body is what a caller routes on.
  *
  * The vendor's detail is not dropped, it moves: the whole body, the id inside it, goes out through
  * `warn` — the door this half keeps for reasons — and stands verbatim on `QoderError.vendor` for a
  * reader that routes by it. The price is named here rather than discovered later: `warn` is the
  * platform's logger, and in this build that logger has no sink beyond its own in-memory ring, so this
- * is the right home for the vendor's detail and not yet a place a person can open. Their copy of it is
+ * is the right home for the vendor's detail and not yet a place a user can open. Their copy of it is
  * whatever a caller of this module publishes beside the state.
  * @param {Response} response the refused answer
  * @param {string} what the call's name for its own message
@@ -324,7 +324,7 @@ export function refusalIn(line, what) {
  * The sentence is the failure of a turn, drawn where a turn's failure is drawn, so it carries the
  * **state** — what was refused and the status — and the vendor's own words where the body had any,
  * marked as the vendor's and bounded to a line: `Login expired` is the measured one, and it is what a
- * person acts on. The body does not stand on it, and neither does a request id out of it: a JSON blob is
+ * user acts on. The body does not stand on it, and neither does a request id out of it: a JSON blob is
  * not a state, and a value fresh on every call would differ between two runs of a turn that did not
  * move. The body stays verbatim on `QoderError.vendor` for a reader that routes by it; this road keeps
  * no log door of its own, so a caller that wants it written down reports it.

@@ -237,7 +237,7 @@ async function listingOf(ctx) {
  * The shape is the runtime's own for a caller's cancellation — an aborted finish chunk — and the
  * stream validator accepts it whether or not it stands
  * outside this listener. The reason is the caller's own when it
- * left one, so a person reads why the turn stopped rather than a sentence invented here.
+ * left one, so a user reads why the turn stopped rather than a sentence invented here.
  * @param {AbortSignal} [signal] the caller's signal
  * @returns {object} the chunk
  */
@@ -503,9 +503,7 @@ async function nameUnlisted(ctx, ledger, resolved, say, said) {
 /**
  * One answer of the gate's route: the state as it stands, or a refusal in words.
  *
- * Every answer is a 200 carrying its own statement — `{ok:true, value}` or `{ok:false, error}` — as the
- * product's other routes answer, because a refusal here is a sentence a surface prints and not a
- * transport error.
+ * `json` answers 200 whatever happened — `{ok:true, value}` or `{ok:false, error}`.
  * @param {object} ctx the cordis context
  * @param {GateLedger} ledger the windows
  * @param {() => {settings: object, rows: object[], refused: object[]}} read the rows as they stand
@@ -524,6 +522,6 @@ async function answerOf(ctx, ledger, read, ns, warn) {
     return json({ ok: true, value: await pictureOf(ctx, ledger, resolved, ns) })
   } catch (error) {
     warn(`the state route refused a request: ${reasonOf(error)}`)
-    return json({ ok: false, error: { code: 'UNREADABLE', message: reasonOf(error) } })
+    return json({ ok: false, error: { code: 'state-failed', message: reasonOf(error) } })
   }
 }

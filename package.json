@@ -1,6 +1,6 @@
 {
   "name": "@coreness/dsh",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "The Coreness kit for DeepSeek Harness: a page of its own, the journal, the picture and the form of the profile's MCP servers, and the Qoder route — one bundle for a profile.",
   "keywords": [
     "deepseek-harness",
@@ -29,6 +29,7 @@
     "./plugins/journal": "./plugins/journal/index.js",
     "./plugins/mcp": "./plugins/mcp/index.js",
     "./plugins/rate-gate": "./plugins/rate-gate/index.js",
+    "./plugins/rules": "./plugins/rules/index.js",
     "./plugins/provider/qoder": "./plugins/provider/qoder/index.js"
   },
   "files": [
@@ -45,6 +46,7 @@
     "@deepseek-ai/dsh-client-connection": "0.2.0-rc.2",
     "@deepseek-ai/dsh-plugin-manager": "0.2.0-rc.2",
     "@deepseek-ai/dsh-storage-domain": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-system-prompt": "0.2.0-rc.2",
     "@deepseek-ai/dsh-timeout": "0.2.0-rc.2",
     "@deepseek-ai/dsh-tools": "0.2.0-rc.2",
     "yaml": "^2.9.1"
@@ -54,6 +56,7 @@
     "@deepseek-ai/dsh-client-connection": "0.2.0-rc.2",
     "@deepseek-ai/dsh-plugin-manager": "0.2.0-rc.2",
     "@deepseek-ai/dsh-storage-domain": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-system-prompt": "0.2.0-rc.2",
     "@deepseek-ai/dsh-timeout": "0.2.0-rc.2",
     "@deepseek-ai/dsh-tools": "0.2.0-rc.2"
   },

@@ -466,10 +466,9 @@ export function apply(ctx, config) {
 /**
  * The answer of one request on the widget's route.
  *
- * Every answer is a 200 carrying its own statement — `{ok:true, value}` or `{ok:false, error}` — as
- * the MCP plugin's route does, because a refusal here is a sentence the widget prints, not a transport
- * error. A reading that failed is **not** such a refusal: it is a state of the widget (`last.kind`),
- * and it travels as a value so the line can say what the account answered instead of going blank.
+ * The status is 200 in both cases — `{ok:true, value}` or `{ok:false, error}`. A reading that failed is
+ * **not** a refusal: it is a state of the widget (`last.kind`), and it travels as a value so the line can
+ * say what the account answered instead of going blank.
  * @param {object} account the account, its picture and its sweeps
  * @param {Request} request the request
  * @param {(message: string) => void} warn where a refusal is said
@@ -507,10 +506,9 @@ const messageOf = (error) => (error instanceof Error ? error.message : String(er
 /**
  * The answer of one request on the page's route.
  *
- * The same shape as the widget's route: a 200 carrying `{ok:true, value}` or `{ok:false, error}`, so a
- * refusal is a sentence the page prints. A sweep that could not start at all — no token, a node map
- * that does not answer — is such a refusal: an empty list would read as "no node answered", which is a
- * different fact. One node's own failure is not: that is a result.
+ * The status is 200 in both cases — `{ok:true, value}` or `{ok:false, error}`. A sweep that could not
+ * start at all — no token, a node map that does not answer — is a refusal: an empty list would read as
+ * "no node answered", which is a different fact. One node's own failure is not: that is a result.
  *
  * `catalogue` answers the vendor's listing as the transport reads it, menus included, and knows no
  * argument: the credential it needs is the row's reference, which the transport resolves for itself
@@ -551,7 +549,7 @@ async function answerOfRoute(transport, request, warn, credential) {
  * readers of the body's fields. A surface draws the reason beside this; the body itself stays on the
  * error, and this is what a reader who wants the why reads where the project keeps content.
  *
- * This place renders a **sentence**, because the content line here is read in the flow: a person meets
+ * This place renders a **sentence**, because the content line here is read in the flow: a user meets
  * it beside the state and acts on the words, with the id the vendor traces by standing marked at the
  * end. Where a row is opened on purpose to ask what the contour said, the body itself is the answer and
  * is handed over verbatim instead — one fact, two readers, and the shape follows the act of reading.
