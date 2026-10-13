@@ -174,13 +174,19 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * The sheet. The place rule (`margin-left:auto`), the reservation the page's own law asks for (no
-     * fixed height, the sentence wraps inside its own room, the text whole in the DOM) and the three
-     * tones live here and nowhere else: a status is right-aligned on every card because this rule says
-     * so, not because five sections each say so.
+     * The sheet. The place rule (`margin-left:auto` together with the row's own last place, `order:1`), the
+     * reservation the page's own law asks for (no fixed height, the sentence wraps inside its own room, the
+     * text whole in the DOM) and the three tones live here and nowhere else: a status is right-aligned on
+     * every card because this rule says so, not because five sections each say so.
+     *
+     * The last place is declared here rather than left to the order a head happens to be drawn in: an auto
+     * margin takes the free space **before the next sibling**, so a head that draws anything after the state
+     * — the page's own answer strip, whose room is reserved at a fixed width — leaves the state short of the
+     * card's right edge by exactly that room and the row's gap, at every width and whichever chunk drew the
+     * head.
      */
     const CSS = `
-.coreness-status{box-sizing:border-box;margin-left:auto;flex:0 1 auto;display:inline-flex;align-items:center;min-width:0;max-width:60%;text-align:right;font-size:12px;line-height:18px;overflow-wrap:anywhere;color:var(--dsw-alias-label-tertiary)}
+.coreness-status{box-sizing:border-box;order:1;margin-left:auto;flex:0 1 auto;display:inline-flex;align-items:center;min-width:0;max-width:60%;text-align:right;font-size:12px;line-height:18px;overflow-wrap:anywhere;color:var(--dsw-alias-label-tertiary)}
 .coreness-status-mark{box-sizing:border-box;corner-shape:round;border-radius:50%;flex:none;width:8px;height:8px;display:inline-block;background:var(--dsw-alias-label-tertiary)}
 /* The status word's two tones stand once in the entry's sheet — coreness-tone-done and coreness-tone-fault,
    worn beside this class — because the word is one of the state's sentences the page paints. The mark's own two

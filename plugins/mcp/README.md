@@ -47,7 +47,7 @@ The include's path is resolved against the profile's directory — every patch r
     "server": "supabase",
     "transport": "streamable-http",
     "url": "https://mcp.supabase.com/mcp",
-    "command": null, "args": [], "timeout": null,
+    "command": null, "args": [], "timeout": null, "cwd": null, "loud": false,
     "env": [], "headers": [{"name": "Authorization", "value": "Bearer …"}],
     "kept": ["reconnect"], "refs": [],
     "enabled": true, "disabledRef": false,
@@ -67,7 +67,9 @@ A row the platform's own client has complained about carries the client's senten
 
 `state` is `ready`, `no-file` (this composition declares no row for the servers file) or `failed` (the row is declared and cannot be read — `reason` carries the Loader's own words). A header and an environment variable travel as the row's own file holds them: each pair is its name and the text under it — a literal as the literal, an expression as the file spells it (`!!js …`), `""` when the file carries none. No name makes a value unfit for the screen.
 
-`POST` — one save. The body names the action: `add` carries a `form` (the name, the kind, the address, the call timeout, the headers, the environment), `edit` an `entryId` and a `form`, `toggle` an `entryId` and `enabled`, `remove` an `entryId` alone. The answer is the picture read back beside what was done:
+`kept` names the keys of the row the form does not draw for that row's branch: their values stay in the file and only their names travel, so a reader is told the row holds more than the form shows. A key of the branch a save would leave stands there as well — that is how the editor can name what a save will drop before it drops it. `transport` is the platform's own word and nothing else, and a row is named by it: nothing of the file is read back as a label.
+
+`POST` — one save. The body names the action: `add` carries a `form`, `edit` an `entryId` and a `form`, `toggle` an `entryId` and `enabled`, `remove` an `entryId` alone, `reference` an `entryId` with the credential key and the expression a row's header is to carry, and `reload` an `entryId` alone. The form carries `serverName` and `transport`, the fields of that branch — `command` with `args` (one argument per line) and `env`, or `url` with `headers` — and the fields both branches draw: `cwd`, `timeout` and `loud` (the one plain sentence for a server that fails to come up). A pair travels as `{"name": "…", "value": "…"}`. The answer is the picture read back beside what was done:
 
 ```json
 {"ok": true, "value": {…the picture…, "result": "updated", "entryId": "include:mcp-servers:mcp-supabase", "server": "supabase"}}
@@ -75,32 +77,21 @@ A row the platform's own client has complained about carries the client's senten
 
 `result` is `created`, `updated`, `nothing` (the file already held exactly this row, and a repeated save writes nothing so that a connection is not restarted for no reason), `removed`, `disabled` or `enabled`.
 
+A field the form draws follows the form in three states: **absent** from the request it keeps what the row holds — a page that does not draw a field yet wipes nothing — **empty** it takes the key off the row, and **filled** it is the person's word. `loud` is a yes or a no, and any other value is refused (`bad-value`).
+
 ```json
 {"ok": false, "error": {"code": "name-taken", "message": "the file already declares a server named \"supabase\""}}
 ```
 
 The codes are one vocabulary, named in `row.js` and held against the browser half's by a check — `name-taken`, `not-saved` and the rest — and the message beside a code is the sentence the user reads.
 
-**The corporate kind.** A third value of `transport` stands in the form and in the picture beside the platform's two: `corporate`. It is the internal platform's own way to reach a server — the platform's CLI is started as a local process and speaks MCP over stdio, carrying the corporate hop and the access itself, so the harness never resolves the address and never holds a value of the credential. The kind is ours and the row is the platform's: a corporate save writes the platform's own `stdio` branch.
+**Two saves carry a reference, and they are the only hand that writes a row's authorization header as an expression.** `reference` writes the credential key's own expression into the row's `Authorization` header and puts `inject: [credentials]` on the row, so the row's own context holds the credential service; `reload` writes neither and activates the row afresh. The option goes in a write of its own, before the header: the Loader evaluates a configuration as the write lands, and a write carrying both was refused in its own words — `cannot get property "credentials" without inject` — while the option stood in the file. What a person sees: a row that has signed in stops holding a token and holds a reference instead — nothing of the secret stands in the servers file — and the header it sends is read from the stored grant every time the row is activated, so a rotated token is carried by activating the row again rather than by editing the file. A reference pointing at a grant that is not there is not silence: the expression refuses the row's activation with a sentence carrying `oauth-no-token`, and the platform reports the row among the entries that did not activate, where before such a row activated happily and sent `Bearer undefined` to a server.
 
-```yaml
-- id: mcp-dd
-  name: '@deepseek-ai/dsh-mcp-client'
-  config:
-    serverName: dd
-    transport: stdio
-    command: dp
-    args: ['ai', 'mcp', 'remote', '--url', 'https://<internal endpoint>/mcp']
-    failOnStartupError: true
-```
+**A row's tools come back by activating it again.** A token that changed in the store is not a change to the file, so `reload` switches the row off and on through the Loader — `disabled: true` and then the key off the row — because a write that changes nothing restarts the entry and leaves the header standing as it activated; that was measured at a run's own wire, where the old token went on being sent after such a write and the new one arrived after a fresh activation. The file carries `disabled: true` for the one write in between, the tool list of that one server is unregistered and registered again, and a reload that leaves the row switched off is refused rather than reported as done.
 
-The form sends `{"serverName": "dd", "transport": "corporate", "url": "https://…/mcp", "timeout": ""}`, and the picture answers with `transport: "corporate"` and the address lifted out of the bridge's own arguments — the file holds it there and nowhere else — so the form redraws the row it wrote with no second copy of the address anywhere. `failOnStartupError` is written explicitly and reported among `kept`: a bridge that cannot come up must say so, and without that field a failed row is indistinguishable, in the platform's own data, from a server that has no tools.
+**The display rule: the form draws what connects a server, and carries the rest.** The fields the form draws are `serverName` and `transport`, the branch's own fields — `command` with `args` and `env`, or `url` with `headers` — and, on both, `cwd`, `toolCallTimeoutMs` and `failOnStartupError`, the last one drawn as one plain sentence rather than as a field's name. Every other key a row carries belongs to the file: a save writes it back exactly as it stands, and `kept` names it so a reader knows the row holds more than the form shows. The two lists live in `row.js` as `DRAWN`, and the property they hold is one sentence: **nothing is lost on save**.
 
-The row's command is the bridge as the machine spells it: `dp`, looked up in the child's `PATH` (the platform scrubs the environment it hands a row but keeps `PATH`), or a path to it carrying the CLI's own file name — `dp` or `dp.exe`. A machine where the CLI is not on `PATH` pins it by adding the row through the `stdio` branch with the absolute path and the bridge's own arguments: the picture reads that row as the corporate kind, because the recognition is the row's shape and not the way it was typed. A shell shim named `dp.cmd` or `dp.bat` is not a spelling of the bridge but a row that cannot start at all: the platform's client spawns a row without a shell, and Node refuses a `.cmd` there with `EINVAL` — measured, not assumed.
-
-**The recognition is exact, and a near-miss stays a plain stdio row.** A row reads as corporate only when its transport is `stdio`, its command is the bridge, its arguments are exactly `['ai', 'mcp', 'remote', '--url', <one http(s) address>]`, `failOnStartupError` is `true`, and it carries no `env`, no `headers` and no `cwd`. Anything else — one extra `--header` of the bridge's own, the loud startup dropped, another command, an environment, a working directory — is a plain `stdio` row, drawn with its own fields and edited as one. A near-miss claimed as corporate would hide the very field the user put there, and the next save would rewrite it away.
-
-**What the kind refuses.** A corporate save carrying `headers`, an environment, a command or arguments is refused in words that name the field and the reason (`bad-transport`): the access belongs to the bridge and the command is ours, so neither is typed on this form — and a refusal, not a silent drop, is what keeps a half-typed secret out of a row. An address that is not one http or https URL is refused (`bad-url`). The address never becomes a field of the row: it travels inside the bridge's arguments, so nothing on this side is handed an endpoint to reach itself.
+A row is added through the form's own fields, by hand: the two branches are the two ways a server connects, and the form is self-sufficient — it offers no prepared recipe, and none is asked of it.
 
 ## The host's own words
 
@@ -141,7 +132,7 @@ Each row is one change, the file and the names in it that carry the change, and 
 | the change | where it lands | what measures it |
 | --- | --- | --- |
 | the vocabulary of a row: the name pattern, the row id, the transports, the refusals | `row.js` — `NAME`, `rowId`, `TRANSPORTS`, `REFUSALS`, `buildConfig` | `test/row.test.mjs` |
-| the corporate kind: the row a save writes, the fields it refuses, the near-miss that stays stdio | `row.js` — `KINDS`, `isCorporate`, `corporateConfig`, `foreignFields` | `test/corporate.test.mjs` |
+| the display rule: the fields the form draws per branch, and the keys it carries instead | `row.js` — `DRAWN`, `keptOf`, `refsOf`, `buildConfig` | `test/row.test.mjs`, `test/picture.test.mjs` |
 | a tool attributed to its server | `row.js` — `publicPrefix`, `rawToolName`; `picture.js` | `test/picture.test.mjs`, `test/row.test.mjs` |
 | the picture: the states of the file, a row's fields, the kept names, the expressions | `picture.js`; `tree.js` — `includeOf`, `rowsOf`, `entryOf` | `test/picture.test.mjs` |
 | the write path — add, edit, toggle, remove — and the read-back that confirms each | `write.js`; `tree.js` — `createRow`, `updateRow`, `removeRow` | `test/write.test.mjs` |
@@ -161,7 +152,7 @@ The tests drive the plugin through a loader faithful where the addressing matter
 
 The host's own words are held on their own: which line belongs to which server, what a line of nobody does, what the newest line decides, and how long the ring is (`test/trouble.test.mjs`), with the field's rule in the picture and the receiver's lifetime against the plugin's own effects (`test/picture.test.mjs`, `test/route.test.mjs`).
 
-The corporate kind is held on its own (`test/corporate.test.mjs`): the row a save writes and the picture reading it back as corporate with its address and its tools; the call timeout carried and a repeated save writing nothing; the near-misses — a plain stdio row with its command and arguments intact, and a row whose `transport` stands as an expression and reads as no kind at all; the bridge recognised under its own file names (`dp`, `dp.exe`) and every other program — a script of one's own, a shell shim, a near name — not claimed as it; the fields of another branch refused in words, with the file untouched; and an address that is not one http or https URL refused, with no `url` ever written into the row.
+The display rule is held on its own: a drawn field follows the form while a key the form does not draw stays the file's own, the two transports do not mix and the branch a save leaves is pruned, and the carried keys are named exactly as the file holds them (`test/row.test.mjs`), with the picture's reading of the same rule beside it (`test/picture.test.mjs`).
 
 The installed assembly is read from the launcher:
 
@@ -177,11 +168,10 @@ The route is checked by a run against the profile's own file — `curl`-style wi
 - **No MCP client of our own, and no connection state.** The platform connects, reconnects and removes the tools of a server that stays down; this plugin reads what the tools service carries and repeats what the platform's own client said about a row, quoted. It never decides for itself why a server is not up: with a `trouble` line the reason is the host's, and without one the row says only "no tools yet", which is also what an answered-but-toolless server looks like.
 - **A second source of servers is invisible.** An ACP session may declare `mcpServers` of its own, mounted per session and never a Loader row: those servers are not in the picture and their tools appear under a name with no row. Named as a debt, not a fault.
 - **A rename is a new row plus a removal.** The row id is derived from the server name (`mcp-<name>`), and the form does not offer the action; a save that carried another name is refused rather than performed as a side effect.
-- **Unknown field shapes are carried, not edited.** `cwd`, `reconnect`, `maxInstructionBytes`, `failOnStartupError` and any field of a later version survive a save untouched; their names are drawn so the user knows the row holds more than the form shows, and their values stay in the file.
+- **Keys the form does not draw are carried, not edited.** `reconnect`, `maxInstructionBytes` and any key of a later version survive a save untouched; their names are drawn so the user knows the row holds more than the form shows, and their values stay in the file. The two fields the form gained — the working directory and the loud startup — are drawn and therefore the form's own: an empty box takes the key off, and a page that does not draw a field yet changes nothing by staying silent.
 - **An expression is the file's, not the form's.** A header, a variable, an enablement or a setting the form owns that stands as `!!js` is reported as it stands — the file's own text travels — and any other text over it is refused (`header-ref`, `env-ref`, `config-ref`, `disabled-ref`): removing one means editing the file.
 - **A header and a variable are the file's own text, and no name makes one a secret.** The page draws what it is given (§ "In the surface"); what remains of the form's own care is idempotence, not secrecy: a field left blank means "keep the stored one", whitespace alone is refused, and a value is removed by removing its pair.
 - **The platform's own switches stay where they are.** The page writes its own file through this route and writes nothing else: the profile's patch and the enablement of rows we do not own are the platform's own manager's business.
-- **The corporate hop is not provable in this repository.** The bridge is absent from this machine and no corporate network is reachable, so what stands here is the shape of the row handed to the platform's own client — the row the handover's evidence shows working live on the owner's machine — and the mechanism proven against a local stdio server. Nothing in this plugin, its tests or its picture claims the hop itself: a corporate row that comes up is the bridge's doing, and a row that does not says so through the platform's own words (`trouble`).
-- **The bridge's other subcommands are not carried.** The bridge also serves named corporate servers of its own; this form writes the `remote --url` branch alone, and no list of corporate server names stands in the package.
-- **No list of corporate hosts stands in the package.** The product cannot tell an internal address from an external one without a company-specific list, and that list is not carried here: it would publish internal names and rot. The guard is structural — the harness never resolves the address, the bridge does — and the field's own words say what belongs in it.
-- **The form's own half of the corporate kind is the page's, and it stands there.** The route takes the kind and the picture reports it; the section's own option, its address field and its line of help are the browser half's — `KINDS` carries the third kind, the dictionary words it (`kind.corporate`, `help.corporate`), the editor draws the address in place of the command and the arguments, and `formOf` sends the kind's fields alone: the name, the kind, the address and the call timeout (`plugins/page/client.mcp.js`). So `Edit` on a corporate row opens the corporate layout, and the host writes what the page must not type — the bridge's own command, its arguments and `failOnStartupError` (`row.js`). A save that carried a header, an environment, a command or arguments is refused in words (`bad-transport`) rather than written over the row.
+- **The package names no organization.** Nothing in this plugin, its README or its checks names an organization, its hosts or its command-line tool: which servers a profile keeps is that profile's own file, and a public package that carried such a name would publish what is not ours to publish.
+- **A refused form costs a form, never a connection.** The route answers a save it cannot accept with words and writes nothing; the rows are the platform's own and connect either way.
+- **The form's own half is the page's.** The route publishes the picture — the rows, the fields each branch draws, the keys a row carries, the host's own words about it — and the section's own boxes, its two branches and the way a filled form is sent are the browser half's; both halves read the same vocabulary, `row.js`, whose refusals are the ones the page draws.

@@ -1,6 +1,6 @@
 {
   "name": "@coreness/dsh",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "The Coreness kit for DeepSeek Harness: a page of its own, the journal, the picture and the form of the profile's MCP servers, and the Qoder route — one bundle for a profile.",
   "keywords": [
     "deepseek-harness",
@@ -28,6 +28,7 @@
     "./client": "./plugins/page/client.js",
     "./plugins/journal": "./plugins/journal/index.js",
     "./plugins/mcp": "./plugins/mcp/index.js",
+    "./plugins/oauth": "./plugins/oauth/index.js",
     "./plugins/rate-gate": "./plugins/rate-gate/index.js",
     "./plugins/rules": "./plugins/rules/index.js",
     "./plugins/provider/qoder": "./plugins/provider/qoder/index.js"

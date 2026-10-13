@@ -28,6 +28,11 @@ window.__ModuleLoader__.load({
 
     /** The plugin's own door: the picture on a GET, one save on a POST. */
     const ROUTE = '/api/coreness.mcp';
+    /** The page's own door: the composition's read, and the sign-in a row that asks for OAuth is offered. */
+    const PAGE_ROUTE = '/api/coreness.page';
+    /** How often a sign-in that waits for a person is read again. The person's own act ends it, and nothing
+        here counts the minutes: a browser step takes as long as it takes. */
+    const SIGNIN_POLL_MS = 2000;
     /** The seat the page declares for the sections of the plugins that come later. */
     const SEAT = 'coreness.section';
     /** The rail row's own id inside that seat. */
@@ -40,24 +45,23 @@ window.__ModuleLoader__.load({
     const PACKAGE = '@coreness/dsh';
 
     /**
-     * The kinds the form offers, and the words for them — the same three the host's own row reader
-     * names under `KINDS`.
+     * The kinds the form offers, and the words for them — the same two the host's own row reader names
+     * under `TRANSPORTS`.
      *
      * The value is the platform's own spelling — it is what the row carries and what the route reads —
-     * while the label is the page's: `streamable-http` and `stdio` are wire words, and the corporate
-     * kind is not the platform's at all, it is the internal platform's own CLI started as a local
-     * process.
+     * while the label is the page's: both are wire words a reader should not have to meet. A row of the
+      * third kind the page used to offer is a `stdio` row: it reads, edits and connects as one.
      */
-    const KINDS = ['streamable-http', 'stdio', 'corporate'];
+    const KINDS = ['streamable-http', 'stdio'];
     const KIND_LABELS = {
       'streamable-http': 'kind.http',
       'stdio': 'kind.stdio',
-      'corporate': 'kind.corporate',
     };
 
     /**
      * The page's own picker, drawn where a value is chosen from a settled list: the kind of an MCP row,
-     * which is three values the platform names. It lives in a chunk of its own
+     * which is two values the platform names. It
+     * lives in a chunk of its own
      * because three of the page's sections draw it, and this chunk pulls it the way the entry pulls this
      * one: a sibling file beside the entry, materialised once for the whole package.
      *
@@ -107,6 +111,57 @@ window.__ModuleLoader__.load({
       'unreadable',
     ];
 
+    /**
+     * The refusals of the flow's own vocabulary, as the flow publishes them.
+     *
+     * A sign-in the flow refuses is not a route's answer: the attempt outlives the press, and its code
+     * arrives in the state the page reads. Every code the flow can answer with must have a sentence here,
+     * because a code the page cannot word is a branch that reaches a reader as a bare word — and a check
+     * holds this list against the flow's own vocabulary rather than trusting the copy.
+     */
+    const OAUTH_FAULTS = [
+      'no-resource-metadata',
+      'no-server-metadata',
+      'bad-metadata',
+      'registration-refused',
+      'registration-invalid',
+      'exchange-refused',
+      'exchange-invalid',
+      'refresh-refused',
+      'refresh-invalid',
+      'no-code-verifier',
+      'no-redirect',
+      'no-authorization-url',
+      'no-token-endpoint',
+      'state-mismatch',
+      'no-code',
+      'provider-refused',
+      'no-attempt',
+      'no-callback',
+      'no-web-server',
+      'no-registry',
+      'cancelled',
+    ];
+
+    /**
+     * The refusals of the page's own sign-in door, which the flow never sees.
+     *
+     * Spelled apart from the servers route's own codes on purpose: one code carried by two vocabularies
+     * would leave one of them drawing the other's sentence, and a reader would be told about a sign-in
+     * where a header was refused.
+     */
+    const DOOR_FAULTS = ['signin-action', 'signin-body', 'no-flow', 'signin-lost', 'signin-failed', 'no-loader'];
+
+    /**
+     * The families of a failure this half has a sentence for, in the order the host names them.
+     *
+     * The reading itself lives in the host half, where the Loader's own record is: it decides the family, and
+     * this list is only what this half can draw. The two are held together by a check, the way the two halves'
+     * refusal codes are — a family the host grows and this half does not know would otherwise be drawn as a
+     * bare key, and a key a person reads is not an answer.
+     */
+    const REASONS = ['forbidden', 'unauthorized', 'missing', 'broken', 'unexpected', 'closed', 'silent', 'unknown'];
+
     /* The section's own words. One namespace, one dictionary: the rail row's label is a thunk so it
        follows the language without a re-registration, and every failure the route can answer with
        has words here rather than a bare code. */
@@ -126,23 +181,29 @@ window.__ModuleLoader__.load({
       'target.none': 'no address yet',
       'target.stdio': '{command} {args}',
       'tools.none': 'no tools yet',
+      /* The three conditions a row can stand in, one word each: the fiber failed (the row never started),
+         the client gave up, the client is between attempts. The platform's own sentence about the row — the
+         address, the attempt count, the delay — stands in the console, where a reader who needs it looks. */
+      'row.failed': 'Did not start',
+      'row.lost': 'Not connected',
+      'row.connecting': 'Connecting',
       'actions': 'Row actions',
       'open': 'Show the details',
       'close': 'Hide the details',
-      'trouble.label': 'The host says',
-      'trouble.hint': 'the platform\'s own MCP client on this row',
       'editor.kept': 'This form writes the fields it shows; a field of the row it does not show stands as your own file has it',
+      'editor.drop': 'Leaving the {kind} branch: this save drops {fields} — the file holds them today',
+      'field.cwd': 'Working directory',
       'refs': 'The file holds an expression in {names}; this form does not write over it',
       'field.name': 'Name',
       'field.nameFixed': 'Name — the row id, and a rename is a new row plus a removal',
       'field.transport': 'Transport',
       'kind.http': 'Streamable HTTP',
       'kind.stdio': 'Standard input/output',
-      'kind.corporate': 'Corporate bridge',
-      'help.corporate': 'The connection is made by the internal platform\'s own CLI on this machine; the access token is not typed here and is not held by this page.',
       'field.url': 'Address',
       'field.command': 'Command',
       'field.args': 'Arguments, one per line',
+      'help.command': 'Any command or a full path to a script.',
+      'help.args': 'One line is one argument, taken whole — a space inside it does not split it.',
       'field.timeout': 'Call timeout, ms',
       'field.headers': 'Headers',
       'row.tools': 'Tools ({count}):',
@@ -168,19 +229,24 @@ window.__ModuleLoader__.load({
       'done.updated': 'Saved',
       'done.nothing': 'Nothing changed',
       'done.removed': 'Saved',
-                              'fault.bad-action': 'The page asked for a save the plugin does not take',
+      'fault.bad-action': 'The page asked for a save the plugin does not take',
       'fault.bad-name': 'A server name is 1 to 32 letters, digits, underscores or hyphens',
       'fault.name-taken': 'Another row of this file already takes that name',
       'fault.no-file': 'This composition declares no servers file',
       'fault.no-row': 'The servers file holds no such row',
       'fault.not-an-mcp-row': 'This row is not an MCP client row, so this form does not shape it',
-      'fault.bad-transport': 'A row carries one kind — streamable-http, stdio or corporate — and the fields of another branch do not travel with it',
+      'fault.bad-transport': 'A row carries one kind — streamable-http or stdio — and the fields of another branch do not travel with it',
       'fault.bad-url': 'The address must be an http or https URL',
       'fault.bad-command': 'A stdio row needs the command it starts',
       'fault.bad-timeout': 'The call timeout is a whole number of milliseconds',
       'fault.bad-header': 'A header carries a name and a value',
       'fault.bad-env': 'An environment variable carries a name and a value',
       'fault.bad-value': 'A value with a line break — or one of spaces alone — is not a value this file can hold',
+      /* The two codes the route can answer with and the page had no words for: a header or an environment
+         variable standing as an expression is the same refusal `config-ref` names, said about the field the
+         reader was looking at — and until these stood here, a reader met the bare code. */
+      'fault.header-ref': 'A header of this row stands as an expression in the file: the form does not write over it',
+      'fault.env-ref': 'An environment variable of this row stands as an expression in the file: the form does not write over it',
       'fault.config-ref': 'A setting of this row stands as an expression in the file: the form does not write over it',
       'fault.disabled-ref': 'The enablement of this row stands as an expression in the file: the toggle does not write over it',
       /* The word a press's refusal is said with, the same on every page; the sentence beside it is the reason and
@@ -189,6 +255,59 @@ window.__ModuleLoader__.load({
       'fault.not-saved': 'The save did not stand: the file does not hold what was written',
       'fault.write-failed': 'The Loader refused the write',
       'fault.unreadable': 'The servers file could not be read',
+      /* The sign-in a row that asks for OAuth is offered, and the states that follow the press. The words
+         the flow itself hands out — the sentence the address is carried in, the question it cannot answer for
+         itself — are the flow's own and are drawn as they came, quoted like the host's own line about a row;
+         the page's own `signin.waiting` stands only where the flow handed out no sentence at all. */
+      'signin': 'Sign in',
+      'signin.waiting': 'Waiting for you to sign in',
+      'signin.answer': 'Send',
+      'signin.withdraw': 'Withdraw',
+      'signin.answerLabel': 'What the sign-in page showed you',
+      'signin.done': 'Signed in',
+      'signin.refused': 'Sign-in refused',
+      'signin.cancelled': 'The sign-in was withdrawn',
+      /* The flow's own refusals, each in the page's words: the one short sentence a refused sign-in draws beside
+         its code, while the flow's own sentence — which names the address, the server or the endpoint — goes to
+         the console with every other reason this page may not stand on a face. */
+      'fault.no-resource-metadata': 'The server asks for a sign-in and publishes no OAuth document to sign in through',
+      'fault.no-server-metadata': 'The document names an authorization server that answers no metadata',
+      'fault.bad-metadata': 'The metadata that answered is not the document the standard describes',
+      'fault.registration-refused': 'The authorization server refused to register this page as a client',
+      'fault.registration-invalid': 'The registration answered, and not with a client id',
+      'fault.exchange-refused': 'The token endpoint refused the exchange — a scope it will not grant is refused here too',
+      'fault.exchange-invalid': 'The token endpoint answered without the fields an exchange returns',
+      'fault.refresh-refused': 'The refresh was refused; an expired grant means signing in again',
+      'fault.refresh-invalid': 'The refresh answered without the fields a refresh returns',
+      'fault.no-code-verifier': 'No verifier stands for this server, so the exchange cannot be finished',
+      'fault.no-redirect': 'No address stands for the browser step to come back to',
+      'fault.no-authorization-url': 'The authorization server published no sign-in address',
+      'fault.no-token-endpoint': 'The authorization server published no token address',
+      'fault.state-mismatch': 'The answer carries a state this page never stored for that server',
+      'fault.no-code': 'The answer came back without a code to exchange',
+      'fault.provider-refused': 'The authorization server sent its own refusal back',
+      'fault.no-attempt': 'An answer came back for a sign-in that is not waiting for one',
+      'fault.no-callback': 'The browser did not come back with an answer in time',
+      'fault.no-web-server': 'This composition has no web server, so a sign-in has nowhere to come back to',
+      'fault.no-registry': 'This composition has no authorization registry, so no sign-in can be offered',
+      'fault.cancelled': 'The sign-in was withdrawn before an answer came back',
+      'fault.signin-action': 'The page asked the sign-in door for something it does not take',
+      'fault.signin-body': 'The sign-in door could not read what the page sent',
+      'fault.no-flow': 'This composition carries no OAuth flow, so no sign-in can run here',
+      'fault.signin-lost': 'The plugin that was running this sign-in is gone; press Sign in again',
+      'fault.signin-failed': 'The sign-in could not be started',
+      'fault.no-loader': 'This composition carries no Loader, so a row\'s own failure record cannot be read here',
+      /* The reasons a row that did not start is given, one sentence per family. The family is the platform's
+         own reading of what the server said — a status, or the SDK's code for a shape without one — and the
+         server's own message stands in the sentence's place whenever its answer carried one. */
+      'reason.forbidden': 'The server understood the request and refused it — this address is out of reach from here (a region, a plan or a policy)',
+      'reason.unauthorized': 'The server wants a sign-in before it answers, and no attempt was made for it',
+      'reason.missing': 'No MCP endpoint answers at this address',
+      'reason.broken': 'The server is broken behind this address: its own error came back',
+      'reason.unexpected': 'The address answered, but not as an MCP server',
+      'reason.closed': 'The server closed the connection before it answered — for a command, the process it starts ends at once',
+      'reason.silent': 'The server did not answer at all',
+      'reason.unknown': 'The row did not start, and the record the platform kept names no reason this page can read',
     };
 
     /* The host's own sheets, copied rule for rule and renamed, carried by its tokens alone: the
@@ -218,10 +337,25 @@ window.__ModuleLoader__.load({
 [data-note][data-tone='fault']{color:var(--dsw-alias-state-error-primary);margin:0;font-size:12px;line-height:18px}
 [data-note][data-tone='done']{color:var(--dsw-alias-state-success-primary);margin:0;font-size:12px;line-height:18px}
 /* The tones this line carries stand once in the entry's sheet — coreness-tone-done and coreness-tone-fault,
-   worn beside this class — because the state's sentence is painted there. What stays here is the line's own
-   shape: the amber a trouble line carries until its level says error. */
-.coreness-mcp-trouble{margin:0;font-size:14px;line-height:22px;color:var(--dsw-alias-state-warn-label);overflow-wrap:anywhere}
-.coreness-mcp-trouble code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+   worn beside this class — because the state's sentence is painted there. */
+.coreness-mcp-signin code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+/* The row's own sign-in block in a card's body: a column of lines — the sentence, the field with its hint, and
+   the reset — stood apart by the 8 the page's action strips stand on. The tone is worn beside this class — the
+   warn rule for a refusal, the page's dim role for a wait — because a colour is a fact of the state and not of
+   this box. */
+.coreness-mcp-signin{display:flex;flex-direction:column;gap:8px;margin:0;font-size:12px;line-height:18px}
+/* The flow's address is carried by the words "sign in" **inside** the sentence the person reads, so the link is
+   words and not a bordered control of its own: it keeps the sentence's own ink and is marked by the one sign a
+   link carries everywhere. The page's sheet publishes no link role, and this is the whole of what the block
+   declares for one. */
+.coreness-mcp-signinLink{color:inherit;text-decoration:underline;cursor:pointer}
+/* The field reads as one line: the page's own box and the page's own control on a grid whose distances are the
+   page's own 6, the field taking the room and the control its own width after it. */
+.coreness-mcp-signinLine{grid-template-columns:minmax(0,1fr) auto;gap:6px;display:grid}
+/* The reset is the block's own last line, hard against the **left** edge, where every other line of the block
+   begins: the owner moved it there by his own word after seeing it drawn at the right. It is the block's only
+   button besides the field's own Send. */
+.coreness-mcp-signinWithdraw{align-self:flex-start}
 /* The right side of the head: the row's own controls, held to the right of the head and parted by the 8 the
    page's card action lines stand on; the free room in front of them, and not this number, is what holds them
    there. */
@@ -231,7 +365,8 @@ window.__ModuleLoader__.load({
    left over (flex:1 1 auto, below) and cuts a long sentence with an ellipsis rather than pushing the
    actions or the marker — the whole sentence stands in the title, and a refusal's reason also stands in
    the row's or the section's own state. */
-/* The answer stands at the card's right edge and on the **name's own line**, not in the middle of the head:
+/* The answer stands on the **name's own line**, at the right of the row but not at the card's edge — the
+   actions and the marker after it are what keep that edge — and not in the middle of the head:
    the head centres its children (align-items:center), and the strip — 18 px tall in a 60 px head — was
    therefore sitting on the buttons' line. align-self:flex-start lifts it to the head's top, which is the line
    the name stands on, and it changes nothing else: the box is still reserved (flex:0 0 160px), the head still
@@ -283,6 +418,11 @@ window.__ModuleLoader__.load({
 .coreness-mcp-rows + *,.coreness-mcp-editor + *{margin-top:8px}
 .coreness-mcp-editor{border-radius:var(--dsw-radius-lg);background:var(--dsw-alias-bg-module-platform);flex-direction:column;gap:12px;padding:12px 14px;margin-top:8px;display:flex}
 .coreness-mcp-editorHead{align-items:center;justify-content:space-between;display:flex}
+/* The right side of the editor's head: the row's own acts and the editor's answer, parted by the 8 the page's
+   action lines stand on. The answer keeps the top right it has always had; the sign-in stands before it, on the
+   line a person reads the row's name on, and not among the form's own acts — a press that never touches the
+   draft must not read as one that saves it. */
+.coreness-mcp-editorBeside{align-items:center;gap:8px;display:inline-flex}
 .coreness-mcp-editorTitle{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px}
 .coreness-mcp-fieldLabel{color:var(--dsw-alias-label-secondary);font-size:12px;font-weight:500;line-height:18px}
 .coreness-mcp-editorNote{flex:none;text-align:right;font-size:12px;line-height:18px}
@@ -424,29 +564,79 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
     let lastRead = null;
 
     /**
+     * What the console has already been told, row by row: the last thing sent for that row.
+     *
+     * A reason that may not stand on the face goes to the console through the page's one door, and it is
+     * said once per sentence: a wait reads the same picture every second, and a line repeated sixty times
+     * is not news. A **new** sentence — the next attempt's own words, another refusal — is said again,
+     * which is what keeps the door a record of what happened rather than of what was drawn.
+     */
+    const toldTrouble = new Map();
+    const toldSignin = new Map();
+    const toldReason = new Map();
+
+    /**
+     * The host's own sentence about every row that carries one, told to the console — once per new sentence.
+     *
+     * A picture read is a picture read: the row's word is drawn from it (`rowState`) and the platform's line
+     * goes here. The door is called from every path a picture arrives by — the mount's read, a save's answer,
+     * and the wait's own reads — because a sentence that changed while the wait ran is exactly the news that
+     * matters most, and one that stands unchanged is not news at all.
+     * @param {object | null} picture the picture that just arrived
+     */
+    function tellTroubles(picture) {
+      for (const row of picture?.rows ?? []) {
+        const told = row.trouble ?? null;
+        if (told === null) continue;
+        const server = row.server ?? row.id;
+        const said = `${told.level}\u0000${told.text}`;
+        if (toldTrouble.get(server) === said) continue;
+        toldTrouble.set(server, said);
+        statusDetail(server, told.text);
+      }
+    }
+
+    /**
      * One request to the plugin's route. The route answers 200 with its own refusals in words
      * (`{ok:false, error:{code, message}}`), so a refusal is read, not guessed from a status.
      */
     async function ask(method, body) {
-      const answer = await fetch(ROUTE, {
+      return request(ROUTE, method, body);
+    }
+
+    /**
+     * One request to the page's own route, which carries the sign-in: the row's precondition, the attempt a
+     * press starts, the answer to the flow's own question, and the withdrawal of an attempt. One shape for
+     * every answer, `{ok, value}` or `{ok:false, error:{code, message}}`, read the same way.
+     */
+    async function askPage(body) {
+      return request(PAGE_ROUTE, 'POST', body);
+    }
+
+    /** One request of one route of this page, read the page's own way. */
+    async function request(route, method, body) {
+      const answer = await fetch(route, {
         method,
         headers: body === undefined ? undefined : { 'content-type': 'application/json' },
         body: body === undefined ? undefined : JSON.stringify(body),
       });
-      if (!answer.ok) throw new Refused('unreadable', `${ROUTE} answered ${answer.status} ${answer.statusText}`);
+      if (!answer.ok) throw new Refused('unreadable', `${route} answered ${answer.status} ${answer.statusText}`);
       let payload;
       try {
         payload = await answer.json();
       } catch (error) {
-        throw new Refused('unreadable', `${ROUTE} answered something that is not JSON: ${reasonOf(error)}`);
+        throw new Refused('unreadable', `${route} answered something that is not JSON: ${reasonOf(error)}`);
       }
       if (payload?.ok !== true) throw new Refused(payload?.error?.code ?? 'write-failed', payload?.error?.message);
       return payload.value;
     }
 
+    /** Every code this section can draw a sentence for: the plugin's own, the flow's, and the sign-in door's. */
+    const KNOWN_FAULTS = [...REFUSALS, ...OAUTH_FAULTS, ...DOOR_FAULTS];
+
     /** The words of a refusal: the page's own for a code it knows, the host's message beside it. */
     function faultLines(code, message) {
-      const known = REFUSALS.includes(code);
+      const known = KNOWN_FAULTS.includes(code);
       const words = known ? t(`fault.${code}`) : null;
       const detail = typeof message === 'string' && message !== '' && message !== words ? message : null;
       return [words ?? detail ?? String(code), ...words !== null && detail !== null ? [detail] : []];
@@ -468,29 +658,6 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
       if (row.url !== null && row.url !== '') return h('code', null, words);
       if (row.command !== null && row.command !== '') return h('code', null, words);
       return h('span', { className: 'coreness-mcp-dim coreness-dim' }, words);
-    }
-
-    /** The tools a server brings now: the platform's prefix rule decides, not this page. */
-    /** The time of a line, as the user reads a clock; a time the host did not give stands as it came. */
-    function timeOf(at) {
-      const moment = new Date(at);
-      return Number.isNaN(moment.getTime()) ? String(at) : moment.toLocaleTimeString();
-    }
-
-    /**
-     * What the host itself said about this row, quoted.
-     *
-     * The sentence is the platform's own — `mcp-client(<name>): connection failed; retrying in 4000ms
-     * (attempt 5/10)` — and it is drawn as it stands: this page does not translate it into a reason of
-     * its own, because a paraphrase standing where the host's own words exist is a guess drawn as a
-     * fact. Only the label, the time and the severity around it are the page's.
-     */
-    function troubleLine(row) {
-      return h('p', { key: 'trouble', className: 'coreness-mcp-trouble' + (TONE_CLASS[row.trouble.level] ?? ''), role: 'note', 'data-level': row.trouble.level }, [
-        h('span', { key: 'label', className: 'coreness-mcp-dim coreness-dim' }, `${t('trouble.label')} `),
-        h('code', { key: 'words', 'data-at': row.trouble.at ?? '', title: t('trouble.hint') }, row.trouble.text),
-        h('span', { key: 'when', className: 'coreness-mcp-dim coreness-dim' }, ` · ${row.trouble.level} · ${timeOf(row.trouble.at)}`),
-      ]);
     }
 
     /** The count line over the section: the total, then only the states that occur. */
@@ -575,7 +742,256 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
       ]);
     }
 
-    
+    /** What the door answered, by the row it answered about. */
+    const byEntry = (signins) => Object.fromEntries((signins ?? []).map((one) => [one.entryId, one]));
+
+    /** The value the row's own Authorization header carries, or null when the file holds none. */
+    function authorizationOf(row) {
+      const pair = (row.headers ?? []).find((one) => String(one.name ?? '').toLowerCase() === 'authorization');
+      const value = pair === undefined ? '' : String(pair.value ?? '');
+      return value === '' ? null : value;
+    }
+
+    /**
+     * Whether a row owes the write that joins it to a grant the store already holds.
+     *
+     * The write goes into a row whose own authorization header stands empty and never over one a person
+     * wrote: a header the file carries is the file's own text, and this page does not shape expressions. A
+     * grant that stands and a row that already reads it owes nothing; a row that reads something else is
+     * left as its file has it.
+     * @param {object} row the row of the picture
+     * @param {object | null} signin what the page's own door answered about this row
+     * @returns {boolean} whether the row should be joined to its grant
+     */
+    function needsJoin(row, signin) {
+      if (signin === null || signin.reference === null || signin.reference === undefined) return false;
+      const held = authorizationOf(row);
+      if (held === signin.reference.expression) return false;
+      if (held !== null) return false;
+      return signin.state === 'authorized' || (signin.state === null && signin.grant === true);
+    }
+
+    /**
+     * Where the row's sign-in press stands — the answer strip, the row's own settings, or nowhere.
+     *
+     * Three conditions, each read from what the picture and the flow's own door publish and none from a
+     * guess: the flow must stand to run the attempt at all (`available`, the desk's own reading of the
+     * composition) and no attempt of that row may be waiting, because the platform's registry refuses a
+     * second attempt for one key and a control there would be a button that cannot work.
+     *
+     * **A row that serves is left alone, whatever a probe met** (requirement 5): a client whose tools stand
+     * answers, so a sign-in offered beside them is a press that changes nothing. The condition is read from
+     * the row's own picture — the tools the platform registered — and not from a second probe.
+     *
+     * **And the press stands in one place at a time** (requirement 6): the strip carries it where the
+     * standard's own signals announced a door at the row's address and the row is switched on; the row's own
+     * settings carry it everywhere else the flow can run. That is the only way a server whose door the
+     * standard's signals do not announce can be signed in at all — its address answers no pointer and no
+     * metadata, and the person still knows it asks for OAuth.
+     * @param {object} row the row of the picture
+     * @param {object | null} signin what the page's own door answered about this row
+     * @returns {'strip' | 'settings' | null} where the press stands
+     */
+    function signinPlace(row, signin) {
+      if (signin === null || signin.available !== true || signin.state === 'waiting') return null;
+      if ((row.tools ?? []).length > 0) return null;
+      if (signin.possible === true && row.enabled === true) return 'strip';
+      return 'settings';
+    }
+
+    /**
+     * The row's own condition, in one short word for the answer strip.
+     *
+     * This is what the row's face says about the host's report. That report is a log line —
+     * `mcp-client(linear): connection failed; retrying in 4000ms (attempt 5/10)` — and it stood in the
+     * card's body exactly as it came, a paragraph of the platform's internals where the person was
+     * looking. One word is what belongs on the face, and the host's own words stand one door away, in the
+     * console, where every reason this page may not draw already stands.
+     *
+     * Three conditions are read and each has a word of its own: a fiber standing **failed** never started,
+     * so the row serves nothing whatever its switch says; a client that has **given up** (`error`) is not
+     * connected and its tools are unregistered; and a client between attempts (`warn`) is connecting. A
+     * row switched off carries no word — the switch is that state, and no client is mounted for it — and a
+     * row with no report and no failed fiber carries none either: silence there is a row that serves, and
+     * a word invented for it would be a claim this page never read.
+     * @param {object} row the row of the picture
+     * @returns {{word: string, tone: string, state: string} | null} the word, or nothing where nothing stands
+     */
+    function rowState(row) {
+      if (row.enabled !== true || row.shape !== true) return null;
+      if (row.phase === 'failed') return { word: 'row.failed', tone: 'fault', state: 'failed' };
+      const told = row.trouble ?? null;
+      if (told === null) return null;
+      if (told.level === 'error') return { word: 'row.lost', tone: 'fault', state: 'lost' };
+      return { word: 'row.connecting', tone: 'plain', state: 'connecting' };
+    }
+
+    /**
+     * The row's reason, as the platform's own record answered it: the server's own message when its answer
+     * carried one, and this page's own sentence for the family otherwise.
+     *
+     * The family is the platform's reading and never this page's guess: it comes from the status the responder
+     * gave, or from the SDK's own code where no status stands — a probe that timed out, a process that closed,
+     * an address that answered something that is not an MCP server. A family this page has no words for is
+     * drawn as the `unknown` state rather than as a silence, and a row whose reason was not answered keeps its
+     * own word and nothing else.
+     * @param {object} reason what the page's own door answered for this row, or nothing
+     * @returns {string | null} the one sentence
+     */
+    function reasonWords(reason) {
+      if (reason === null || reason === undefined) return null;
+      const told = typeof reason.server === 'string' && reason.server !== '' ? reason.server : null;
+      if (told !== null) return told;
+      const family = typeof reason.family === 'string' ? reason.family : 'unknown';
+      return t(REASONS.includes(family) ? `reason.${family}` : 'reason.unknown');
+    }
+
+    /**
+     * The reason of a row that did not start, first in the card's body.
+     *
+     * The strip keeps the row's own condition in one word and the console keeps the platform's record; this is
+     * the third room of that split — the content in the card's body — and it is the answer to the question a
+     * person opens the card with: why the row is standing as it is. It stands above everything else the body
+     * carries, because the tools line under it reads as a consequence of it.
+     * @param {object} row the row of the picture
+     * @param {object} view what the section holds
+     * @returns {object | null} the node, or nothing
+     */
+    function reasonLine(row, view) {
+      const words = reasonWords((view.reasons ?? {})[row.entryId] ?? null);
+      if (words === null) return null;
+      return h('p', { key: 'reason', className: 'coreness-mcp-warn' }, words);
+    }
+
+    /** The name of the input the flow's own question is answered in. */
+    const answerField = (server) => `coreness-signin-${server.replace(/[^A-Za-z0-9_-]+/gu, '-')}`;
+
+    /** The words of a flow's own sentence the address is carried on: the owner's own ask, named once. */
+    const SIGNIN_LINK_WORDS = 'sign in';
+
+    /**
+     * The sentence a person reads, with the flow's address carried by the words `sign in` inside it.
+     *
+     * The words are the flow's own and are drawn as they came; what this page settles is which of them carry
+     * the address, and the answer for a flow whose sentence carries no such words: the page's own `signin`
+     * word stands linked after the sentence, because an address handed out with no way to press it is a link
+     * nobody can follow. A flow that handed out no address yet draws the sentence alone.
+     * @param {string} sentence the words on the face
+     * @param {string | null} url the address the flow handed out, when it handed one
+     * @returns {Array} the parts of the line, in the order they read
+     */
+    function sentenceWithLink(sentence, url) {
+      if (url === null) return [sentence];
+      const link = (words) => h('a', {
+        key: 'link',
+        className: 'coreness-mcp-signinLink',
+        href: url,
+        target: '_blank',
+        rel: 'noreferrer',
+      }, words);
+      const at = sentence.toLowerCase().indexOf(SIGNIN_LINK_WORDS);
+      if (at === -1) return [sentence, ' ', link(t('signin'))];
+      return [
+        sentence.slice(0, at),
+        link(sentence.slice(at, at + SIGNIN_LINK_WORDS.length)),
+        sentence.slice(at + SIGNIN_LINK_WORDS.length),
+      ].filter((part) => part !== '');
+    }
+
+    /**
+     * The row's sign-in, as the card's body carries it.
+     *
+     * Three things and no more: the sentence — the flow's own words about the wait, or the page's own where
+     * the flow said nothing, or the page's one sentence for a refused code — with the flow's address carried
+     * by the words `sign in` **inside** it and no bordered control beside it; the question the flow cannot
+     * answer for itself, drawn where the person is already looking, on one line: the page's own box with the
+     * page's own control at its right and the question under the field; and the reset, which takes back what
+     * is pending — an attempt waiting, or a refusal the flow still holds — and stands nowhere else, so a
+     * block with nothing to take back carries no control of its own. A sign-in that finished draws nothing
+     * here: the row's own header and its tools are what changed.
+     * @param {object} row the row of the picture
+     * @param {object | null} signin what the page's own door answered about this row
+     * @param {object} view the section's state
+     * @param {object} act the section's acts
+     * @returns {object | null} the block, or nothing where the row's sign-in has nothing to say
+     */
+    function signinBlock(row, signin, view, act) {
+      if (signin === null || signin.state === null || signin.state === 'authorized') return null;
+      const server = row.server ?? row.id;
+      const url = typeof signin.url === 'string' && signin.url !== '' ? signin.url : null;
+      const parts = [];
+      if (signin.state === 'waiting') {
+        const sentence = typeof signin.message === 'string' && signin.message !== '' ? signin.message : t('signin.waiting');
+        parts.push(h('span', { key: 'words', className: 'coreness-mcp-signinWords' }, sentenceWithLink(sentence, url)));
+      }
+      if (signin.prompt !== null) {
+        const question = signin.prompt.message === '' ? t('signin.answerLabel') : signin.prompt.message;
+        /* The flow's own question, in the page's own field: the page's boxed input and the page's own control
+           on one line — the border, the radius, the focus ring, the placeholder and the disabled look stand
+           once in the page's own sheet (`coreness-field`, `coreness-field-box`) and are worn here as every
+           other value this page draws wears them, so a secret the flow asks for is not a second design
+           language inside one card — and the question **under** the field, where the person reads it as the
+           hint to the box he is typing in. The input keeps the question as its own accessible name, so the
+           field is named for a reader who cannot see the hint. */
+        parts.push(h('div', { key: 'field', className: 'coreness-field coreness-mcp-signinField' }, [
+          h('div', { key: 'line', className: 'coreness-mcp-signinLine' }, [
+            h('input', {
+              key: 'value',
+              id: answerField(server),
+              className: 'coreness-mcp-input coreness-field coreness-field-box',
+              type: signin.prompt.kind === 'secret' ? 'password' : 'text',
+              'aria-label': question,
+              placeholder: signin.prompt.placeholder ?? '',
+              value: (view.answers ?? {})[server] ?? '',
+              onChange: (event) => act.type(server, event.target.value),
+            }),
+            h('button', {
+              key: 'reply',
+              type: 'button',
+              className: 'coreness-mcp-button coreness-button',
+              disabled: ((view.answers ?? {})[server] ?? '') === '',
+              onClick: () => act.reply(row),
+            }, t('signin.answer')),
+          ]),
+          h('p', { key: 'hint', className: 'coreness-mcp-dim coreness-dim' }, question),
+        ]));
+      }
+      if (signin.state === 'refused' || signin.state === 'cancelled') {
+        const code = typeof signin.code === 'string' && signin.code !== '' ? signin.code : 'signin-failed';
+        /* One short sentence and the code, on the one line the person reads: the page's own words for that
+           code — never a generic "the sign-in failed", so a reader tells a scope the server refuses from a
+           refresh that expired — and the code itself, which is what a person repeats when asking about it.
+           The flow's own sentence names the address, the endpoint and the parameter, and it goes to the
+           console where the answer arrives, by the same door every other reason this page may not draw takes. */
+        parts.push(h('span', { key: 'words', className: 'coreness-mcp-signinWords' }, [
+          faultLines(code, null)[0],
+          ' ',
+          h('code', { key: 'code', 'data-code': code }, code),
+        ]));
+      }
+      /* The reset stands while an attempt waits for its code and nowhere else. A refusal is not something a
+         person can take back by pressing it: the measurement on this face is that a press on a refused attempt
+         draws the same refusal again and the log gains not one line, and the way on from a refusal is the
+         link in the sentence above. */
+      if (signin.state === 'waiting') {
+        parts.push(h('button', {
+          key: 'withdraw',
+          type: 'button',
+          className: 'coreness-mcp-button coreness-button coreness-mcp-signinWithdraw',
+          onClick: () => act.withdraw(row),
+        }, t('signin.withdraw')));
+      }
+      if (parts.length === 0) return null;
+      return h('div', {
+        key: 'signin',
+        className: 'coreness-mcp-signin' + (signin.state === 'refused' ? ' coreness-mcp-warn' : ' coreness-mcp-dim coreness-dim'),
+        'data-note': 'signin',
+        'data-state': signin.state,
+        'data-code': typeof signin.code === 'string' ? signin.code : undefined,
+        'data-tone': signin.state === 'refused' ? 'fault' : 'plain',
+      }, parts);
+    }
+
     /**
      * One card of the roster: the donor's own card.
      *
@@ -587,6 +1003,11 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
      */
     function cardOf({ row, view, act, open, menu }) {
       const busy = view.busy === row.entryId;
+      /* The row's sign-in as the page's own door answered it, or nothing where the door was not asked or
+         answered that no flow can run here. Nothing of the control is drawn from a guess, and where it stands
+         is one judgement (`signinPlace`). */
+      const signin = (view.signins ?? {})[row.entryId] ?? null;
+      const signable = signinPlace(row, signin) === 'strip';
 
       /* The subtitle is the row's target and its state in one line — the room the head reserves. It stands as
          parts and not as a joined string: `targetOf` answers a node (a command in its own `code`), and a join
@@ -601,7 +1022,9 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
       const subtitle = [
         targetOf(row),
         ' · ',
-        row.transport ?? '—',
+        row.transport === null || row.transport === undefined
+          ? '—'
+          : (KIND_LABELS[row.transport] === undefined ? row.transport : t(KIND_LABELS[row.transport])),
       ].filter((part) => part !== null);
 
       const items = row.shape
@@ -612,8 +1035,11 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
         : [];
 
       const body = [
+        /* The reason the row did not start stands first: it is the answer to the question the card is opened
+           with, and the tools line under it reads as its consequence. */
+        reasonLine(row, view),
         row.disabledRef === true ? h('p', { key: 'disabledRef', className: 'coreness-mcp-warn' }, t('fault.disabled-ref')) : null,
-        (row.trouble ?? null) === null ? null : troubleLine(row),
+        signinBlock(row, signin, view, act),
         h('p', { key: 'tools', className: 'coreness-mcp-dim coreness-dim' }, row.tools.length === 0
           ? t('tools.none')
           : [
@@ -647,6 +1073,14 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
          inside the card, and the reader's eye is on the card he pressed in. */
       const editorNote = editing && noteNames(view.note ?? null, draftRow(view.editor.draft)) ? view.note : null;
       const mine = noteOf(row, view) ?? editorNote;
+      /* What stands in the answer strip when no press has just answered: the row's own condition in one word,
+         and nothing else. **The flow's own state never stands here**: this room is the row's, the sign-in is
+         the flow's, and a wait said in both places said the same thing twice while taking the row's own
+         condition off the face for as long as it lasted. What the flow is doing is said in the card's body,
+         in the sentence the person reads. */
+      const state = mine === null ? rowState(row) : null;
+      const answerText = mine !== null ? noteTextOf(mine) : (state === null ? '' : t(state.word));
+      const answerTone = mine !== null ? noteToneOf(mine) : (state === null ? undefined : state.tone);
       const subtitleNode = h('span', { key: 'subtitle', className: 'coreness-mcp-subtitle' }, subtitle);
       /* The strip is drawn **always**, empty when there is no answer: the reservation the rule makes
          (`flex:0 0 160px`) is a promise about the layout, and a span that appears and disappears keeps that
@@ -663,11 +1097,14 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
         /* The tone, in the attribute the instruments read: the colour was painted by a class and no reading
            ever saw it, so the word could stand with a tone nothing could name. An empty room carries none —
            it stands before its word arrives, and a room with nothing in it states nothing. */
-        'data-tone': mine === null ? undefined : noteToneOf(mine),
+        'data-tone': answerTone,
         'data-note': 'head',
+        /* The row's own condition, named as the reading that chose it: the words on the face are the
+           section's dictionary's, and this attribute is what tells them apart for anyone reading the tree. */
+        'data-state': state === null ? undefined : state.state,
         role: 'status',
         'aria-live': 'polite',
-      }, mine === null ? '' : noteTextOf(mine));
+      }, answerText);
 
       return h('li', { key: row.entryId, className: 'coreness-mcp-row coreness-card-box' }, [
         h('div', { key: 'card', className: 'coreness-mcp-card', 'data-open': String(open) }, [
@@ -689,6 +1126,19 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
                controls keep the card's right edge by the same rule as every other row of this page. */
             answerNode,
             h('span', { key: 'actions', className: 'coreness-mcp-actions' }, [
+              /* The sign-in stands first in the strip: the row's own act, before the menu of edits and the
+                 switch. It stands only where the flow can run — the door settles that at the row's address
+                 before this line is ever reached — and it is withdrawn while an attempt waits, because a
+                 second press of one key is refused by the platform's own registry. */
+              signable
+                ? h('button', {
+                  key: 'signin',
+                  type: 'button',
+                  className: 'coreness-mcp-button coreness-button',
+                  disabled: busy,
+                  onClick: () => act.signin(row),
+                }, t('signin'))
+                : null,
               items.length === 0 ? null : rowMenu(items, menu === row.entryId, act, row.entryId),
               /* The state is the switch's own: aria-checked carries it, the label names the row it belongs to,
                  and the word a press would do stands in the title rather than in the row's line, so nothing in the
@@ -758,9 +1208,6 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
     function editorOf(draft, view, act) {
       const busy = view.busy !== null;
       const http = draft.transport === 'streamable-http';
-      /* The corporate kind points at an address like an http row and carries no command of its own:
-         the bridge's command and arguments are written by the host, out of the address. */
-      const corporate = draft.transport === 'corporate';
       const fields = [
         h('div', { key: 'name', className: 'coreness-field coreness-mcp-field' }, [
           h('label', { key: 'label', className: 'coreness-fieldLabel coreness-mcp-fieldLabel' }, draft.entryId === null ? t('field.name') : t('field.nameFixed')),
@@ -776,7 +1223,7 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
         ]),
         h('div', { key: 'transport', className: 'coreness-field coreness-mcp-field' }, [
           h('span', { key: 'label', className: 'coreness-fieldLabel coreness-mcp-fieldLabel' }, t('field.transport')),
-          /* The kind is chosen in the page's own control, from the platform's three values: the words are
+          /* The kind is chosen in the page's own control, from the platform's two values: the words are
              the page's (`kind.http` and the like) and the value that travels is the platform's own
              spelling, exactly as the native select this replaced handed it over. */
           h(IdPicker, {
@@ -789,7 +1236,7 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
             onChoose: (next) => act.patch({ transport: next }),
           }),
         ]),
-        http || corporate
+        http
           ? h('div', { key: 'url', className: 'coreness-field coreness-mcp-field' }, [
             h('label', { key: 'label', className: 'coreness-fieldLabel coreness-mcp-fieldLabel' }, t('field.url')),
             h('input', {
@@ -812,8 +1259,9 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
               'aria-label': t('field.command'),
               onChange: (event) => act.patch({ command: event.target.value }),
             }),
+              h('p', { key: 'help', className: 'coreness-mcp-dim coreness-dim' }, t('help.command')),
           ]),
-        http || corporate ? null : h('div', { key: 'args', className: 'coreness-field coreness-mcp-field' }, [
+        http ? null : h('div', { key: 'args', className: 'coreness-field coreness-mcp-field' }, [
           h('label', { key: 'label', className: 'coreness-fieldLabel coreness-mcp-fieldLabel' }, t('field.args')),
           h('textarea', {
             key: 'area',
@@ -823,6 +1271,7 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
             'aria-label': t('field.args'),
             onChange: (event) => act.patch({ args: event.target.value }),
           }),
+              h('p', { key: 'help', className: 'coreness-mcp-dim coreness-dim' }, t('help.args')),
         ]),
         h('div', { key: 'timeout', className: 'coreness-field coreness-mcp-field' }, [
           h('label', { key: 'label', className: 'coreness-fieldLabel coreness-mcp-fieldLabel' }, t('field.timeout')),
@@ -837,13 +1286,14 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
             onChange: (event) => act.patch({ timeout: event.target.value }),
           }),
         ]),
+          /* A pair field grows by the rows a person adds to it, so it stands after the fields that are one line
+             each, where the growing does not push a one-line field down the form. */
+        http ? null : pairsField('env', t('field.env'), draft, view, act),
         /* Both maps a row carries stand in the form: the headers a request goes out with, and the environment a
            child process gets. The headers block was taken off the page on a misreading of the user's word (he
            asked that the **row's meta line** stop printing `authorization`, not that the setting go) and he asked
            for it back: "Их теперь не заполнять, не удалять нельзя… Надо вернуть, как было в настройках в MCP". */
         http ? pairsField('headers', t('field.headers'), draft, view, act) : null,
-        http || corporate ? null : pairsField('env', t('field.env'), draft, view, act),
-        corporate ? h('p', { key: 'corporateHelp', className: 'coreness-mcp-dim coreness-dim' }, t('help.corporate')) : null,
       ].filter((field) => field !== null);
 
       /* The form's own pair, in the one order every card of this page keeps and the harness itself keeps: `Cancel`
@@ -875,27 +1325,58 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
          the head of the card the press was made in (`cardOf`), the editor of a row included. The draft is the
          fact that stands when the news goes. */
       const note = draft.entryId === null && noteNames(view.note ?? null, draftRow(draft)) ? view.note : null;
+      /* What this save will drop, when the draft leaves the branch: the row as the file holds it, read against
+         the branch the draft now carries. The line stands before the press — the loss is named while the reader
+         can still change his mind — and nothing is said when the branch stays. */
+      const row = (view.picture?.rows ?? []).find((one) => one.entryId === draft.entryId) ?? null;
+      const lost = lostFields(row, draft);
+
+      /* The same press as the strip's, where the strip does not carry it: the flow stands to run the attempt at
+         this row and the standard's signals announced no door, so the row's own settings are the only way a
+         person can ask (requirement 6). A draft that is not saved yet has no row to sign in, and no control is
+         drawn for one. */
+      const signin = row === null ? null : (view.signins ?? {})[row.entryId] ?? null;
+      const signHere = row !== null && signinPlace(row, signin) === 'settings';
 
       return h('div', { key: 'editor', className: 'coreness-mcp-editor' }, [
         h('div', { key: 'titleRow', className: 'coreness-mcp-editorHead' }, [
           h('span', { key: 'title', className: 'coreness-mcp-editorTitle' },
             draft.entryId === null ? t('add.title') : t('edit.title', { server: draft.server })),
-          /* The editor is a head of its own, and its answer stands where Qoder's stands: the top right. The
-             row's own head keeps its answer in the middle — two heads, two places, both by the user's word. */
-          note === null ? null : h('span', {
-            key: 'note',
-            className: 'coreness-mcp-editorNote',
-            'data-tone': noteToneOf(note),
-            'data-note': 'editor',
-            role: 'status',
-            'aria-live': 'polite',
-          }, noteTextOf(note)),
+          h('span', { key: 'beside', className: 'coreness-mcp-editorBeside' }, [
+            signHere
+              ? h('button', {
+                key: 'signin',
+                type: 'button',
+                className: 'coreness-mcp-button coreness-button',
+                disabled: busy,
+                onClick: () => act.signin(row),
+              }, t('signin'))
+              : null,
+            /* The editor is a head of its own, and its answer stands where Qoder's stands: the top right. The
+               row's own head keeps its answer in the middle — two heads, two places, both by the user's word. */
+            note === null ? null : h('span', {
+              key: 'note',
+              className: 'coreness-mcp-editorNote',
+              'data-tone': noteToneOf(note),
+              'data-note': 'editor',
+              role: 'status',
+              'aria-live': 'polite',
+            }, noteTextOf(note)),
+          ].filter((one) => one !== null)),
         ]),
         /* The one sentence about the fields this form does not carry — the host's own kept fields among them
            and every field a newer host may add. It stood in the roster as a list of
            identifiers, where a reader could do nothing with it; here it is said once, in words, beside the
            fields it is about, and it names no identifier of a plugin's business. */
         h('p', { key: 'kept', className: 'coreness-mcp-dim coreness-dim' }, t('editor.kept')),
+        lost === null ? null : h('p', {
+          key: 'drop',
+          className: 'coreness-mcp-warn',
+          'data-note': 'drop',
+        }, t('editor.drop', {
+          kind: KIND_LABELS[row.transport] === undefined ? row.transport : t(KIND_LABELS[row.transport]),
+          fields: lost.join(', '),
+        })),
         ...fields,
         h('div', { key: 'actions', className: 'coreness-mcp-editorActions' }, actions),
       ]);
@@ -917,6 +1398,36 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
         }, t('pair.add'))),
       ]);
     }
+
+
+    /**
+     * The fields the file holds on the branch an edit is leaving, in the page's own words.
+     *
+     * An edit that changes the branch writes the platform's own branch and nothing else, so the fields of the
+     * branch being left go with it. They are named before the press — and only the ones the file really holds:
+     * a key the file never carried is not a loss, and a key neither branch draws is not dropped at all.
+     */
+    function lostFields(row, draft) {
+      if (row === null || draft.entryId === null) return null;
+      if (row.transport === null || row.transport === undefined) return null;
+      if (draft.transport === row.transport) return null;
+      const full = (value) => value !== null && value !== undefined && value !== '';
+      /* The fields of the branch being left that the file holds: the host writes the branch the form sends and
+         deletes the other one, so these go with the save. */
+      const held = row.transport === 'stdio'
+        ? [full(row.command) && 'field.command', (row.args ?? []).length > 0 && 'field.args', full(row.cwd) && 'field.cwd', (row.env ?? []).length > 0 && 'field.env']
+        : [full(row.url) && 'field.url', (row.headers ?? []).length > 0 && 'field.headers'];
+      /* And the keys of the branch being entered that the file holds: the form sends that branch's boxes, and a
+         box the file never filled arrives empty and takes its key off the row. The picture carries them among
+         the keys the form does not draw — beside the carried keys, which are written back exactly as the file
+         holds them and are therefore named by no line here. */
+      const drawn = draft.transport === 'stdio' ? ['command', 'args', 'env', 'cwd'] : ['url', 'headers'];
+      const words = { command: 'field.command', args: 'field.args', env: 'field.env', cwd: 'field.cwd', url: 'field.url', headers: 'field.headers' };
+      const entered = (row.kept ?? []).filter((key) => drawn.includes(key)).map((key) => words[key]);
+      const names = [...new Set([...held, ...entered].filter((one) => typeof one === 'string'))].map((word) => t(word));
+      return names.length === 0 ? null : names;
+    }
+
 
     /** The confirmation of a removal: the host's own dialog over its own mask. */
     function dialogOf(row, view, act) {
@@ -1051,6 +1562,8 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
            marking, no hiding, no word instead of a value. An expression stands here as it is written. */
         headers: (row.headers ?? []).map((pair, index) => ({ key: `header.${index}`, name: pair.name, value: String(pair.value ?? '') })),
         env: (row.env ?? []).map((pair, index) => ({ key: `env.${index}`, name: pair.name, value: String(pair.value ?? '') })),
+        values: {},
+        ticks: {},
       };
     }
 
@@ -1066,24 +1579,28 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
         timeout: '',
         headers: [],
         env: [],
+        values: {},
+        ticks: {},
       };
     }
 
     /**
      * The form as the route reads it: the fields the chosen transport uses, and nothing else.
      *
-     * What the row keeps beyond this is the host's own decision, the one its own config builder takes:
-     * the branch a transport does not use is deleted there, a pair list merges with what
-     * the row already holds, and `failOnStartupError`/`toolCallTimeoutMs` are the host's fields — the
-     * corporate kind needs the first of them set, which is exactly why this form never sends it.
+     * What the row keeps beyond this is the host's own decision, the one its own config builder takes: the
+     * branch a transport does not use is deleted there, a pair list merges with what the row already holds,
+     * and an empty box takes its key off the row. The call timeout belongs to both
+     * branches, so both save with them.
      */
     function formOf(draft) {
-      const common = { serverName: draft.server, transport: draft.transport, timeout: draft.timeout };
-      if (draft.transport === 'corporate') {
-        /* The bridge is the host's to write: `command: 'dp'` and its arguments are not the page's to
-           send, and a save carrying either is refused in words (`bad-transport`). */
-        return { ...common, url: draft.url };
-      }
+      const common = {
+        /* A row this form creates or saves comes up loud: the product offers no way to be silent about a server
+           that never started, and the control that used to offer it is gone. */
+        loud: true,
+        serverName: draft.server,
+        transport: draft.transport,
+        timeout: draft.timeout,
+      };
       if (draft.transport === 'streamable-http') {
         return {
           ...common,
@@ -1120,9 +1637,10 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
      * its hold is measured over are the same one, so it is written once.
      */
     function noteTextOf(note) {
-      return note.fault === undefined
-        ? t(note.word, note.params ?? {})
-        : t('state.refused');
+      /* A refusal's word is the page's own ('Not saved') unless the press that was refused carries a word of
+         its own — a refused sign-in reads as a refused sign-in and not as a failed save. */
+      const word = note.fault === undefined ? note.word : (note.word ?? 'state.refused');
+      return t(word, note.params ?? {});
     }
 
 
@@ -1222,6 +1740,16 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
          so a row's disclosure and its menu are the section's own state, held by the entryId. */
       const [openRows, setOpenRows] = React.useState(() => new Set());
       const [openMenu, setOpenMenu] = React.useState(null);
+      /* What the page's own door answered about each row's sign-in, by entryId, and what a person has typed
+         into a question the flow asked, by server. Both are the section's own: the door is asked and not
+         remembered across a mount, and a half-typed answer is nobody's but the person's. `joined` names the
+         rows this session has already written the reference into, so one grant is joined once. */
+      const [signins, setSignins] = React.useState({});
+      /* The reason of every row the platform reported as failed, by the row's own entry: read off the host's
+         own failure record, and drawn as the one sentence in the card's body. */
+      const [reasons, setReasons] = React.useState({});
+      const [answers, setAnswers] = React.useState({});
+      const [joined, setJoined] = React.useState({});
 
       /* An open menu is closed by a press outside it or by Escape, wherever the press lands: the listener
          stands on the document while one menu is open and leaves with it. */
@@ -1242,8 +1770,17 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
         };
       }, [openMenu]);
 
-      /** A picture the user asked for: drawn, and followed while something in it is still moving. */
+      /**
+       * A picture the user asked for: drawn, and followed while something in it is still moving.
+       *
+       * The host's own sentence about a row is taken **here**, where the reading arrives, and not where the
+       * row's word is drawn: the face carries the one word (`rowState`) and the platform's line — with the
+       * address, the attempt count and the delay it names — goes to the console, which is this page's own
+       * door for a reason that may not stand on the face. It is said once per new sentence: a wait reads
+       * the same picture every second, and a log line repeated sixty times says less than one.
+       */
       const take = (picture) => {
+        tellTroubles(picture);
         setState({ status: 'ready', picture, fault: null });
         setSpent(unsettled(picture) ? 0 : null);
       };
@@ -1300,6 +1837,7 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
             setSpent(null);
             return;
           }
+          tellTroubles(next);
           setState((current) => (current.picture !== null && JSON.stringify(current.picture) === JSON.stringify(next)
             ? current
             : { status: 'ready', picture: next, fault: null }));
@@ -1307,6 +1845,161 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
         }, everyMs);
         return () => clearTimeout(timer);
       }, [spent, state.picture]);
+
+      /* The rows a sign-in could be offered on: an MCP row, switched on, with an address. Whether the flow
+         can actually run there is not this half's question — the page's own door settles it at the address
+         itself, and a row it answered nothing about is offered nothing. */
+      const candidates = (state.picture?.rows ?? [])
+        .filter((row) => row.shape === true && row.enabled === true && typeof row.url === 'string' && row.url !== '')
+        .map((row) => ({ entryId: row.entryId, server: row.server ?? row.id, resource: row.url }));
+      const candidateKey = JSON.stringify(candidates);
+
+      /**
+       * The flow's own long words about a refused sign-in, told to the console wherever the answer arrives.
+       *
+       * The face carries one short sentence and the code (`signinBlock`), and the flow's own sentence names the
+       * address, the endpoint and the parameter — words a person repeats when asking about it — so it goes to
+       * the console through this page's one door. It is said **wherever the answer lands**: the door's own read
+       * of the rows, and the answer a press made, which is the same door. And it is said once per new refusal:
+       * the door is read again while a person waits, and the same refusal is not news the second time.
+       * @param {object[]} list what the page's own door answered, one entry per row it was asked about
+       */
+      const tellSignins = (list) => {
+        for (const one of list ?? []) {
+          if (one === null || (one.state !== 'refused' && one.state !== 'cancelled')) continue;
+          const code = typeof one.code === 'string' && one.code !== '' ? one.code : 'signin-failed';
+          const said = `${one.state}\u0000${code}\u0000${one.message ?? ''}`;
+          if (toldSignin.get(one.server) === said) continue;
+          toldSignin.set(one.server, said);
+          /* The flow's own sentence is the half the face may not carry. Where the flow said nothing beyond its
+             code — a withdrawal — the face's short sentence is the whole answer, and the console is not told the
+             page's own words twice. */
+          if (typeof one.message === 'string' && one.message !== '') {
+            statusDetail(one.server, `${faultLines(code, null)[0]} — ${one.message}`);
+          }
+        }
+      };
+
+      /* The rows are asked about when the rows themselves change, and not on every read: the door's own
+         answer costs a request to somebody's server the first time it is asked, and a picture read once a
+         second would knock on it once a second. */
+      React.useEffect(() => {
+        if (candidateKey === '[]') return undefined;
+        let live = true;
+        askPage({ action: 'sign-ins', rows: JSON.parse(candidateKey) }).then(
+          (answer) => {
+            if (live) {
+              tellSignins(answer.signins);
+              setSignins(byEntry(answer.signins));
+            }
+          },
+          (error) => {
+            /* A read that failed claims nothing: the states go, so no row keeps a control or a wait the door
+               no longer answers for, and the reason stands where a reader who needs it looks. */
+            if (!live) return;
+            setSignins({});
+            statusDetail(t('section'), `the sign-in door could not be read: ${reasonOf(error)}`);
+          },
+        );
+        return () => {
+          live = false;
+        };
+      }, [candidateKey]);
+
+      /* A sign-in waits for a person, and a person is not on a clock: the state is read again while one waits,
+         and the reading stops when none does. A read that failed stops it too — the states it could not
+         refresh are dropped rather than kept as a wait nothing stands behind. */
+      const waiting = Object.values(signins)
+        .filter((one) => one?.state === 'waiting')
+        .map((one) => one.server)
+        .sort()
+        .join(',');
+      React.useEffect(() => {
+        if (waiting === '') return undefined;
+        const timer = setTimeout(async () => {
+          try {
+            const answer = await askPage({ action: 'sign-ins', rows: JSON.parse(candidateKey) });
+            tellSignins(answer.signins);
+            setSignins(byEntry(answer.signins));
+          } catch (error) {
+            setSignins({});
+            statusDetail(t('section'), `the sign-in door could not be read: ${reasonOf(error)}`);
+          }
+        }, SIGNIN_POLL_MS);
+        return () => clearTimeout(timer);
+      }, [waiting, signins, candidateKey]);
+
+      /**
+       * The long words of a failure, told to the console wherever the reason is read.
+       *
+       * The face carries one sentence — the server's own when it wrote one, the page's own for the family
+       * otherwise — and the platform's own record of it names the status, the SDK's classification and the
+       * responder's body as it came, which is what a person repeats when asking about it. So it goes to the
+       * console through this page's one door, and once per new record: a wait reads the same picture every
+       * second, and the same record is not news the second time.
+       * @param {object[]} list what the page's own door answered, one entry per row it was asked about
+       */
+      const tellReasons = (list) => {
+        for (const one of list ?? []) {
+          const reason = one?.reason ?? null;
+          if (reason === null || typeof reason.detail !== 'string' || reason.detail === '') continue;
+          const said = `${reason.family}\u0000${reason.detail}`;
+          if (toldReason.get(one.entryId) === said) continue;
+          toldReason.set(one.entryId, said);
+          statusDetail(one.server ?? one.entryId, reason.detail);
+        }
+      };
+
+      /* The rows the platform reported as failed: the only rows whose reason can be read at all, because the
+         record is kept by the fiber that failed and a row that came up has none. The rows are asked about when
+         the failing set itself changes — a row that keeps standing failed is not asked again on every read,
+         and the platform's record of a failure does not move while it stands. */
+      const failed = (state.picture?.rows ?? [])
+        .filter((row) => row.shape === true && row.enabled === true && row.phase === 'failed')
+        .map((row) => ({ entryId: row.entryId, server: row.server ?? row.id }));
+      const failedKey = JSON.stringify(failed);
+      React.useEffect(() => {
+        if (failedKey === '[]') {
+          setReasons({});
+          return undefined;
+        }
+        let live = true;
+        askPage({ action: 'reasons', rows: JSON.parse(failedKey) }).then(
+          (answer) => {
+            if (!live) return;
+            tellReasons(answer.reasons);
+            /* Keyed by the row's own entry, and the reason itself as the value: the card reads one sentence
+               off it, and a row the door answered nothing about keeps no entry at all. */
+            setReasons(Object.fromEntries((answer.reasons ?? [])
+              .filter((one) => one?.reason != null)
+              .map((one) => [one.entryId, one.reason])));
+          },
+          (error) => {
+            /* A read that failed claims nothing: the reasons go, so no card keeps a sentence the door no
+               longer stands behind, and the refusal itself stands where a reader who needs it looks. */
+            if (!live) return;
+            setReasons({});
+            statusDetail(t('section'), `the reason of a row that did not start could not be read: ${reasonOf(error)}`);
+          },
+        );
+        return () => {
+          live = false;
+        };
+      }, [failedKey]);
+
+      /* A grant that stands and a row that does not read it is the other half of one press: the record was
+         committed and the row was never joined to it, by a page closed mid-way or by a restart of the
+         application. The write is the same one the press makes, and it never stands over a header a person
+         wrote. */
+      React.useEffect(() => {
+        for (const row of state.picture?.rows ?? []) {
+          const signin = signins[row.entryId] ?? null;
+          if (!needsJoin(row, signin)) continue;
+          if (joined[row.entryId] === true) continue;
+          setJoined((now) => (now[row.entryId] === true ? now : { ...now, [row.entryId]: true }));
+          void join(row, signin);
+        }
+      }, [signins, state.picture]);
 
       /**
        * One save: the answer replaces the picture, and its outcome is said in the card it belongs to.
@@ -1342,6 +2035,53 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
         }
       };
 
+      /* The file's own word on coming up loud is carried, not overwritten: a row whose file already names the key
+         is saved without it, so the host leaves the value exactly as the file has it — which is what the picture
+         says beside the row — while every row this form creates or saves is written loud. */
+      const formFor = (draft) => {
+        const row = (state.picture?.rows ?? []).find((one) => one.entryId === draft.entryId) ?? null;
+        const form = formOf(draft);
+        if ((row?.kept ?? []).includes('failOnStartupError')) delete form.loud;
+        return form;
+      };
+      /**
+       * A refusal of the sign-in door, said where the press was made and in the console's own door.
+       *
+       * The word is the section's own — a refused sign-in reads as a refused sign-in — and the code's
+       * sentence goes to the console, which is where a reason that leaves the face stands for this page.
+       */
+      const refusePress = (server, error, word) => {
+        const code = error instanceof Refused ? error.code : 'signin-failed';
+        const note = { fault: { code, message: reasonOf(error) }, word, params: { server }, server };
+        setNote(note);
+        statusDetail(server, noteReason(note));
+      };
+
+      /**
+       * The write that joins a row to the grant its sign-in committed: the reference into the row's own
+       * header, and the row activated afresh, because the transport holds the headers it was built with —
+       * a token reaches a connection by the row being loaded again and by nothing else.
+       */
+      const join = async (row, signin) => {
+        const server = row.server ?? row.id;
+        setBusy(row.entryId);
+        try {
+          await ask('POST', {
+            action: 'reference',
+            entryId: row.entryId,
+            reference: signin.reference.key,
+            expression: signin.reference.expression,
+          });
+          const picture = await ask('POST', { action: 'reload', entryId: row.entryId });
+          setNote({ word: 'signin.done', params: { server }, server });
+          take(picture);
+        } catch (error) {
+          refusePress(server, error, 'signin.refused');
+        } finally {
+          setBusy(null);
+        }
+      };
+
       const act = {
         open: (draft) => {
           setNote(null);
@@ -1351,22 +2091,22 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
         patch: (patch) => setEditor((current) => (current === null ? current : { draft: { ...current.draft, ...patch } })),
         patchPair: (kind, index, patch) => setEditor((current) => {
           if (current === null) return current;
-          const pairs = current.draft[kind].map((pair, at) => (at === index ? { ...pair, ...patch } : pair));
+          const pairs = (current.draft[kind] ?? []).map((pair, at) => (at === index ? { ...pair, ...patch } : pair));
           return { draft: { ...current.draft, [kind]: pairs } };
         }),
         addPair: (kind) => setEditor((current) => {
           if (current === null) return current;
-          const pairs = current.draft[kind];
-          return { draft: { ...current.draft, [kind]: [...pairs, { key: `${kind}.${pairs.length}.${Date.now()}`, name: '', value: '' }] } };
+          const pairs = current.draft[kind] ?? [];
+          return { draft: { ...current.draft, [kind]: [...pairs, { key: kind + "." + pairs.length + "." + Date.now(), name: "", value: "" }] } };
         }),
         dropPair: (kind, index) => setEditor((current) => {
           if (current === null) return current;
-          return { draft: { ...current.draft, [kind]: current.draft[kind].filter((pair, at) => at !== index) } };
+          return { draft: { ...current.draft, [kind]: (current.draft[kind] ?? []).filter((pair, at) => at !== index) } };
         }),
         save: (draft) => save(
           draft.entryId === null
-            ? { action: 'add', form: formOf(draft) }
-            : { action: 'edit', entryId: draft.entryId, form: formOf(draft) },
+            ? { action: 'add', form: formFor(draft) }
+            : { action: 'edit', entryId: draft.entryId, form: formFor(draft) },
           draft.server,
         ),
         ask: (row) => {
@@ -1374,8 +2114,71 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
           setConfirm(row);
         },
         cancelRemove: () => setConfirm(null),
-        remove: (row) => save({ action: 'remove', entryId: row.entryId }, row.server ?? row.id),
+        /**
+         * The removal: the row's grant goes **before** the row does.
+         *
+         * The flow's own records for that server are dropped first, so a row added again is signed in again
+         * rather than silently remembering a token (requirement 7). The drop is asked of the flow through this
+         * page's own door — the page never reaches into the store itself — and a refusal of it is told where a
+         * reason that may not stand on the face goes: the servers file is the person's own, so their press is
+         * not held by a record that could not be dropped, and the trace stands in the console rather than
+         * nowhere.
+         */
+        remove: async (row) => {
+          const server = row.server ?? row.id;
+          try {
+            await askPage({ action: 'forget', server });
+          } catch (error) {
+            statusDetail(server, `the grant was not dropped: ${reasonOf(error)}`);
+          }
+          await save({ action: 'remove', entryId: row.entryId }, server);
+        },
         toggle: (row, enabled) => save({ action: 'toggle', entryId: row.entryId, enabled }, row.server ?? row.id),
+        /* The sign-in: the press starts the attempt through the page's own door, and the card that carries
+           the row opens, because the link the flow hands out stands in its body — the person's next act is
+           to follow it, and it must not stand behind a disclosure nobody opened. */
+        signin: async (row) => {
+          setNote(null);
+          setBusy(row.entryId);
+          try {
+            const answer = await askPage({ action: 'sign-in', entryId: row.entryId, server: row.server ?? row.id, resource: row.url });
+            tellSignins([answer.signin]);
+            setSignins((now) => ({ ...now, [row.entryId]: answer.signin }));
+            setOpenRows((now) => new Set(now).add(row.entryId));
+          } catch (error) {
+            refusePress(row.server ?? row.id, error, 'signin.refused');
+          } finally {
+            setBusy(null);
+          }
+        },
+        /* The question the flow asked, answered; and the wait withdrawn through the platform's own door. */
+        reply: async (row) => {
+          const server = row.server ?? row.id;
+          setBusy(row.entryId);
+          try {
+            const answer = await askPage({ action: 'answer', server, value: (answers ?? {})[server] ?? '' });
+            setAnswers((now) => ({ ...now, [server]: '' }));
+            tellSignins([answer.signin]);
+            setSignins((now) => ({ ...now, [row.entryId]: answer.signin }));
+          } catch (error) {
+            refusePress(server, error, 'signin.refused');
+          } finally {
+            setBusy(null);
+          }
+        },
+        type: (server, value) => setAnswers((now) => ({ ...now, [server]: value })),
+        withdraw: async (row) => {
+          setBusy(row.entryId);
+          try {
+            const answer = await askPage({ action: 'cancel', server: row.server ?? row.id });
+            tellSignins([answer.signin]);
+            setSignins((now) => ({ ...now, [row.entryId]: answer.signin }));
+          } catch (error) {
+            refusePress(row.server ?? row.id, error, 'signin.refused');
+          } finally {
+            setBusy(null);
+          }
+        },
         isBusy: (entryId) => busy === entryId,
         /* The row's disclosure and its menu: the drawing reports the press, the section holds the state. */
         row: (entryId, open) => setOpenRows((current) => {
@@ -1397,12 +2200,17 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
         note,
         open: openRows,
         menu: openMenu,
+        signins,
+        reasons,
+        answers,
       }, act);
     }
 
     return {
       /** The refusals this half knows, for the check that holds the two halves' vocabularies together. */
       refusals: REFUSALS,
+      /** The families of a failure this half can draw, for the same check against the reading in the host half. */
+      reasons: REASONS,
       /** The wait, for the check that holds its rule, its pace and its ceiling against the states it must follow. */
       settle: { first: { ...SETTLE.first }, then: { ...SETTLE.then }, ceiling: SETTLE.ceiling, unsettled },
       /* The hold of a note is not exposed here: the page's one number lives in the page's own hold chunk, and the

@@ -165,16 +165,13 @@ window.__ModuleLoader__.load({
       'models.label': 'Models',
       'models.none': 'The route offers no model in this profile yet',
             'models.effortLabel': 'Reasoning effort',
-      /* The control offers the levels a model's own vendor publishes, and one level of ours. The words
-         below are the states a menu can be in — nobody could read it, the model is not in the listing,
-         the model publishes none, and the vendor has stopped publishing the level the row holds — and
-         each one says what stands instead of leaving an empty list or inventing a level. */
+      /* The words of the effort control: our own level as the menu names it, and the trigger's own title for
+         each of the two levels it can stand on while the row names none. No sentence stands beside the menu —
+         what a model publishes is what its own menu holds — so these three are the whole of what the control
+         says of itself. */
       'models.effortOff': 'Off (ours)',
       'models.effortOurs': 'the vendor publishes no such level: Off is this route\'s own',
       'models.effortRow': 'the route\'s effort stands for this model: {effort}',
-      'models.effortNoCatalogue': 'the vendor\'s levels could not be read: this model\'s own menu is unknown',
-      'models.effortUnknownModel': 'this model is not in the vendor\'s live catalog: its levels are unknown',
-      'models.effortNoMenu': 'this model publishes no reasoning levels: the effort travels as this row sets it',
           'models.note': 'Which of these the agent uses, and with what effort, is chosen on the platform\'s own Models page.',
       'models.failed': 'The catalogue could not be listed for this route',
       'models.model': 'Model',
@@ -197,7 +194,6 @@ window.__ModuleLoader__.load({
       'models.added': 'A row was added',
       'models.addedAgain': 'Another row was added',
       'models.pick': 'Choose a model',
-      'models.unknown': 'not in the live catalog',
       'models.catalogDown': 'live catalog unavailable',
       /* The one word the donor did not need: its section waited for the catalogue inside the read, so a
          picker that was locked was locked for as long as the whole section was absent. Here the section
@@ -1337,7 +1333,8 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * The levels one model's row offers, and what the menu itself has to say.
+     * The levels one model's row offers: that model's own menu, the level that stands for the row, and our
+     * own `Off`, and nothing else.
      *
      * The list is that model's own menu, in the vendor's ascending order: the catalogue publishes it as an
      * object whose keys carry no order at all, and a menu drawn in whatever order two reads happened to give
@@ -1349,15 +1346,21 @@ window.__ModuleLoader__.load({
      * The level that stands is an option even where it is not published, because the control draws what it
      * shows and offers what it draws: an untouched row stands on the route's own effort, and two of the
      * vendor's models publish no `max` at all — a trigger reading `max` with a list that cannot name it would
-     * be a value the reader could not put back after moving away from it. Nothing is asked for in silence
-     * either: the note says which of the two reasons stands.
+     * be a value the reader could not put back after moving away from it.
      *
-     * The note names the state of the menu, never its absence: a listing nobody could read, a model the
-     * listing does not carry, and a model that publishes no menu. A level the row itself names and the menu
-     * does not carry drew a fourth note, and it went the way of the route's own default: where neither side
-     * names a level there is nothing to explain. The row keeps standing in every one of the four.
+     * The menu is where the answers stand, and no sentence stands beside it: what a model publishes is what
+     * its own menu holds, a model that publishes none leaves the standing level and `Off` alone in it, and a
+     * model the listing does not carry has no level of its own to draw at all — the row names the id it
+     * declares with no rate beside it, the id stays an option of the picker so no value is replaced in
+     * silence, and the control carries the route's level in its own title. Three sentences said those states
+     * once and drew a line under the control; they left by the user's word because the line made a row's
+     * height depend on which state its model was in, and the size of the field may not change between
+     * choosing and chosen. The tag that named the first of the three in the row's head left with them, and
+     * its ground is the same shape: the head's place was chosen to keep a line out of the field — which is
+     * exactly where the line struck down here stood, so the two are one defect seen from the head and from
+     * the field.
      */
-    function effortChoices(entry, phase, held, standing) {
+    function effortOptions(entry, held, standing) {
       const menu = Array.isArray(entry?.efforts) ? entry.efforts.filter((one) => typeof one === 'string' && one !== '') : [];
       /* Where neither side names a level there is nothing drawn, and `''` is how this page says "nothing named":
          a `null` reaching the options would put a nameless entry in the menu. */
@@ -1367,12 +1370,7 @@ window.__ModuleLoader__.load({
         .map((level) => ({ value: level, words: level }));
       if (drawn !== '' && options.some((one) => one.value === drawn) === false) options.push({ value: drawn, words: drawn });
       options.push({ value: OFF.id, words: t('models.effortOff') });
-      const note = phase === 'refused' ? t('models.effortNoCatalogue')
-        : phase === 'reading' ? null
-          : entry === undefined ? t('models.effortUnknownModel')
-            : menu.length === 0 ? t('models.effortNoMenu')
-              : null;
-      return { options, note };
+      return options;
     }
 
     /** Where a vendor level stands on the vendor's own scale; a level outside it is drawn last. */
@@ -1405,7 +1403,7 @@ window.__ModuleLoader__.load({
       /* Which of the three states the catalogue is in: still on the wire, answered, or refused with a
          reason. The effort menu is drawn differently in each, and "not read yet" is not "not there". */
       const phase = catalogue !== null ? 'read' : state.catalogue.message === null ? 'reading' : 'refused';
-      const choices = effortChoices(entry, phase, draft.effort, rowEffort);
+      const options = effortOptions(entry, draft.effort, rowEffort);
       return h('li', {
         key: `${id}:${index}`,
         className: 'coreness-qoder-model',
@@ -1424,10 +1422,6 @@ window.__ModuleLoader__.load({
             `${draft.name.trim() !== ''
               ? draft.name
               : typeof entry?.name === 'string' && entry.name !== '' ? entry.name : id === '' ? t('models.pick') : id}${rateWords(entry?.priceFactor) === null ? '' : ` · ${rateWords(entry.priceFactor)}`}`),
-                    /* The mark of an id the live catalogue does not carry: a typo stays visible, and the row is not
-             dropped for it. It is a tag of the row's own header — a line under the picker would move the
-             list under the reader's hand as the catalogue answers. */
-          ...known === false ? [h('span', { key: 'unknown', className: 'coreness-qoder-tag' }, t('models.unknown'))] : [],
         ]),
         ...marks?.description === null || marks?.description === undefined
           ? []
@@ -1478,17 +1472,9 @@ window.__ModuleLoader__.load({
               'aria-label': t('models.effortLabel'),
               title: draft.effort === 'off' ? t('models.effortOurs')
                 : draft.effort === '' && rowEffort !== null ? t('models.effortRow', { effort: rowEffort }) : undefined,
-              options: choices.options,
+              options,
               onChoose: (next) => act.patchRow(index, { effort: next }),
             }),
-            /* What the menu itself has to say — nobody could read it, the listing does not carry this
-               model, the model publishes none, or the level that stands has gone from it (the row's own,
-               or the route's where the row names none). An empty control with no word beside it would
-               read as a model that has no levels, and a level drawn without a word would read as one the
-               model publishes. The note's room is the page's own cut line: it says whatever it says on one
-               line, so no sentence of any length moves the row or the card under it, and the text stays
-               whole in the DOM for whoever reads it there. */
-            choices.note === null ? null : h('p', { key: 'menu', className: 'coreness-qoder-dim coreness-dim coreness-cutLine' }, choices.note),
           ]),
           h('div', { key: 'window', className: 'coreness-field coreness-qoder-field' }, [
             h('label', { key: 'label', className: 'coreness-fieldLabel coreness-qoder-fieldLabel' }, t('models.window')),

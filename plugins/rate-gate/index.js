@@ -67,6 +67,16 @@ export const ROUTE = '/api/coreness.rateGate'
 const REASON_MAX = 300
 
 /**
+ * The code a provider's refusal arrives under.
+ *
+ * The platform's own taxonomy and not this plugin's reading of a status: it is assigned by that reader
+ * out of the answer's text, it is the one code the retry policy treats as transient, and a quota or an
+ * allowance that is spent arrives under codes of its own (`QUOTA`, `ACCOUNT_QUOTA`) — a limit that does
+ * not reopen at a window's edge, which this closure would state wrongly if it answered for them.
+ */
+const REFUSAL_CODE = 'RATE_LIMIT'
+
+/**
  * The row's settings.
  *
  * The plugin-level numbers are ordinary fields: `windowMs`, `maxWaitMs`, the watching mode and the
@@ -248,6 +258,29 @@ export function abortedFinish(signal) {
   }
 }
 
+/** The code a failure's own facts carry, or null where this shape names none. */
+function codeIn(failure) {
+  const code = failure?.code
+  return typeof code === 'string' && code !== '' ? code : null
+}
+
+/**
+ * The code a refusal carries, from either shape a provider's error takes, or null where it is not one.
+ *
+ * A provider's error arrives as a chunk or as a throw, and each shape keeps the code where its own
+ * vocabulary puts it: a completion's reason carries the `failure` the platform assigned by reading the
+ * answer's text, and a thrown error carries the same code as its own taxonomy, with that failure beside
+ * it. One reader for the two, so a pair cannot be closed by one shape and left open by the other.
+ * @param {unknown} source the chunk a stream yielded, or the error it threw
+ * @returns {string|null} the refusal's code
+ */
+function refusalCodeOf(source) {
+  if (source === null || typeof source !== 'object') return null
+  /* A thrown error is the failure itself; a chunk names it under the completion's own reason. */
+  if (source instanceof Error) return codeIn(source) ?? codeIn(source.failure)
+  return source.type === 'finish' && source.reason?.kind === 'error' ? codeIn(source.reason.failure) : null
+}
+
 /**
  * What the decision was, in the words a reader of the log wants: nothing when the request simply went.
  *
@@ -334,8 +367,23 @@ async function* gatedStream(options, next, { ledger, settings, log }) {
           log(`${where}: the fact ${fact} tokens (input ${observed ?? '—'}) replaces the reservation of ${tokens}, window ${ledger.usedOf(state)}/${state.limit}, estimate factor ${state.factor.toFixed(2)}`)
         }
       }
+      /* A refusal closes the pair for the rest of its window: the one fact about the provider's window
+         that reaches us, and the only one our own estimate cannot reach. It is read here, where the
+         stream is walked, and marked through the same ending the throw below uses. */
+      if (refusalCodeOf(chunk) === REFUSAL_CODE) {
+        decision.lease.refuse()
+        log(`${where}: the provider refused this pair (${REFUSAL_CODE}), it is closed for ${settings.windowMs} ms`)
+      }
       yield chunk
     }
+  } catch (error) {
+    /* A provider's error arrives as a chunk or as a throw, and the throw is the same refusal: the pair is
+       closed before the error goes on to whoever decides whether the step is asked again. */
+    if (refusalCodeOf(error) === REFUSAL_CODE) {
+      decision.lease.refuse()
+      log(`${where}: the provider refused this pair (${REFUSAL_CODE}) by a throw, it is closed for ${settings.windowMs} ms`)
+    }
+    throw error
   } finally {
     /* A stream that carried no usage — and one that died before it — leaves the reservation standing
        for the rest of the window, read as a charge without a fact: the input of a request that reached

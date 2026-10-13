@@ -236,7 +236,7 @@ window.__ModuleLoader__.load({
      * again has this beside it. A mount paints it at once and the read corrects it behind — this section also
      * keeps its own beat, so the correction arrives by itself; the session's *first* mount has nothing and
      * keeps the honest skeleton, because a skeleton is the truth when nothing is known. It holds a read
-     * picture and never the visit's own state — the draft, the open row, the news of a press.
+     * picture and never the visit's own state — the draft, the news of a press.
      */
     /* The holder's name is the section's own; nothing else on the page writes under it. */
     const HELD = '__corenessGateLastRead';
@@ -638,7 +638,7 @@ window.__ModuleLoader__.load({
      * One card per model under a limit: its head carries the pair and the row's own answer, and its body the
      * pair's two pickers, the ceiling and the two controls, so the card is what the row is and nothing else.
      */
-    function rowCard({ row, index, view, act, open, catalog }) {
+    function rowCard({ row, index, view, act, catalog }) {
       const draftRow = view.draft === null ? null : view.draft.rows[index];
       const held = draftRow ?? row;
       const busy = view.busy === true;
@@ -655,7 +655,7 @@ window.__ModuleLoader__.load({
 
       const pairs = pairsOf(catalog);
       return h('li', { key: `row${index}`, className: 'coreness-gate-row coreness-gate-rowCard' }, [
-        h('div', { key: 'card', className: 'coreness-gate-card coreness-card-box', 'data-open': String(open) }, [
+        h('div', { key: 'card', className: 'coreness-gate-card coreness-card-box' }, [
           /* The card is fixed by the user's own word: it is small — a head and one row of fields — and a fold in
              front of four fields costs a press and hides what the section is about. Its head therefore says what
              the row is and presses nothing, and the fields stand under it always. */
@@ -778,7 +778,6 @@ window.__ModuleLoader__.load({
       const acting = {
         patch,
         patchRow: act.patchRow ?? (() => {}),
-        openRow: act.openRow ?? (() => {}),
         removeRow: act.removeRow ?? (() => {}),
         addRow: act.addRow ?? (() => {}),
         apply: act.apply ?? (() => {}),
@@ -800,7 +799,6 @@ window.__ModuleLoader__.load({
             index,
             view: { ...view, busy },
             act: acting,
-            open: view.open === index,
             catalog: view.catalog,
           })),
         ]),
@@ -839,7 +837,6 @@ window.__ModuleLoader__.load({
           read: valuesOf(null),
           draft: null,
           note: null,
-          open: null,
           catalog: null,
           busy: false,
           fault: null,
@@ -957,7 +954,6 @@ window.__ModuleLoader__.load({
             return { view: { ...now.view, draft: { ...nowDraft, rows }, note: null } };
           });
         },
-        openRow: (index) => setState((now) => ({ view: { ...now.view, open: index } })),
         addRow: () => {
           /* A row arrives without a ceiling, so it arrives refused: the strip carries the word from the first
              frame, and the reason leaves the face here, where the row arrives. */
@@ -970,7 +966,6 @@ window.__ModuleLoader__.load({
                 ...now.view,
                 draft: { ...draft, rows: [...draft.rows, { provider: first.provider, model: first.model, tokensPerMinute: null, thresholdRatio: null, dryRun: null, fresh: true }] },
                 note: null,
-                open: draft.rows.length,
               },
             };
           });

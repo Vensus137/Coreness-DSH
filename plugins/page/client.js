@@ -14,18 +14,17 @@
  * a seat: the page draws it itself. A seat nobody fills draws nothing, so the rail carries no row for it and
  * no code stands for the empty case.
  *
- * That first section is the product's overview, drawn in the host's own package-page shape, with one
- * departure: a row the bundle declares without a live entry is counted under the host's own word for a
- * component that is not running instead of the host's silent `enabled: false`, which would call an unknown
- * off.
+ * That first section is the product's own card, drawn in the host's own package-page shape: the product's
+ * name, the version in a capsule tag, the package the composition installed, and the manifest's one-liner.
+ * The composition's rows are deliberately **not** drawn here: what a profile mounts is the platform's own
+ * component list to show — every row, its phase and its enablement — and a count with the rows that did not
+ * arrive was this page's own second door onto a reading the platform already publishes.
  *
- * The facts are read, never written. The bundles are joined with the plugins by entry id, behind the
- * management gate the page applies before either call, and the switches that enable and disable a plugin
- * stay on the platform's own Plugins page: a second set here would be a second owner of one profile file.
- * The read follows the composition while the page stands — a change of the plugin manager and a reset
- * connection re-read it — and the host half of this package stays empty for the same reason: the profile's
- * facts live in host-only services a browser half cannot see, and the remotes are the platform's own door
- * to them.
+ * The facts are read, never written. The card's fields come from the composition's own bundle, behind the
+ * management gate the page applies before the call, and the switches that enable and disable a plugin stay
+ * on the platform's own Plugins page: a second set here would be a second owner of one profile file. The
+ * read follows the composition while the page stands — a change of the plugin manager and a reset
+ * connection re-read it.
  *
  * The look is the product's own markup and CSS, carrying `--dsw-alias-*` tokens as the only shared styling;
  * the platform's control library is deliberately not required as a module, as its own instruction to a page
@@ -59,20 +58,12 @@ const STYLE_ID = 'coreness-page-style';
     const OUR_SECTION = 'product';
 
     /* Registered per locale: the chain of any other language ends at `en`, so one dictionary answers
-       for all. The count templates, the tag template and the tag words are the host's own; the word of
-       the last count is the host's `rowStateIdle` ("Not running"), the one the host gives a component
-       that is declared and not running. */
+       for all. The tag template and the tag words are the host's own. */
     const EN = {
       panel: 'Coreness',
       'section.product': 'The product',
       'product.off': 'Off',
       'version.tag': 'v{version}',
-      'parts.label': 'Components',
-      'count.total': '{count} total',
-      'count.running': '{count} running',
-      'count.off': '{count} off',
-      'count.failed': '{count} failed',
-      'count.notRunning': '{count} not running',
     };
 
     /* The host's own sheets, copied rule for rule and carried by its tokens alone: the settings nav, the
@@ -130,9 +121,6 @@ const STYLE_ID = 'coreness-page-style';
    it is the block under a section's head, and the head does not carry it. What parts the children themselves is
    a margin each one brings, which a room declared here would not carry. */
 .coreness-sectionBody{flex-direction:column;min-width:0;padding-top:28px;display:flex}
-/* The page's section root draws this body — the wrapper the page's own section stands in — so it stands here once,
-   beside the section furniture above: the shape .coreness-sectionBody already has. */
-.coreness-sectionRoot{flex-direction:column;display:flex}
 /* The field family: the boxed field's body and its two states stand once here, worn beside its own class by the
    MCP's and the Qoder's fields; the disabled look is the whole family's, and its selector carries the state so
    it outranks a member's own base — the picker's trigger carries cursor:pointer, and a bare class of the same
@@ -189,12 +177,6 @@ const STYLE_ID = 'coreness-page-style';
    row 206, the card 687×1348 — and the ninety pixels are the five rows' one line each, which is what a longer
    sentence costs the card where this shape does not stand. */
 .coreness-cutLine{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* The block under the product's own card stands at the same distance as a card inside a section: 12, the number
-   the whole page names for "a card to what follows it"; the user read the larger pass that stood there before it
-   as "the card is made by size, not by intervals… there is a big pass there too". The product card itself carries
-   no height at all: its box is its parts (the title row, the name, the description) and one 8 between them, the
-   sibling number. The panel's own absent padding and radius is a decision of its own and is not touched here. */
-.coreness-sections{flex-direction:column;margin-top:12px;display:flex}
 /* A section's heading is a row of its own kind: its parts stand on a shared baseline, and a heading may carry
    its line inside itself as a column, so it wears no card head and this room is the heading's own. The two
    rows read the same number and are two facts. */
@@ -264,7 +246,7 @@ const STYLE_ID = 'coreness-page-style';
    and is worn beside its own class by every element that draws it, so a tone moves in one place and not in ten.
    The element's own tone attribute is what scopes the rule: this sheet is injected before the sections' own, and
    an unscoped class of the same weight would lose to the neutral colour each section paints on the same element
-   (the gone line's grey, the trouble line's amber) — the fold would then be a rule that changes nothing. The
+   (the gone line's grey, a state word's own colour) — the fold would then be a rule that changes nothing. The
    words stay the sections' own: the gate says error, the MCP's menu says danger, the status map says fault, and
    each section maps its word to this class where it draws. The strip's own three rules above are not this: their
    bodies carry a fallback these do not, and one spelling of a colour is a decision, not a copy. */
@@ -342,27 +324,6 @@ const STYLE_ID = 'coreness-page-style';
      */
     let lastRead = null;
 
-    /** The count line over the components: the total, then only the states that occur. */
-    function countLine(rows) {
-      const running = rows.filter((row) => row.live && row.enabled && row.phase === 'active').length;
-      const off = rows.filter((row) => row.live && !row.enabled).length;
-      const failed = rows.filter((row) => row.phase === 'failed').length;
-      /* A row the bundle declares and the live graph does not carry has no enablement to read, so it
-         is not counted as off: it is counted under the host's own word for a component that is
-         declared and not running. The host's own line calls such a row off, because its join writes
-         `enabled: live?.enabled ?? false` — a substitution this page refuses. */
-      const notRunning = rows.filter((row) => !row.live).length;
-      /* The rule of the line is the host's: the total always, a state only when it
-         occurs, so a departure stands out by being there at all. */
-      return [
-        t('count.total', { count: String(rows.length) }),
-        ...running > 0 ? [t('count.running', { count: String(running) })] : [],
-        ...off > 0 ? [t('count.off', { count: String(off) })] : [],
-        ...failed > 0 ? [t('count.failed', { count: String(failed) })] : [],
-        ...notRunning > 0 ? [t('count.notRunning', { count: String(notRunning) })] : [],
-      ].join(' · ');
-    }
-
     /** What the overview says about the product's own plugin, as the host answers. */
     async function readComposition() {
       const failed = (reason) => ({ status: 'error', reason });
@@ -371,29 +332,18 @@ const STYLE_ID = 'coreness-page-style';
       if (!inventory.ok) return failed(`${inventory.error.code}: ${inventory.error.message}`);
       if (inventory.value.managementAvailable !== true) return { status: 'unavailable' };
 
-      const [bundles, plugins] = await Promise.all([
-        ctx.remote.pluginManager.listBundles(),
-        ctx.remote.pluginManager.listPlugins(),
-      ]);
-      const refused = [bundles, plugins].find((answer) => !answer.ok);
-      if (refused !== undefined) return failed(`${refused.error.code}: ${refused.error.message}`);
+      const bundles = await ctx.remote.pluginManager.listBundles();
+      if (!bundles.ok) return failed(`${bundles.error.code}: ${bundles.error.message}`);
 
       const bundle = bundles.value.find((item) => item.name === PACKAGE);
       if (bundle === undefined) return { status: 'absent' };
+
       return {
         status: 'ready',
         name: bundle.name,
         version: bundle.version,
         description: bundle.description,
         enabled: bundle.enabled,
-        rows: bundle.rows.map((row) => {
-          const live = row.entryId === undefined
-            ? undefined
-            : plugins.value.find((plugin) => plugin.entryId === row.entryId);
-          return live === undefined
-            ? { live: false, enabled: false, phase: null }
-            : { live: true, enabled: live.enabled === true, phase: live.fiberPhase ?? null };
-        }),
       };
     }
 
@@ -492,21 +442,14 @@ const STYLE_ID = 'coreness-page-style';
           }, t('product.off')),
       ];
 
-      return h('div', { className: 'coreness-overview coreness-sectionBody' }, [
+      return h('div', { className: 'coreness-overview coreness-sectionBody' },
         h('div', { key: 'card', className: 'coreness-card coreness-card-body' }, [
           h('div', { key: 'title', className: 'coreness-titleRow' }, titleRow),
           h('p', { key: 'name', className: 'coreness-name' }, h('code', null, state.name)),
           state.description === undefined
             ? null
             : h('p', { key: 'desc', className: 'coreness-desc' }, state.description),
-        ]),
-        h('div', { key: 'parts', className: 'coreness-sections' },
-          h('div', { className: 'coreness-sectionRoot' },
-            h('div', { className: 'coreness-sectionHead' }, [
-              h('h4', { key: 'label', className: 'coreness-sectionTitle' }, t('parts.label')),
-              h('span', { key: 'count', className: 'coreness-sectionCount' }, countLine(state.rows)),
-            ]))),
-      ]);
+        ]));
     }
 
     /** The rail's rows: the product's own section first, then whatever other plugins declared. */
@@ -584,7 +527,9 @@ const STYLE_ID = 'coreness-page-style';
          provider directory, the credential store the token is written to, the settings mirror the
          reference is read from, and the model catalogue. A chunk borrows the context of the entry
          that pulled it, so the namespaces it uses are declared here, in one place — the platform's own
-         models page declares the same four. */
+         models page declares the same four. The one read that is not a remote is this package's own
+         route, asked with `fetch` like every section's: the rows the composition's store holds that
+         the live graph does not carry. */
       inject: [
         'slots',
         'locale',

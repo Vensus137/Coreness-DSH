@@ -39,6 +39,19 @@
         path: ./mcp-servers.yml
         initial: []
 
+    # The flow's row: host-only like the two above it, and the only row of this bundle that owns an
+    # authorization rather than a surface. It carries no config — what it owns is the flow of a server
+    # that answers `401` with an OAuth door, and every number it works with is read from that server's
+    # own metadata. It asks for one service, the platform's credential records, where the tokens of a
+    # server live: no secret of any kind stands in this file, in the package or in a log.
+    #
+    # It owns the flow and nothing else: not the connection (the platform's own MCP client carries
+    # that), not the row (the MCP plugin writes it), not a field of the form (the page draws it). The
+    # step that joins it to a row is the next card's, and its shape is already measured: the platform's
+    # own authorization door hands out the browser step and the web server takes the callback back.
+    - id: coreness-oauth
+      name: '@coreness/dsh/plugins/oauth'
+
     # The journal's row: the limits of its rotation and the limit of its selection.
     # The donor's price setting does not come over — the product does not count the
     # price of a task (the user's decision of 06.10).

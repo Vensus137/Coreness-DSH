@@ -402,6 +402,8 @@ export class GateLedger {
           timer: null,
           pumping: false,
           factor: 1,
+          /* The moment a refusal reopens the pair, or 0 while the provider has refused nothing. */
+          closedUntil: 0,
           maxUsed: 0,
           maxWouldWaitMs: 0,
           counters: { sends: 0, holds: 0, forced: 0, oversize: 0, wouldWait: 0, aborted: 0, cancelled: 0, released: 0 },
@@ -536,6 +538,9 @@ export class GateLedger {
         queued: state.queue.length,
         waitingMs: head === undefined ? 0 : Math.max(0, now - head.enqueuedAt),
         holdUntilMs: head?.releaseAtMs ?? null,
+        /* A pair the provider has refused: the moment it reopens, read beside the wait a surface already
+           draws, so a hold can be told from a refusal without a clock. */
+        closedUntilMs: state.closedUntil > now ? state.closedUntil : null,
         sends: state.counters.sends,
         holds: state.counters.holds,
         forced: state.counters.forced,
@@ -628,7 +633,36 @@ export class GateLedger {
         if (index !== -1) state.entries.splice(index, 1)
         this.#pump(state)
       },
+      /**
+       * The provider refused this pair: the pair is closed to the end of its own window.
+       *
+       * The third ending, and the only one that carries news about the provider's window rather than about
+       * this entry: it stands apart from `settle` and `release`, so a refusal reads the same whether the
+       * stream yielded it as a completion or threw it, and so it lands whatever became of the reservation.
+       */
+      refuse: () => this.#refuse(state, this.#now()),
     }
+  }
+
+  /**
+   * Close a pair the provider has refused, to the end of its own window.
+   *
+   * A refusal is a fact about the provider's window and not about ours, and it is the one fact our own
+   * count cannot reach: it arrives while our window may stand nearly empty — twenty refusals were measured
+   * at a hundred spent tokens — so the requests of that pair would keep going out to a closed door until
+   * our own estimate climbed to the ceiling. One window is the whole of the closure, and it is exact: the
+   * entry the refusal met was admitted a breath earlier, so it leaves the window at the same moment the
+   * closure ends, and nothing enters while the pair is closed. A refusal that arrives while the pair is
+   * already closed — a request sent before the closure — extends it rather than shortening it; the moment
+   * lives on the pair's own state, ages out by time alone, and goes when the pair's row does.
+   * @param {object} state the pair's own state
+   * @param {number} now the moment the provider refused
+   */
+  #refuse(state, now) {
+    state.closedUntil = Math.max(state.closedUntil, now + state.settings.windowMs)
+    /* Whoever waits is woken at the closure's end rather than at the moment its own window would have
+       freed: a ticket armed earlier is re-armed here, or a pair that reopened would stand idle. */
+    this.#pump(state)
   }
 
   /** The ring of latest decisions: the page explains a held or forced request by them. */
@@ -742,15 +776,27 @@ export class GateLedger {
    *
    * A request larger than the whole ceiling can never fit; it waits for the window to be empty and no
    * longer, which is what keeps it from waiting forever for room that cannot exist.
+   *
+   * A pair the provider has refused is short of room whatever its window holds, and by however little it
+   * spent: the closure is the whole shortfall, for every request of the pair and for one larger than the
+   * ceiling too. Its length is not a number of tokens and is answered where a length is answered —
+   * `#timeUntilFree` — which is why the figure here only has to be non-zero.
    */
   #deficit(state, tokens, now) {
+    if (state.closedUntil > now) return Math.max(1, tokens)
     const used = this.#used(state, now)
     if (tokens > state.limit) return used === 0 ? 0 : used
     return Math.max(0, used + tokens - state.limit)
   }
 
-  /** When the shortfall will be gone: the moment the entries adding up to it leave the window. */
+  /**
+   * When the shortfall will be gone: the moment the closure ends, or the entries adding up to it leave.
+   *
+   * A pair the provider refused waits for its closure and not for its window, whatever the window holds:
+   * the closure outlives the entries that would free an ordinary shortfall, so it is read first.
+   */
   #timeUntilFree(state, deficit, now) {
+    if (state.closedUntil > now) return state.closedUntil - now
     if (deficit <= 0) return 0
     let accumulated = 0
     for (const entry of state.entries) {

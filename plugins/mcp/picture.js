@@ -14,7 +14,7 @@
  * @module @coreness/dsh/plugins/mcp/picture
  */
 
-import { MCP_MODULE, addressOf, keptOf, kindOf, pairsOf, publicPrefix, rawToolName, refsOf, serverNameOf } from './row.js'
+import { MCP_MODULE, keptOf, kindOf, pairsOf, publicPrefix, rawToolName, refsOf, serverNameOf } from './row.js'
 import { isTrouble, named } from './trouble.js'
 
 /**
@@ -97,10 +97,8 @@ export function pictureOf({ include = null, rows = [], inventory = [], schemas =
 function rowOf(row, live, schemas, server, word) {
   const config = row.config ?? {}
   const shape = row.module === MCP_MODULE
-  /* The kind the form reads: the platform's own transport, or `corporate` for a row that is exactly
-     the bridge's expansion. A corporate row's address is lifted out of the bridge's own arguments —
-     the file holds it there and nowhere else — so the form redraws the row it wrote. */
-  const kind = kindOf(config)
+  /* What the row connects by: the platform's own transport, read from the row and never stored. */
+  const transport = kindOf(config)
 
   return {
     entryId: row.entryId,
@@ -108,15 +106,20 @@ function rowOf(row, live, schemas, server, word) {
     module: row.module,
     shape,
     server,
-    transport: kind,
-    url: kind === 'corporate' ? addressOf(config) : typeof config.url === 'string' ? config.url : null,
+    transport,
+    url: typeof config.url === 'string' ? config.url : null,
     command: typeof config.command === 'string' ? config.command : null,
     args: Array.isArray(config.args) ? config.args.map((item) => String(item)) : [],
     timeout: typeof config.toolCallTimeoutMs === 'number' ? config.toolCallTimeoutMs : null,
+    cwd: typeof config.cwd === 'string' ? config.cwd : null,
+    /* The one sentence the form draws for `failOnStartupError`: a row that failed to come up is
+       otherwise indistinguishable from a server that has no tools. */
+    loud: config.failOnStartupError === true,
     env: pairsOf(config, 'env'),
     headers: pairsOf(config, 'headers'),
-    /* What the form carries without editing: the names travel, so the user is told the row holds
-       more than the form shows; the values stay in the file. */
+    /* What the form carries without drawing: the names travel, so the user is told the row holds more
+       than the form shows; the values stay in the file. A key of the branch a save would leave stands
+       here too, which is how the editor names what a save will drop before it drops it. */
     kept: keptOf(config),
     /* The fields of the row that stand as expressions: the form draws then and does not shape them. */
     refs: refsOf(config),

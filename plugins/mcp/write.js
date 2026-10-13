@@ -17,7 +17,7 @@
  * @module @coreness/dsh/plugins/mcp/write
  */
 
-import { MCP_MODULE, buildConfig, isRef, refsOf, rowId, sameConfig, serverNameOf } from './row.js'
+import { MCP_MODULE, REFERENCE_HEADER, REFERENCE_OPTION, buildConfig, isRef, referenceOf, refsOf, rowId, sameConfig, serverNameOf } from './row.js'
 import { createRow, entryOf, removeRow, rowsOf, updateRow } from './tree.js'
 
 /**
@@ -29,7 +29,7 @@ const WORDS = {
   'bad-action': 'the page asked for a save this route does not take',
   'bad-name': 'a server name is 1 to 32 characters of letters, digits, underscore or hyphen',
   'name-taken': 'another row of this file already takes that name',
-  'bad-transport': 'a row carries one kind, and the fields of another branch do not travel with it',
+  'bad-transport': 'a server connects by one of the platform\'s two transports, and this save names neither',
   'bad-url': 'the address must parse as an http or https URL',
   'bad-command': 'a stdio row needs the command it starts',
   'bad-timeout': 'the call timeout is a whole number of milliseconds',
@@ -49,7 +49,7 @@ const WORDS = {
 }
 
 /** The actions the route takes. */
-export const ACTIONS = ['add', 'edit', 'remove', 'toggle']
+export const ACTIONS = ['add', 'edit', 'remove', 'toggle', 'reference', 'reload']
 
 /**
  * A refusal of a save: the code the route answers with, and the words the user reads beside it.
@@ -146,6 +146,7 @@ function readAgain(ctx, entryId) {
     config: entry.options?.config ?? {},
     disabled: entry.disabled === true,
     disabledRef: isRef(entry.options?.disabled),
+    inject: Array.isArray(entry.options?.inject) ? entry.options.inject : [],
   }
 }
 
@@ -264,6 +265,86 @@ function removeServer(include, row) {
 }
 
 /**
+ * Write the reference a row's token is read through: the header carrying the expression, and the row
+ * option the expression needs beside it.
+ *
+ * The option is passed here because a save is the only hand the platform's own merge can be asked
+ * through: creation sets a row's options whole, while an update sets the keys it is given and leaves
+ * every other key exactly as it stands. So a row added by the form can be given the option afterwards,
+ * by a save that names it — which is why nothing has to be guessed when the row is created.
+ *
+ * The expression itself is not built here. The record's shape belongs to the flow that writes it, and
+ * this save owns only where it lands: the row's own authorization header, and the option that must stand
+ * beside it for the row's context to hold the credential service at all.
+ * @param {object} ctx the plugin's context
+ * @param {object} include the include entry
+ * @param {object} row the row as the file holds it
+ * @param {object} body the request's body: the credential key and the expression
+ * @returns {Promise<object>} what was done
+ * @throws {Refusal} `not-an-mcp-row`, `bad-value`, or a refusal of the confirmation
+ */
+async function setReference(ctx, include, row, body) {
+  if (row.module !== MCP_MODULE) {
+    throw new Refusal('not-an-mcp-row', `the row "${row.id}" is a "${row.module}" row, and this form shapes MCP client rows only`)
+  }
+  const reference = typeof body?.reference === 'string' ? body.reference.trim() : ''
+  const expression = typeof body?.expression === 'string' ? body.expression.trim() : ''
+  if (reference === '' || expression === '') {
+    throw new Refusal('bad-value', `a reference save needs the credential key and the expression the row reads it through, and this request carries ${reference === '' ? 'no reference' : 'no expression'}`)
+  }
+
+  const headers = { ...(typeof row.config.headers === 'object' && row.config.headers !== null ? row.config.headers : {}), [REFERENCE_HEADER]: { __jsExpr: expression } }
+  const next = { ...row.config, headers }
+
+  /* The option first, in a write of its own. The Loader evaluates a row's configuration as the write
+     lands, so a header expression that reads the credential service is refused in words while the option
+     that puts that service in the row's own context is not there yet — measured at this door, where one
+     write carrying both answered `cannot get property "credentials" without inject`. */
+  if (!readAgain(ctx, row.entryId).inject.includes('credentials')) {
+    await updateRow(ctx, row.entryId, { inject: REFERENCE_OPTION })
+  }
+  await updateRow(ctx, row.entryId, { config: next })
+
+  const back = readAgain(ctx, row.entryId)
+  if (referenceOf(back.config) !== expression) {
+    throw new Refusal('not-saved', disagreement(`the reference of "${row.id}"`, { [REFERENCE_HEADER]: expression }, referenceOf(back.config)))
+  }
+  if (!back.inject.includes('credentials')) {
+    throw new Refusal('not-saved', `the save of the reference for "${row.id}" did not stand: the row now reads the store without the row option that puts the credential service in its own context, so the platform would refuse it at its next activation. A row option is set by a save that names it — creation sets a row's options whole, and an update sets the keys it is given.`)
+  }
+  return { result: referenceOf(row.config) === null ? 'reference' : 'reference-updated', entryId: row.entryId, server: serverNameOf(row.id), reference }
+}
+
+/**
+ * Reload a row without changing it, so a token that was rotated in the store reaches its connection.
+ *
+ * A rotated token is not a configuration change, so nothing in the file moves — and the row's own
+ * transport holds the headers it was built with, so nothing reaches its connection either. The reload is
+ * therefore the mechanism and not a convenience, and the door is measured rather than assumed: the
+ * Loader's own update, asked with no key of its own, restarts the entry and leaves the row's header
+ * standing as it activated, while a fresh activation reads the store again. So the row is switched off
+ * and switched on — the file carries `disabled: true` for the one write in between, and neither write
+ * touches anything else the row holds.
+ * @param {object} ctx the plugin's context
+ * @param {object} include the include entry
+ * @param {object} row the row as the file holds it
+ * @returns {Promise<object>} what was done
+ * @throws {Refusal} `not-an-mcp-row`, or `not-saved` when the row did not come back enabled
+ */
+async function reloadRow(ctx, include, row) {
+  if (row.module !== MCP_MODULE) {
+    throw new Refusal('not-an-mcp-row', `the row "${row.id}" is a "${row.module}" row, and this form shapes MCP client rows only`)
+  }
+  await updateRow(ctx, row.entryId, { disabled: true })
+  await updateRow(ctx, row.entryId, { disabled: null })
+
+  const back = readAgain(ctx, row.entryId)
+  if (back.disabled) throw new Refusal('not-saved', `the reload of "${row.id}" left the row switched off: the file now holds it disabled, and the next read of this profile will not connect it`)
+  ctx.logger?.info?.(`coreness-mcp: the row "${row.entryId}" was activated afresh, so a token that changed in the store reaches its connection again`)
+  return { result: 'reloaded', entryId: row.entryId, server: serverNameOf(row.id) }
+}
+
+/**
  * One save: the action the page asked for, written through the Loader and confirmed by a read.
  * @param {object} ctx the plugin's context
  * @param {object} include the include entry
@@ -280,5 +361,7 @@ export async function write(ctx, include, body) {
   const row = ownRow(include, body.entryId)
   if (action === 'edit') return editServer(ctx, include, row, body.form)
   if (action === 'toggle') return setEnabled(ctx, include, row, body.enabled === true)
+  if (action === 'reference') return setReference(ctx, include, row, body)
+  if (action === 'reload') return reloadRow(ctx, include, row)
   return removeServer(include, row)
 }

@@ -1,18 +1,15 @@
 /**
- * The vocabulary of one MCP row: its id in the servers file, the fields the form owns, and the
+ * The vocabulary of one MCP row: its id in the servers file, the fields the form draws, and the
  * config that a save writes back.
  *
- * The rules here are the platform's own, read from `@deepseek-ai/dsh-mcp-client`'s config schema:
+ * The rules here are the platform's own, read from the config schema of the module a row names:
  * `serverName` matches `/^[A-Za-z0-9_-]{1,32}$/` and names the tools of that server; `transport` is
  * `stdio` or `streamable-http` and decides which branch of the config is meaningful; the two
- * branches do not mix. What the form knows is exactly what the user manages; everything else a row
- * carries is kept as it stands and never rewritten by a value the form does not understand.
+ * branches do not mix.
  *
- * One kind stands above the platform's two: a **corporate** server is reached through the internal
- * platform's own CLI, which the harness starts as a local process and speaks MCP with over stdio.
- * The form asks for it by name and the file holds the platform's own `stdio` branch — the bridge's
- * command, its subcommand and the address — so the platform's schema is never extended and nothing
- * of the credential passes through here (`KINDS`, `isCorporate`, `kindOf`).
+ * What the form draws is what a person needs to connect a server and to read its state; every other
+ * key a row carries is the file's, written back exactly as it stands and only named by the picture
+ * (`keptOf`, `buildConfig`).
  *
  * @module @coreness/dsh/plugins/mcp/row
  */
@@ -30,25 +27,6 @@ export const NAME = /^[A-Za-z0-9_-]{1,32}$/
 export const TRANSPORTS = ['streamable-http', 'stdio']
 
 /**
- * What a save may ask for: the platform's two transports and the corporate kind.
- *
- * `corporate` never reaches the file. A corporate server is reached through the internal platform's
- * own CLI, which the harness starts as a local process and speaks MCP with over stdio, so the row
- * that stands in the file is the platform's own `stdio` branch: `TRANSPORTS` is what a row may hold
- * and the kinds are what the form may ask for. The translation is total and lives here.
- */
-export const KINDS = [...TRANSPORTS, 'corporate']
-
-/** The bridge of the corporate kind: the internal platform's own CLI. */
-export const BRIDGE = 'dp'
-
-/**
- * The bridge's own subcommand: a remote MCP server proxied over stdio, with the platform's access
- * added by the bridge itself. The harness passes the address and holds nothing of the credential.
- */
-export const BRIDGE_ARGS = ['ai', 'mcp', 'remote', '--url']
-
-/**
  * The name of a header: the HTTP token charset, so a legal header of an unusual spelling is not
  * refused by a rule narrower than the wire's own.
  */
@@ -57,15 +35,21 @@ const HEADER_NAME = /^[!#$%&'*+.^_`|~0-9A-Za-z-]{1,64}$/
 /** The name of an environment variable. */
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/
 
-/** The config fields the form does not edit: they are carried, and their names are reported. */
-const KEPT = ['cwd', 'reconnect', 'maxInstructionBytes', 'failOnStartupError']
-
 /**
- * The config fields the form owns. A field of this list standing as a `!!js` expression is not the
- * form's to overwrite: the file owns such a value, and a save that replaced it with a plain one
- * would delete a decision nobody on the page can see.
+ * The config fields the form draws, by the branch the row connects by.
+ *
+ * The list is what a person needs to connect a server and to read its state — the command and its
+ * arguments or the address and its headers, the variables it starts with, the directory it runs in,
+ * how long a call may take, and one plain sentence for a server that fails to come up. A key of the
+ * row outside this list is the file's: it is carried untouched and only named (`keptOf`).
  */
-const OWNED = ['serverName', 'transport', 'url', 'command', 'args', 'toolCallTimeoutMs']
+const DRAWN = {
+  'streamable-http': ['serverName', 'transport', 'url', 'headers', 'toolCallTimeoutMs', 'failOnStartupError'],
+  stdio: ['serverName', 'transport', 'command', 'args', 'env', 'toolCallTimeoutMs', 'failOnStartupError'],
+}
+
+/** Every field the form draws on either branch: a value here standing as an expression is the file's. */
+const OWNED = [...new Set(Object.values(DRAWN).flat())]
 
 /**
  * The refusals of a save: the codes the route answers with and the browser half words. The two
@@ -114,101 +98,38 @@ export function serverNameOf(id) {
 }
 
 /**
- * An address this form accepts: one http or https URL, trimmed — or null.
- *
- * One predicate for both directions of the corporate kind: what a save writes is what the picture
- * must read back as corporate, and two rules would drift apart into a row that saves and then reads
- * as a plain stdio row.
- * @param {unknown} value the address as typed
- * @returns {string | null} the address, when it parses
- */
-export function parseAddress(value) {
-  const text = String(value ?? '').trim()
-  if (text === '') return null
-  let parsed
-  try {
-    parsed = new URL(text)
-  } catch {
-    return null
-  }
-  return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? text : null
-}
-
-/**
- * Whether a command is the bridge's own: `dp`, or a path to it.
- *
- * `dp` is looked up in the child's `PATH` — the platform scrubs the environment it hands a row but
- * keeps `PATH` — and the machine where the CLI is not on it pins the executable, which is the same
- * program under its own name: `dp`, or `dp.exe`. A script of one's own under another name is not the
- * bridge and never reads as one; neither is a shell shim, and that is measured rather than assumed —
- * the platform's own client spawns a row without a shell, and Node refuses a `.cmd`/`.bat` there with
- * `EINVAL`, so such a row could never be raised at all.
- * @param {unknown} command the row's command
- * @returns {boolean} whether it is the bridge
- */
-export function isBridge(command) {
-  const text = String(command ?? '').trim()
-  if (text === '') return false
-  const file = text.split(/[\\/]/).pop() ?? ''
-  return /^dp(\.exe)?$/i.test(file)
-}
-
-/**
- * The address a corporate row carries, or null when the row's arguments are not the bridge's own.
- * @param {object} config the row's config
- * @returns {string | null} the address
- */
-export function addressOf(config) {
-  const args = config?.args
-  if (!Array.isArray(args) || args.length !== BRIDGE_ARGS.length + 1) return null
-  for (const [at, word] of BRIDGE_ARGS.entries()) {
-    if (String(args[at]) !== word) return null
-  }
-  return parseAddress(args[BRIDGE_ARGS.length])
-}
-
-/** Whether a config map carries anything at all. */
-function carries(map) {
-  return map !== null && typeof map === 'object' && !Array.isArray(map) && Object.keys(map).length > 0
-}
-
-/**
- * Whether a row is corporate — exactly the bridge's own expansion and nothing of another branch.
- *
- * The reading is total and has no mercy by design: a row that differs in any way — another command,
- * an extra `--header`, a missing loud startup, an environment, a working directory — is a plain stdio
- * row, drawn and edited as one. A near-miss claimed as corporate would hide the very field the user
- * put there, and the form would then rewrite it away on the next save.
- * @param {object} config the row's config
- * @returns {boolean} whether the row is corporate
- */
-export function isCorporate(config) {
-  if (config?.transport !== 'stdio') return false
-  if (config?.failOnStartupError !== true) return false
-  if (!isBridge(config?.command)) return false
-  if (addressOf(config) === null) return false
-  if (carries(config?.env) || carries(config?.headers)) return false
-  return config?.cwd === undefined
-}
-
-/**
- * The kind a row connects by, as the form and the picture read it.
- * @param {object} config the row's config
- * @returns {string | null} the platform's own transport, `corporate`, or null when the row names none
- */
-export function kindOf(config) {
-  const transport = config?.transport
-  if (typeof transport !== 'string') return null
-  return transport === 'stdio' && isCorporate(config) ? 'corporate' : transport
-}
-
-/**
  * Whether a value is a serialized Loader expression (`!!js`) rather than a plain value.
  * @param {unknown} value the value as it stands in the config
  * @returns {boolean} whether it is an expression node
  */
 export function isRef(value) {
   return value instanceof Object && '__jsExpr' in value
+}
+
+/** The row option a row needs when its header reads the platform's store: the service, in the row's own context. */
+export const REFERENCE_OPTION = ['credentials']
+
+/** The header a row's own reference is written into. */
+export const REFERENCE_HEADER = 'Authorization'
+
+/**
+ * The expression a row's header carries, or null while the header stands as a plain value.
+ * @param {object} config the row's config
+ * @returns {string | null} the expression's text
+ */
+export function referenceOf(config) {
+  const held = config?.headers?.[REFERENCE_HEADER]
+  return isRef(held) ? String(held.__jsExpr) : null
+}
+
+/**
+ * The transport a row connects by, as the picture reads it.
+ * @param {object} config the row's config
+ * @returns {string | null} the platform's own transport, or null when the row names none
+ */
+export function kindOf(config) {
+  const transport = config?.transport
+  return typeof transport === 'string' ? transport : null
 }
 
 /**
@@ -254,19 +175,26 @@ export function pairsOf(config, key) {
 }
 
 /**
- * The names of the config fields a row carries and the form does not edit.
+ * The names of the keys of a row that the form does not draw for that row's branch.
+ *
+ * The names travel so a reader is told the row holds more than the form shows — the value stays in
+ * the file. A key of the branch a save would leave is in this list too, which is how the editor can
+ * name what a save will drop before it drops it.
  * @param {object} config the row's config
- * @returns {string[]} the names
+ * @returns {string[]} the names, in the order the file holds them
  */
 export function keptOf(config) {
-  return KEPT.filter((name) => config?.[name] !== undefined)
+  const drawn = new Set(DRAWN[kindOf(config)] ?? OWNED)
+  return Object.keys(config ?? {}).filter((name) => !drawn.has(name))
 }
 
 /**
- * The fields of the row the form owns that stand as expressions instead of values.
+ * The fields of the row the form draws that stand as expressions instead of values.
  *
- * The page draws this list: a row whose transport is a `!!js` expression is not a row the form may
- * shape, and saying so before a save is cheaper than a refused save.
+ * The page draws this list: a row whose drawn field stands as a `!!js` expression is not a row the
+ * form may shape, and saying so before a save is cheaper than a refused save. The reading is taken
+ * over both branches rather than over the row's own, because a save may switch the branch and draw
+ * a key the row carries today.
  * @param {object} config the row's config
  * @returns {string[]} the field names
  */
@@ -281,6 +209,9 @@ export function refsOf(config) {
  * @returns {{ pairs?: object[], error?: string }} the named rows, or the refusal
  */
 function formPairs(rows, key) {
+  /* The form carries a list of rows: a body that hands a map instead is not a form this path may
+     read, and it is refused in words rather than walked into a crash. */
+  if (rows !== undefined && rows !== null && !Array.isArray(rows)) return { error: 'bad-value' }
   const named = []
   for (const row of rows ?? []) {
     const name = String(row?.name ?? '').trim()
@@ -303,9 +234,11 @@ function formPairs(rows, key) {
 /**
  * Build the config a save writes, from the form and from the row as it stands.
  *
- * The row as it stands is the source of everything the form does not own: a field the form never
- * shows is carried unchanged, and a value that is an expression is kept rather than replaced — a
- * value the form does not understand must not be overwritten by one it does.
+ * The row as it stands is the source of everything the form does not draw: a key outside the fields
+ * the form shows is carried exactly as the file holds it, so a save made here never costs a value
+ * somebody put there by hand. A field the form draws follows the form, in three states: **absent**
+ * from the request it keeps what the row holds — a page that does not draw a field yet must not wipe
+ * it — **empty** it takes the key off the row, and **filled** it is the person's word.
  * @param {object} form the form's fields
  * @param {object} current the row's config as it stands
  * @returns {{ config?: object, error?: string, detail?: string }} the config to store, or the refusal
@@ -315,11 +248,9 @@ export function buildConfig(form, current = {}) {
   const server = String(form?.serverName ?? '').trim()
   if (!NAME.test(server)) return { error: 'bad-name' }
 
-  const kind = String(form?.transport ?? '')
-  if (!KINDS.includes(kind)) return { error: 'bad-transport' }
-  if (kind === 'corporate') return corporateConfig(form, current, server)
+  const transport = String(form?.transport ?? '')
+  if (!TRANSPORTS.includes(transport)) return { error: 'bad-transport' }
 
-  const transport = kind
   const config = { ...current, serverName: server, transport }
 
   if (transport === 'streamable-http') {
@@ -338,10 +269,12 @@ export function buildConfig(form, current = {}) {
     if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return { error: 'bad-url' }
     config.url = url
 
-    const built = mergePairs(form?.headers, current?.headers, 'headers')
-    if (built.error !== undefined) return { error: built.error }
-    if (Object.keys(built.map).length > 0) config.headers = built.map
-    else delete config.headers
+    if (sent(form, 'headers')) {
+      const built = mergePairs(form.headers, current?.headers, 'headers')
+      if (built.error !== undefined) return { error: built.error }
+      if (Object.keys(built.map).length > 0) config.headers = built.map
+      else delete config.headers
+    }
   } else {
     delete config.url
     delete config.headers
@@ -354,23 +287,51 @@ export function buildConfig(form, current = {}) {
     if (args.length > 0) config.args = args
     else delete config.args
 
-    const built = mergePairs(form?.env, current?.env, 'env')
-    if (built.error !== undefined) return { error: built.error }
-    if (Object.keys(built.map).length > 0) config.env = built.map
-    else delete config.env
+    if (sent(form, 'env')) {
+      const built = mergePairs(form.env, current?.env, 'env')
+      if (built.error !== undefined) return { error: built.error }
+      if (Object.keys(built.map).length > 0) config.env = built.map
+      else delete config.env
+    }
+
+  }
+
+  /* One plain sentence on the form for `failOnStartupError`: without it a row that failed to come up
+     is indistinguishable from a server that has no tools. Unticking the box takes the key off, and
+     the platform's own default — a quiet failure — applies again. */
+  if (sent(form, 'loud')) {
+    if (typeof form.loud !== 'boolean') {
+      return { error: 'bad-value', detail: 'the loud-startup field is a yes or a no, and this save carries neither' }
+    }
+    if (form.loud) config.failOnStartupError = true
+    else delete config.failOnStartupError
   }
 
   return withTimeout(config, form)
 }
 
 /**
- * The call timeout a form carries: written onto the config, or taken off it.
+ * Whether the form carries a field at all.
+ *
+ * A page that does not draw a field sends nothing for it, and nothing means the row keeps what the
+ * file holds — which is what keeps a hand-written value safe from a form that never showed it.
+ * @param {object} form the form's fields
+ * @param {string} key the field's own name
+ * @returns {boolean} whether the request carries the field
+ */
+function sent(form, key) {
+  return form !== null && typeof form === 'object' && key in form
+}
+
+/**
+ * The call timeout a form carries: written onto the config, taken off it, or left as it stands.
  * @param {object} config the config a save built
  * @param {object} form the form's fields
  * @returns {{ config?: object, error?: string }} the config, or the refusal
  */
 function withTimeout(config, form) {
-  const timeout = String(form?.timeout ?? '').trim()
+  if (!sent(form, 'timeout')) return { config }
+  const timeout = String(form.timeout ?? '').trim()
   if (timeout === '') {
     delete config.toolCallTimeoutMs
     return { config }
@@ -379,56 +340,6 @@ function withTimeout(config, form) {
   if (!Number.isInteger(value) || value <= 0) return { error: 'bad-timeout' }
   config.toolCallTimeoutMs = value
   return { config }
-}
-
-/**
- * The row a corporate save writes: the platform's own stdio branch, filled with the bridge's own
- * command and subcommand and with the address the form carries.
- *
- * The fields of another branch are refused rather than dropped — the access belongs to the bridge and
- * the command is ours, so a save carrying either would be a silent substitution if it were ignored.
- * `failOnStartupError` is written explicitly: a bridge that cannot come up must say so, and in the
- * platform's own data a row that failed without it is indistinguishable from a server with no tools.
- * @param {object} form the form's fields
- * @param {object} current the row's config as it stands
- * @param {string} server the server name the form carries
- * @returns {{ config?: object, error?: string, detail?: string }} the config, or the refusal
- */
-function corporateConfig(form, current, server) {
-  const refused = foreignFields(form)
-  if (refused !== null) return refused
-  const address = parseAddress(form?.url)
-  if (address === null) return { error: 'bad-url' }
-
-  const config = {
-    ...current,
-    serverName: server,
-    transport: 'stdio',
-    command: BRIDGE,
-    args: [...BRIDGE_ARGS, address],
-    failOnStartupError: true,
-  }
-  for (const key of ['url', 'headers', 'env', 'cwd']) delete config[key]
-  return withTimeout(config, form)
-}
-
-/**
- * The fields a corporate save may not carry, each with the words that name it and the reason.
- * @param {object} form the form's fields
- * @returns {{ error: string, detail: string } | null} the refusal, or null when there is none
- */
-function foreignFields(form) {
-  const carried = (rows) => (rows ?? []).some((row) => String(row?.name ?? '').trim() !== '' || String(row?.value ?? '') !== '')
-  if (carried(form?.headers)) {
-    return { error: 'bad-transport', detail: 'a corporate row carries no headers: the internal platform\'s own CLI makes the connection and carries the access, so nothing of it passes through this form' }
-  }
-  if (carried(form?.env)) {
-    return { error: 'bad-transport', detail: 'a corporate row carries no environment: the access belongs to the internal platform\'s own CLI, and this form never holds a value of it' }
-  }
-  if (String(form?.command ?? '').trim() !== '' || parseArgs(form?.args).length > 0) {
-    return { error: 'bad-transport', detail: `the corporate kind writes the bridge's own command and arguments (${BRIDGE} ${BRIDGE_ARGS.join(' ')}); neither is typed on this form` }
-  }
-  return null
 }
 
 /**
