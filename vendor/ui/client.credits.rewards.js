@@ -127,14 +127,20 @@ window.__ModuleLoader__.load({
        * is, and the rows it returns are appended where they stood.
        */
       function rewardRows(picture) {
+        /* A campaign whose action is "look at the details" is not a reward to take: the contour lists it
+           for reading, and neither "available" nor "claimed" over it is true. The claiming kinds stay — an
+           open one is offered, a taken one is marked. */
+        const rewards = picture.rewards.filter((entry) => String(entry.actionType ?? '').toUpperCase() !== 'VIEW_DETAILS');
+        // A list that held only view-only entries has nothing to show; it is not an empty answer.
+        if (rewards.length === 0 && picture.rewards.length > 0) return [];
         const rows = [];
         rows.push(h('p', { key: 'rewards', className: 'coreness-credits-blockTitle' }, t('rewards')));
         // A hidden list and an empty one are different things: hidden means the contour did not
         // recognise the desktop client, not that there is nothing to take.
         if (picture.shown === false) rows.push(h('p', { key: 'hidden', className: 'coreness-credits-dim' }, t('hidden')));
-        if (picture.rewards.length === 0) rows.push(h('p', { key: 'empty', className: 'coreness-credits-dim' }, t('noCampaigns')));
-        if (picture.rewards.length > 0) {
-          rows.push(h('div', { key: 'list', className: 'coreness-credits-rewards' }, picture.rewards.map((entry) => h('div', {
+        if (picture.shown !== false && picture.rewards.length === 0) rows.push(h('p', { key: 'empty', className: 'coreness-credits-dim' }, t('noCampaigns')));
+        if (rewards.length > 0) {
+          rows.push(h('div', { key: 'list', className: 'coreness-credits-rewards' }, rewards.map((entry) => h('div', {
             key: entry.id,
             className: 'coreness-credits-reward',
           }, [

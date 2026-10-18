@@ -19,12 +19,16 @@
  * sheet asked for, and lets the live run say who else stands in that row.
  *
  * The figures are the product's own route (`/api/coreness.credits`), not the row's settings section: that
- * section is the profile's Cordis patch, and the donor rewrote it on every sweep. This half only asks and
- * draws — on the mount, on the refresh button, and on the cadence the host names in its own answer — so the
- * line follows the sweep without a second timer of its own to keep in step.
+ * section is the profile's Cordis patch, and the donor rewrote it on every sweep. This half asks and draws:
+ * on the mount when no reading stands, on the refresh button, on the cadence the host names in its own
+ * answer, and — while no balance has been read and a reading costs no vendor call — on a one-minute beat, so
+ * a token written a moment ago is found without a press.
  *
  * A failed reading is a state, not a blank: the reason replaces the numbers on the line, and the popover
- * prints it in full under the head. Nothing here is muted.
+ * prints it in full under the head. Nothing here is muted. The two absences are the first moment, before any
+ * answer stands, and a missing credential: with no account behind the widget there is nothing to show, so
+ * the foot draws nothing and the Qoder section is where the token is written; the widget returns on the next
+ * beat.
  */
 window.__ModuleLoader__.load({
   id: '@coreness/ui/client.credits.js',
@@ -50,6 +54,9 @@ window.__ModuleLoader__.load({
     const MINE = '.coreness-credits-seat, .coreness-credits-card';
     /** How often the widget asks again when the host's answer names no cadence of its own. */
     const FALLBACK_EVERY_MS = 10 * 60 * 1000;
+    /** How often the widget asks while no balance has been read at all: a token written a moment ago is
+        found on the next beat instead of waiting out the sweep's ten minutes. */
+    const UNREAD_EVERY_MS = 60 * 1000;
 
     /**
      * The part beside this entry, pulled at materialisation and in hand before the widget is seated: the
@@ -414,6 +421,14 @@ window.__ModuleLoader__.load({
       /** Why the widget's own asking failed, when the route itself could not be reached or refused. */
       const [fault, setFault] = React.useState(undefined);
       const [everyMs, setEveryMs] = React.useState(FALLBACK_EVERY_MS);
+      const picture = pictureOf(held);
+      const pictureKnown = picture !== undefined;
+      /* No credential stored: there is no account behind the widget, so it draws nothing. */
+      const missingCredential = held?.last?.kind === 'failed' && held.last.code === 'MISSING_CREDENTIAL';
+      /* The short beat belongs to the states where a reading costs no vendor call: nothing answered yet, or
+         no credential stored. A refused token (AUTH, RATE_LIMIT, TRANSPORT) keeps the host's own cadence — a
+         page that POSTed a read every minute would be a vendor poller. */
+      const retryFree = !pictureKnown && (held?.last?.kind !== 'failed' || missingCredential);
 
       /** One answer from the route, kept the way the widget draws it. */
       const take = (value) => {
@@ -430,27 +445,64 @@ window.__ModuleLoader__.load({
        */
       const listen = async () => {
         try {
-          take(await ask('GET'));
+          const value = await ask('GET');
+          take(value);
+          return value;
         } catch (error) {
           setHeld({ kind: 'waiting' });
           setFault(`${error?.code ?? 'unreadable'}: ${reasonOf(error)}`);
+          return undefined;
         }
       };
 
+      /* The mount asks for the held picture, and asks for a reading when none stands: the host sweeps on its
+         own mount, and this closes the race in the widget's favour — a page opened after a token was written
+         is not left saying "not read yet" until the next beat. */
       React.useEffect(() => {
-        void listen();
+        void listen().then((value) => {
+          if (value?.last?.kind !== 'done') void refresh();
+        });
       }, []);
 
       /* The line follows the host's own cadence: the answer names how often the sweep reads, so the
-         widget asks again at that pace instead of keeping a second schedule to stay in step with. */
+         widget asks again at that pace instead of keeping a second schedule to stay in step with. This
+         applies to a standing picture and to a refused token alike — the short beat below is the only
+         exception. */
       React.useEffect(() => {
+        if (retryFree) return () => {};
         const timer = setTimeout(() => {
           void listen();
         }, everyMs);
         return () => {
           clearTimeout(timer);
         };
-      }, [everyMs, held]);
+      }, [everyMs, held, retryFree]);
+
+      /* Nothing answered yet, or nothing to answer with: ask on a short beat instead of waiting out the
+         cadence, so a token written into the platform's Settings is found within a minute. Only the free
+         states take the beat: the host refuses a missing credential before the vendor is called. */
+      React.useEffect(() => {
+        if (!retryFree || busy) return () => {};
+        const timer = setTimeout(() => {
+          void refresh();
+        }, UNREAD_EVERY_MS);
+        return () => {
+          clearTimeout(timer);
+        };
+      }, [retryFree, busy, held]);
+
+      /* Opening the popover is a reader asking now: a picture that does not stand yet is read in that press
+         rather than after the next beat. */
+      React.useEffect(() => {
+        if (open && !pictureKnown) void refresh();
+      }, [open]);
+
+      /* Hiding the widget closes its popover, so a token that answers later does not re-open a card anchored
+         to a press from another minute. A fault of this half's own asking keeps the widget drawn, so a press
+         there still opens the card and its reason is readable. */
+      React.useEffect(() => {
+        if (open && fault === undefined && (missingCredential || held?.kind === 'waiting')) setOpen(false);
+      }, [open, missingCredential, fault, held]);
 
       /** A human press: one reading, and the icon turns while it runs. */
       const refresh = async () => {
@@ -494,14 +546,19 @@ window.__ModuleLoader__.load({
         setOpen(true);
       };
 
-      const picture = pictureOf(held);
       /* Two readings can fail: the host's own (it answers with the reason `last` carries) and this
          half's asking for it. Both are the same fact to the line — there is no figure to show, and
          here is why — so both take the same place.
          The vendor's own body is content rather than state: the line keeps the reason, and the body
          travels beside it so the popover can show what the contour said without a face carrying it. */
-      const vendor = held?.last?.kind === 'failed' ? held.last.vendor : undefined;
-      const failed = (held?.last?.kind === 'failed' ? held.last.message : undefined) ?? fault;
+      const vendor = fault === undefined && held?.last?.kind === 'failed' ? held.last.vendor : undefined;
+      /* The newer fact wins: a fault of this half's own asking is newer than the held answer it stands on. */
+      const failed = fault ?? (held?.last?.kind === 'failed' ? held.last.message : undefined);
+      /* Before the first answer, and with no credential stored, the foot draws nothing: the first moment is
+         not yet a state, and a missing credential has no account behind it. A fault of this half's own asking
+         is still drawn, so a dead route never disappears into the silence. */
+      if (held?.kind === 'waiting' && fault === undefined) return null;
+      if (missingCredential && fault === undefined) return null;
       return draw({ wide, open, picture, vendor, failed, busy, anchor }, { toggle, refresh });
     }
 

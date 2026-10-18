@@ -2,7 +2,7 @@
 
 The bundle for one DeepSeek Harness profile: it inserts the product's page and the host packages behind its
 sections. It carries the page, the journal, the rules, MCP (with its servers file), OAuth, the Qoder route and
-the rate gate: `@coreness/dsh` 0.5.1, the local install.
+the rate gate: `@coreness/dsh` 0.5.2, the local install.
 
 ## What the patch inserts
 

@@ -4,10 +4,10 @@
  * panel id and the sidebar selects that id on a click, so the two registrations meet through the id alone.
  *
  * The page is two panes: a rail of sections beside the body of the chosen one. The rail's rows are the
- * sections other chunks register into the seat this page declares — the product's own first section is one
- * of them, registered by `client.product.js`, not drawn here. While the entry's chunk pulls are pending the
- * pane draws nothing: the seat is not yet known to be empty. Once they settle, an empty seat draws the
- * explicit empty state below; the product is not special-cased.
+ * sections other chunks register into the seat this page declares; none of them is drawn here, and the
+ * rail's title carries the bundle's version once the composition answers. While the entry's chunk pulls
+ * are pending the pane draws nothing: the seat is not yet known to be empty. Once they settle, an empty
+ * seat draws the explicit empty state below; no section is special-cased.
  *
  * The facts are read, never written. The sections read their own routes and remotes; the switches that
  * enable and disable a plugin stay on the platform's own Plugins page. The look is the product's own markup
@@ -27,8 +27,10 @@ window.__ModuleLoader__.load({
     const PANEL_ID = 'coreness';
     /** The place this page declares for the sections of the chunks beside it. */
     const SECTION_SEAT = 'coreness.section';
-    /** The package-local chunks beside the entry, applied once each; the product's own section first. */
-    const CHUNKS = ['./client.product.js', './client.mcp.js', './client.provider.js', './client.credits.js', './client.gate.js'];
+    /** The bundle whose version the rail's title carries; the composition names it. */
+    const BUNDLE = '@coreness/dsh';
+    /** The package-local chunks beside the entry, applied once each. */
+    const CHUNKS = ['./client.mcp.js', './client.provider.js', './client.credits.js', './client.gate.js'];
     /** The locale namespace the visible text is taken from. */
     const NS = 'coreness';
     /* The sheet's own id, in this package's namespace: the old `coreness-page` package kept the donor's ids,
@@ -41,8 +43,6 @@ window.__ModuleLoader__.load({
        all. */
     const EN = {
       panel: 'Coreness',
-      'section.product': 'The product',
-      'product.off': 'Off',
       'version.tag': 'v{version}',
       'seat.empty': 'No sections loaded; see the console',
     };
@@ -54,7 +54,7 @@ window.__ModuleLoader__.load({
 :root{--coreness-elevation:0 12px 32px #0000002e;--coreness-news-strip:160px;--coreness-pill-radius:999px}
 .coreness-page{display:flex;height:100%;box-sizing:border-box;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary)}
 .coreness-nav{box-sizing:border-box;flex-direction:column;flex:none;gap:18px;width:188px;padding:22px 12px 0;display:flex}
-.coreness-navTitle{color:var(--dsw-alias-label-primary);padding:0 12px;font-size:16px;font-weight:500;line-height:24px}
+.coreness-navTitle{color:var(--dsw-alias-label-primary);align-items:baseline;gap:8px;flex-wrap:wrap;padding:0 12px;font-size:16px;font-weight:500;line-height:24px;display:flex}
 .coreness-navList{flex-direction:column;gap:4px;display:flex;overflow-y:auto}
 .coreness-navCell{box-sizing:border-box;border-radius:var(--dsw-radius-md);cursor:pointer;color:var(--dsw-alias-label-primary);text-align:left;background:0 0;border:none;align-items:center;padding:9px 16px 9px 12px;font-family:inherit;font-size:14px;font-weight:400;line-height:22px;display:flex}
 .coreness-navCell:hover{background:var(--dsw-specific-sidebar-nav-item-hover)}
@@ -75,15 +75,10 @@ window.__ModuleLoader__.load({
 .coreness-card-head{align-items:center;gap:10px;flex-wrap:nowrap;display:flex}
 .coreness-card-list{margin:12px 0 0}
 .coreness-list{flex-direction:column;gap:8px;margin:0;padding:0;list-style:none;display:flex}
-.coreness-titleRow{flex-wrap:wrap;align-items:center;gap:8px;min-width:0;display:flex}
-.coreness-title{margin:0;font-size:20px;font-weight:500;line-height:28px}
 .coreness-tag{display:inline-flex;align-items:center;border-radius:var(--dsw-radius-xs);corner-shape:round;padding:1px 6px;font-size:12px;line-height:18px;font-weight:400;white-space:nowrap;color:var(--dsw-alias-label-tertiary)}
 /* A tone names the chip's own background; the colour of its words belongs to the class beside it. */
 .coreness-tag[data-tone='neutral']{background:var(--dsw-alias-bg-module-platform)}
 .coreness-version{font-variant-numeric:tabular-nums;flex:none}
-.coreness-name{color:var(--dsw-alias-label-tertiary);overflow-wrap:anywhere;margin:0;font-size:14px;line-height:22px}
-.coreness-name code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.coreness-desc{color:var(--dsw-alias-label-secondary);margin:0;font-size:14px;line-height:22px}
 /* The page's hint line: one pair for every section's small line, 12/18 in label-tertiary. */
 .coreness-dim{color:var(--dsw-alias-label-tertiary);margin:0;font-size:12px;line-height:18px}
 /* A room where a line is cut: one line, cut with an ellipsis, its height from the line-height. */
@@ -92,7 +87,6 @@ window.__ModuleLoader__.load({
 .coreness-sectionHead{align-items:baseline;gap:10px;display:flex}
 .coreness-sectionTitle{margin:0;font-size:16px;font-weight:500;line-height:24px}
 .coreness-sectionCount{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;font-variant-numeric:tabular-nums}
-.coreness-failure p{color:var(--dsw-alias-label-tertiary);margin:0;font-size:14px;line-height:22px}
 .coreness-failed{color:var(--dsw-alias-state-error-primary);flex-direction:column;gap:4px;display:flex}
 /* The page's button, declared once and worn by every section that draws one, beside that section's own
    class; a section keeps only what is its own. Later rules at equal specificity win within this sheet, so
@@ -178,6 +172,10 @@ window.__ModuleLoader__.load({
       const { renderSlot } = props;
       const [chosen, setChosen] = React.useState(null);
       const [, setRevision] = React.useState(0);
+      /* The bundle's version, read from the composition rather than held in this file, so the title and the
+         installed bundle cannot drift apart. A read that fails leaves the title without it: the version is
+         not a status surface, and a made-up one would be worse than none. */
+      const [version, setVersion] = React.useState(undefined);
       /* The grace before an empty seat is said in words; a section is normally seated in a few frames, and a
          section chunk that was pulled still assembles its own parts behind its apply. */
       const [gracePassed, setGracePassed] = React.useState(false);
@@ -201,6 +199,41 @@ window.__ModuleLoader__.load({
         };
       }, []);
 
+      React.useEffect(() => {
+        let live = true;
+        const read = async () => {
+          try {
+            const inventory = await ctx.remote.pluginInventory.list();
+            if (!inventory.ok) {
+              console.error(`${PACKAGE}: the version was not read: ${inventory.error.code}: ${inventory.error.message}`);
+              return;
+            }
+            if (inventory.value.managementAvailable !== true) {
+              console.info(`${PACKAGE}: the version is not shown: the management gate is closed`);
+              return;
+            }
+            const bundles = await ctx.remote.pluginManager.listBundles();
+            if (!bundles.ok) {
+              console.error(`${PACKAGE}: the version was not read: ${bundles.error.code}: ${bundles.error.message}`);
+              return;
+            }
+            const bundle = bundles.value.find((item) => item.name === BUNDLE);
+            if (live && bundle?.version !== undefined) setVersion(bundle.version);
+          } catch (error) {
+            console.error(`${PACKAGE}: the version was not read: ${error?.message ?? error}`);
+          }
+        };
+        void read();
+        const disposers = [
+          ctx.remote.$on('plugin-manager/changed', read),
+          ctx.on('connection/reset', read),
+        ];
+        return () => {
+          live = false;
+          for (const dispose of disposers) dispose();
+        };
+      }, []);
+
       const rows = sectionRows();
       /* The chosen row survives a chunk that left; when it is gone the page falls back to the first row. */
       const active = rows.some((row) => row.id === chosen) ? chosen : (rows[0]?.id ?? null);
@@ -215,7 +248,16 @@ window.__ModuleLoader__.load({
 
       return h('div', { className: 'coreness-page' }, [
         h('nav', { key: 'rail', className: 'coreness-nav', 'aria-label': t('panel') }, [
-          h('div', { key: 'title', className: 'coreness-navTitle' }, t('panel')),
+          h('div', { key: 'title', className: 'coreness-navTitle' }, [
+            h('span', { key: 'name' }, t('panel')),
+            version === undefined
+              ? null
+              : h('span', {
+                key: 'version',
+                className: 'coreness-tag coreness-version',
+                'data-tone': 'neutral',
+              }, t('version.tag', { version })),
+          ]),
           h('div', { key: 'list', className: 'coreness-navList' },
             rows.map((row) => h('button', {
               key: row.id,
@@ -245,8 +287,8 @@ window.__ModuleLoader__.load({
 
     return {
       /* What this entry reads: the slots and the locale for the frame and the seat, the two remotes the
-         product card asks for the composition's own bundle, and the four the Qoder section and the credits
-         action read — the platform's llm/session/settings/credentials namespaces. A chunk borrows the
+         rail's version tag asks about the composition's own bundle, and the four the Qoder section and the
+         credits action read — the platform's llm/session/settings/credentials namespaces. A chunk borrows the
          entry's context, so this list is what waits for a namespace; a remote named here is not read by the
          frame, and a chunk that reads one before the entry names it reads `undefined`. */
       inject: [
