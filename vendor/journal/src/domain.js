@@ -86,8 +86,14 @@ const profileMaybe = profileField.optional()
  * A figure is written by whoever knows it — the price of a task is not derivable from the platform's token
  * counts, which is why the record takes it rather than computes it. The rate travels with the figure: a
  * re-valued rate moves the records written after it and never the ones behind.
+ *
+ * The block is built by the same three wrappers as the record around it: a write refuses a field it does not
+ * know inside the money as it refuses one beside it, an older record's extra field rides through on read, and
+ * an answer carries the declared fields alone.
+ * @param {(shape: object) => object} objectOf the wrapper of this variant
+ * @returns {object} the money schema
  */
-const costSchema = z.object({
+const costSchemaOf = objectOf => objectOf({
   usd: z.number().nonnegative(),
   paid: z.boolean(),
   unit: z.enum(['credits', 'cny']),
@@ -100,12 +106,12 @@ const costSchema = z.object({
 const compositionValue = z.union([compositionSchema, z.object({ packed: z.string().min(1) })])
 
 /** The shell of a record: the address, the task it belongs to, the money it may carry, and the profile that wrote it. */
-const shellOf = profile => ({
+const shellOf = (profile, objectOf) => ({
   time: instant,
   area: z.string().min(1),
   id: z.string().min(1),
   task: z.string().min(1).optional(),
-  cost: costSchema.optional(),
+  cost: costSchemaOf(objectOf).optional(),
   profile,
 })
 
@@ -120,15 +126,15 @@ const shellOf = profile => ({
  * @returns {object} the record schema
  */
 const recordVariants = (objectOf, profile) => z.discriminatedUnion('kind', [
-  objectOf({ ...shellOf(profile), kind: z.literal('состав'), author: z.literal('среда'), changed: z.array(z.string().min(1)).min(1), composition: compositionValue }),
-  objectOf({ ...shellOf(profile), kind: z.literal('настройки'), author: z.literal('среда'), changed: z.array(z.string().min(1)).min(1), composition: compositionValue }),
-  objectOf({ ...shellOf(profile), kind: z.literal('жизненный цикл'), author: z.literal('среда'), text: z.string().min(1), reason: z.string().min(1).optional() }),
-  objectOf({ ...shellOf(profile), kind: z.literal('оборот'), author: z.literal('среда'), dropped: z.number().int().nonnegative(), kept: z.number().int().nonnegative(), reason: z.string().min(1) }),
-  objectOf({ ...shellOf(profile), kind: z.literal('сбой'), author: z.literal('среда'), text: z.string().min(1) }),
-  objectOf({ ...shellOf(profile), kind: z.literal('задача'), author: z.literal('участник'), task: z.string().min(1), text: z.string().min(1) }),
-  objectOf({ ...shellOf(profile), kind: z.literal('шаг'), author: z.literal('участник'), task: z.string().min(1), stepMs: z.number().int().nonnegative(), text: z.string().optional(), reread: z.string().optional() }),
-  objectOf({ ...shellOf(profile), kind: z.literal('отказ'), author: z.literal('участник'), task: z.string().min(1), reason: z.string().min(1), text: z.string().optional() }),
-  objectOf({ ...shellOf(profile), kind: z.literal('сдача'), author: z.literal('участник'), text: z.string().min(1) }),
+  objectOf({ ...shellOf(profile, objectOf), kind: z.literal('состав'), author: z.literal('среда'), changed: z.array(z.string().min(1)).min(1), composition: compositionValue }),
+  objectOf({ ...shellOf(profile, objectOf), kind: z.literal('настройки'), author: z.literal('среда'), changed: z.array(z.string().min(1)).min(1), composition: compositionValue }),
+  objectOf({ ...shellOf(profile, objectOf), kind: z.literal('жизненный цикл'), author: z.literal('среда'), text: z.string().min(1), reason: z.string().min(1).optional() }),
+  objectOf({ ...shellOf(profile, objectOf), kind: z.literal('оборот'), author: z.literal('среда'), dropped: z.number().int().nonnegative(), kept: z.number().int().nonnegative(), reason: z.string().min(1) }),
+  objectOf({ ...shellOf(profile, objectOf), kind: z.literal('сбой'), author: z.literal('среда'), text: z.string().min(1) }),
+  objectOf({ ...shellOf(profile, objectOf), kind: z.literal('задача'), author: z.literal('участник'), task: z.string().min(1), text: z.string().min(1) }),
+  objectOf({ ...shellOf(profile, objectOf), kind: z.literal('шаг'), author: z.literal('участник'), task: z.string().min(1), stepMs: z.number().int().nonnegative(), text: z.string().optional(), reread: z.string().optional() }),
+  objectOf({ ...shellOf(profile, objectOf), kind: z.literal('отказ'), author: z.literal('участник'), task: z.string().min(1), reason: z.string().min(1), text: z.string().optional() }),
+  objectOf({ ...shellOf(profile, objectOf), kind: z.literal('сдача'), author: z.literal('участник'), text: z.string().min(1) }),
 ])
 
 /**
