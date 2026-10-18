@@ -2,7 +2,7 @@
 
 The bundle for one DeepSeek Harness profile: it inserts the product's page and the host packages behind its
 sections. It carries the page, the journal, the rules, MCP (with its servers file), OAuth, the Qoder route and
-the rate gate: `@coreness/dsh` 0.5.2, the local install.
+the rate gate: `@coreness/dsh` 0.5.3, the local install.
 
 ## What the patch inserts
 
@@ -49,33 +49,25 @@ the rate gate: `@coreness/dsh` 0.5.2, the local install.
         dryRun: false
 ```
 
-The rows' packages are `file:` dependencies inside this repository (`"@coreness/ui": "file:../ui"`,
-`"@coreness/journal": "file:../journal"`, `"@coreness/rules": "file:../rules"`, `"@coreness/mcp":
-"file:../mcp"`, `"@coreness/oauth": "file:../oauth"`, `"@coreness/qoder": "file:../qoder"`, `"@coreness/rate-gate": "file:../rate-gate"`), so the install
-resolves them from the local tree; a tarball of this package alone would not carry its siblings. The rules row
-carries no config: the order is the module's own default. The `mcp-servers` row is the platform's own
-`cordis:include`, the one writer of the profile's `mcp-servers.yml`. The Qoder row's models are the schema
-default and are not restated here; its token is the platform credential under `QODER_PERSONAL_ACCESS_TOKEN`,
-never a value in this file.
+The rows' packages are `file:` dependencies of this bundle. The public tree keeps them under `vendor/`
+and rewrites the dependencies to the vendored copies, so the install resolves inside the clone; the
+development tree binds them to the sibling packages. The rules row carries no config: the order is the
+module's own default. The `mcp-servers` row is the platform's own `cordis:include`, the one writer of
+the profile's `mcp-servers.yml`. The Qoder row's models are the schema default and are not restated
+here; its token is the platform credential under `QODER_PERSONAL_ACCESS_TOKEN`, never a value in this
+file.
 
 ## Install
 
-Into a scratch home under `tmp/` with the `web` template:
+Install the latest release into a profile:
 
 ```powershell
-$env:DSH_HOME = 'E:\Projects\Coreness-DSH-dev\tmp\install\<stamp>\home'
-& "$env:LOCALAPPDATA\Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" plugin --profile web add file:E:/Projects/Coreness-DSH-dev/packages/bundle
+dsh plugin --profile <profile> add github:Vensus137/Coreness-DSH
 ```
 
-A profile takes this bundle by a `file:` dependency. The earlier 0.4.4 install used a `link:` to the
-donor tree; its warning — peers do not resolve from the target's `node_modules` — applies to that
-form. The 0.4.4 code is not part of this tree.
-
-The `file:` spec uses forward slashes: pnpm records `file:E:/...` in the profile's manifest, and backslashes in
-that URL are not the measured form. The platform's `plugin add` creates the profile from the `web` template
-itself. The repository's `scripts/install-scratch.mjs` does this in one command and reads the manifest back;
-`scripts/probe-client.mjs` boots the profile, reads the launch token and the boot graph, and checks the served
-entry and chunks.
+The public repository carries the assembled tree: the bundle at the root, the seven packages under
+`vendor/`, and their `file:` dependencies rewritten to the vendored copies, so the install resolves
+inside the clone. The platform's `plugin add` creates the profile from the `web` template itself.
 
 ## What it does not do
 
