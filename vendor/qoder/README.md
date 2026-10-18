@@ -74,11 +74,20 @@ log or a message.
 ## Files under the home
 
 - `$DSH_HOME/qoder-requests.ndjson` — the spend journal: one append-only line per request that carried
-  usage (time, model, ending, duration, counters); rotated at 64 MiB, two generations.
+  usage (time, model, ending, duration, counters, the vendor's credits and the dollars at the rate written
+  with them); rotated at 64 MiB, two generations.
 - `$DSH_HOME/qoder/qoder-machine-id` — the machine id, written only when neither this file nor the
   vendor CLI's own `~/.qoder/.auth/machine_id` exists (the CLI's id is read first and never written).
 
 No other host file. The sweep and the routes write neither the profile's patch nor a log file.
+
+## The spend tool
+
+`spend` answers what the ledger holds for a window: dollars, credits, requests and tokens, and the same
+figures by day or by model. Every row is one request; a row whose wire counted no credits adds no money,
+and the answer says how many lines of the ledger were not rows and how many generations it read. A ledger
+that stands nowhere is a refusal in words, never an empty answer. The reader sums the row's own figure:
+`usd` where it stands, else the credits at the row's own rate, else at the fixed rate.
 
 ## The checks
 

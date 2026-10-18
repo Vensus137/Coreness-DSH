@@ -36,6 +36,7 @@ import { createImageReader } from './images.js'
 import { createCredits } from './credits.js'
 import { createAccount } from './account.js'
 import { createSpendJournal } from './spend.js'
+import { spendTools } from './spendTool.js'
 import { PROBE_ACTION } from './probe.js'
 
 export { Config, DEFAULT_MODELS, DEFAULT_SWEEP_MS, MAX_SWEEP_MS, MIN_SWEEP_MS, sweepMsOf } from './config.js'
@@ -56,7 +57,7 @@ export const name = 'coreness-qoder'
  * its startup cannot boot at all. The routes are registered in the scoped area in `apply` instead — the
  * platform's own idiom for a service that may be absent, `ctx.inject(["connection"], …)`.
  */
-export const inject = ['credentials', 'llm']
+export const inject = ['credentials', 'llm', 'tools']
 
 /** The service this plugin provides: the transport the adapter of this route consumes. */
 export const SERVICE = 'qoderTransport'
@@ -164,6 +165,12 @@ export function apply(ctx, config) {
     journal: createSpendJournal({ path: spendJournalPath(home), log: warn }),
   })
   ctx.llm.registerAdapter([ROUTE], adapter)
+  /* The ledger's reader: the money one window holds, by day and model. It reads the file the adapter
+     writes, through the one place the path is resolved — a second join of the two halves would drift the
+     first time the ledger moves. */
+  for (const tool of spendTools(spendJournalPath(home))) {
+    ctx.effect(() => ctx.tools.register(tool))
+  }
   /* The row's own id is the settings namespace the platform's page reads the profile from: the config
      below is that namespace's schema, and `settingsPath: []` means the row itself. One name for both
      doors — the directory entry and the discovery below — so a row and its live catalogue cannot drift

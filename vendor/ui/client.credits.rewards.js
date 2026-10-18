@@ -127,31 +127,25 @@ window.__ModuleLoader__.load({
        * is, and the rows it returns are appended where they stood.
        */
       function rewardRows(picture) {
-        /* A campaign whose action is "look at the details" is not a reward to take: the contour lists it
-           for reading, and neither "available" nor "claimed" over it is true. The claiming kinds stay — an
-           open one is offered, a taken one is marked. */
-        const rewards = picture.rewards.filter((entry) => String(entry.actionType ?? '').toUpperCase() !== 'VIEW_DETAILS');
-        // A list that held only view-only entries has nothing to show; it is not an empty answer.
-        if (rewards.length === 0 && picture.rewards.length > 0) return [];
+        /* Only what may be taken is drawn: a taken, blocked or expired campaign, and one that only asks
+           for a look at its details, stands as nothing rather than as a mark beside text nobody can act
+           on. The answer's own silence about a reward is not the same as a reward that was passed over. */
+        const rewards = picture.rewards.filter((entry) => entry.claimable === true);
         const rows = [];
         rows.push(h('p', { key: 'rewards', className: 'coreness-credits-blockTitle' }, t('rewards')));
         // A hidden list and an empty one are different things: hidden means the contour did not
         // recognise the desktop client, not that there is nothing to take.
         if (picture.shown === false) rows.push(h('p', { key: 'hidden', className: 'coreness-credits-dim' }, t('hidden')));
         if (picture.shown !== false && picture.rewards.length === 0) rows.push(h('p', { key: 'empty', className: 'coreness-credits-dim' }, t('noCampaigns')));
+        if (picture.shown !== false && picture.rewards.length > 0 && rewards.length === 0) rows.push(h('p', { key: 'taken', className: 'coreness-credits-dim' }, t('nothingToTake')));
         if (rewards.length > 0) {
           rows.push(h('div', { key: 'list', className: 'coreness-credits-rewards' }, rewards.map((entry) => h('div', {
             key: entry.id,
             className: 'coreness-credits-reward',
           }, [
             h('span', { key: 'text', className: 'coreness-credits-rewardText' }, rewardText(entry)),
-            // What was taken is marked, never hidden: the list shows what the contour handed out.
-            h('span', {
-              key: 'mark',
-              className: entry.claimable === true ? 'coreness-credits-rewardMarkOn' : 'coreness-credits-rewardMark',
-            }, entry.claimable === true
-              ? t('available')
-              : entry.status === 'CLAIMED' ? t('claimed') : t('notOffered')),
+            // Every drawn campaign may be taken: the mark says so and nothing else is drawn to skip.
+            h('span', { key: 'mark', className: 'coreness-credits-rewardMarkOn' }, t('available')),
           ]))));
         }
         return rows;

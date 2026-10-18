@@ -9,8 +9,10 @@
  * A refusal to open does not become an empty journal: the query refuses in words, and the refusal itself stays
  * in the list of faults the summary carries. A silent journal without records would read as "nothing changed".
  *
- * There is no price anywhere: the product does not count the price of a task, and the donor's price part is not
- * part of this port.
+ * Money is the record's own when someone knows it: a note may carry the `cost` block — dollars, the unit the
+ * figure was taken in, the rate between them, and whether the run was billed — and the summary counts it. The
+ * platform prices nothing, so the figure is reported rather than derived; a record without one counts as no
+ * money rather than as a free run.
  *
  * The stored journal is read tolerantly and written strictly: a record of an older era carries fields this
  * journal does not know, and those fields ride through untouched — the history of the environment is not
@@ -30,14 +32,14 @@
  */
 
 import { DEFAULT_RECORD_ID, addressOf, answerSchema, refusalOf, strictRecordSchema } from './domain.js'
-import { PROFILE_FILES, compositionDiff, compositionPrint, kindOfChange, profilePrint } from './fingerprint.js'
+import { PROFILE_FILES, compositionDiff, compositionOf, compositionPrint, kindOfChange, packComposition, profilePrint } from './fingerprint.js'
 import { planRotation } from './rotation.js'
 import { buildSummary, selectRecords } from './summary.js'
 
 /** The plugin's name: it signs the records about the lifecycle and about rotation. */
 export const PLUGIN_NAME = 'coreness-journal'
 /** The fields a note may carry: the address, the author and the profile are the journal's own. */
-const NOTE_FIELDS = ['kind', 'area', 'id', 'task', 'text', 'reason', 'stepMs', 'reread']
+const NOTE_FIELDS = ['kind', 'area', 'id', 'task', 'text', 'reason', 'stepMs', 'reread', 'cost']
 /** The fields a query may name: everything else is a refusal rather than a silent omission. */
 const QUERY_FIELDS = ['since', 'until', 'kind', 'area', 'id', 'limit']
 /** How many observation faults are remembered for the summary: a list is an observation, not a history. */
@@ -89,7 +91,7 @@ export function createJournal(deps) {
         const handle = await openDomain()
         table = handle.table('records')
         const records = recordList()
-        baseline = [...records].reverse().find(record => record.composition !== undefined)?.composition
+        baseline = compositionOf([...records].reverse().find(record => record.composition !== undefined))
         return table
       })()
     }
@@ -182,7 +184,7 @@ export function createJournal(deps) {
           id: first ? 'база' : cause,
           author: 'среда',
           changed,
-          composition: print,
+          composition: packComposition(print),
         })
         baseline = print
         await rotate()
@@ -214,6 +216,7 @@ export function createJournal(deps) {
         ...named('reason', input.reason),
         ...named('stepMs', input.stepMs),
         ...named('reread', input.reread),
+        ...named('cost', input.cost),
       }
       const written = await write(record)
       await rotate()
@@ -291,7 +294,7 @@ export function createJournal(deps) {
         truncated: selected.length > limit,
         // A record leaves as the fields of a record: what the journal does not know stays in
         // the store, where it was stored, and is not handed to a reader as if it were ours.
-        records: selected.slice(-limit).map(record => answerSchema.parse(record)),
+        records: selected.slice(-limit).map(record => answerSchema.parse(withComposition(record))),
         faults: [...faults],
       }
     }
@@ -361,6 +364,18 @@ function wordsOf(args) {
 /** A field of a record, when it was named: an optional field is not filled with an empty value. */
 function named(name, value) {
   return value === undefined ? {} : { [name]: value }
+}
+
+/**
+ * A record with its composition unpacked: a packed print is the record's storage, not the answer a reader
+ * was handed, and the fields of a record leave as the shapes the schema names.
+ * @param {object} record a stored record
+ * @returns {object} the record as an answer
+ */
+function withComposition(record) {
+  const composition = compositionOf(record)
+  if (composition === undefined) return record
+  return { ...record, composition }
 }
 
 /** The reason of a refusal in words. */

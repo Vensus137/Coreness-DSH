@@ -57,7 +57,7 @@ const BY_CODE = new Map([
 const POSTING = /^Error POSTing to endpoint \((?:HTTP )?(\d{3})\):\s*([\s\S]*)$/u
 
 /** How much of a responder's body is kept for the console: enough to quote, not a page of markup. */
-export const DETAIL_MAX = 400
+const DETAIL_MAX = 400
 
 /**
  * How long the one sentence drawn in the card's body may be.
@@ -185,7 +185,7 @@ export function readReason(error) {
  * @param {string} entryId the row's own entry, as the picture names it
  * @returns {Promise<{family: string, server: string | null, detail: string | null} | null>} the reason
  */
-export async function reasonOfRow(ctx, entryId) {
+async function reasonOfRow(ctx, entryId) {
   const loader = ctx.get?.('loader')
   if (loader === undefined) return null
   const entries = [...(loader.entries?.() ?? [])]

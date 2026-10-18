@@ -35,7 +35,7 @@ export function journalTools(journal) {
     defineTool({
       name: QUERY_TOOL,
       description: 'One query over the environment\'s journal: without a kind it answers with a short summary '
-        + '(how many records, what changed, refusals, steps), with a kind or an area — with the records themselves '
+        + '(how many records, what changed, refusals, steps, the money the notes reported), with a kind or an area — with the records themselves '
         + 'within the named limit. The journal is never read whole.',
       parameters: {
         since: { type: 'string', description: `Window start, an instant like ${INSTANT}. By default there is no lower bound.` },
@@ -64,7 +64,8 @@ export function journalTools(journal) {
       name: NOTE_TOOL,
       description: 'Write into the environment\'s journal what changes the world and cannot be observed: a closed '
         + 'task, a step, a refusal with its reason, a mark "the plugin is handed over". A refusal without a reason is '
-        + 'refused; a step carries its measured duration.',
+        + 'refused; a step carries its measured duration; a note may carry the money a run came to in `cost` — '
+        + 'usd, paid, unit (credits or cny), amount, rate, at.',
       parameters: {
         kind: {
           type: 'string',

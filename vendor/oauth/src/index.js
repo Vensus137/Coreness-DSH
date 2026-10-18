@@ -40,7 +40,7 @@ export const inject = ['credentials']
 export const FLOW = 'oauthFlow'
 
 /** Every action this route takes, in the order they are named to a request that asks for none of them. */
-const ROUTE_ACTIONS = [...SIGNIN_ACTIONS]
+const ROUTE_ACTIONS = SIGNIN_ACTIONS
 
 /** The exact route the page's sign-in strip reads this door through: one act per request. */
 export const ROUTE = '/api/coreness.signin'

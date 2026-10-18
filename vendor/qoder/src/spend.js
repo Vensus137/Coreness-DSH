@@ -14,6 +14,11 @@
  * classifies an attempt with. No figure here is arithmetic of ours: the vendor's credits and the platform's
  * counts travel as they arrived.
  *
+ * The money is the row's own: `rate` is the dollars-per-credit the owner fixed, and `usd` is the credits
+ * converted at that rate — written only where the wire counted credits, because a row of zeros in a ledger
+ * of costs is worse than no row. A row keeps the rate it was written with, so a re-valued rate moves the
+ * rows written after it and never the ones behind.
+ *
  * **The bound, and why this number.** The donor rotated this file itself at the round number inside its own
  * two generations — 4 MiB was the only round number in that window — which left a row quoted by its **line
  * number** a shelf life of hours: after a rotation the index names nothing or another row, and a second
@@ -38,6 +43,9 @@ import { usageOf, vendorUsageOf } from './frames.js'
 
 /** The size a file is rotated at: 64 MiB, the user's own number, two generations on disk. */
 export const ROTATE_AT = 64 * 1024 * 1024
+
+/** US dollars per credit, fixed by the owner: a dollar buys a hundred credits. */
+export const USD_PER_CREDIT = 0.01
 
 /** How much of a file is read to date one of its ends. The longest donor row is 40 612 bytes, so this holds a whole one. */
 const HEAD_BYTES = 128 * 1024
@@ -120,13 +128,18 @@ export function createSpendJournal({ path, now = () => Date.now(), log = () => {
           keepTheDonorEra()
           renameSync(path, `${path}.1`)
         }
+        const vendor = vendorUsageOf(usage)
+        const credits = vendor.credits
         const row = {
           time: new Date(now()).toISOString(),
           model,
           finish,
           durationMs,
           usage: usageOf(usage),
-          vendor: vendorUsageOf(usage),
+          vendor,
+          ...Number.isFinite(credits)
+            ? { rate: USD_PER_CREDIT, usd: Math.round(credits * USD_PER_CREDIT * 1e6) / 1e6 }
+            : {},
         }
         appendFileSync(path, `${JSON.stringify(row)}\n`)
       } catch (error) {

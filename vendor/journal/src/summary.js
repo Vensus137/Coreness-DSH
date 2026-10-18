@@ -8,8 +8,9 @@
  * truncation said out loud, so that nobody receives the whole journal without noticing.
  *
  * What is counted is what the measure of reflection is made of: steps and rereads from
- * the records of participants, refusals by reason. There is no price: the product does not
- * count the price of a task, so no summary carries a line about one.
+ * the records of participants, refusals by reason, and the money the records carry — the
+ * whole figure and the part of it written by runs that were billed. The platform prices
+ * nothing, so the money of a summary is what the notes reported, never a derivation.
  *
  * @module @coreness/journal/src/summary
  */
@@ -94,6 +95,7 @@ export function buildSummary(records, options = {}) {
     last,
     refusals: refusalsOf(inside),
     steps: stepsOf(inside),
+    cost: costOf(inside),
   }
 }
 
@@ -122,6 +124,20 @@ function refusalsOf(records) {
   return [...by.entries()]
     .map(([reason, count]) => ({ reason, count }))
     .sort((left, right) => right.count - left.count)
+}
+
+/**
+ * The money over the selection: the whole figure and the part written by runs that were billed, at six
+ * decimals — the ledger's own precision.
+ */
+function costOf(records) {
+  const withCost = records.filter(record => record.cost !== undefined)
+  const round = value => Math.round(value * 1e6) / 1e6
+  return {
+    usd: round(withCost.reduce((sum, record) => sum + record.cost.usd, 0)),
+    billedUsd: round(withCost.filter(record => record.cost.paid === true).reduce((sum, record) => sum + record.cost.usd, 0)),
+    records: withCost.length,
+  }
 }
 
 /** Steps and rereads: by them the number of approaches a task took is counted. */

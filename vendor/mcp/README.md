@@ -36,9 +36,10 @@ reading the tree back, and the answer is the picture as the file now stands — 
 through". A disagreement is `not-saved`.
 
 The reload carries a second fact beside the file: the row is switched off and on, and the door reads the
-Loader's phase for it. A row that comes back `failed` is refused with the phase named — `reloaded` over a
-row that serves nothing is a claim the door cannot stand behind — and so is a row the Loader cannot name;
-a row still coming up is answered with the phase it is in. The reload's own line goes through the route's
+Loader's phase for it. A row that comes back `failed` is refused — the strip says Not saved and the note's
+detail names the phase the Loader gave, because `reloaded` over a row that serves nothing is a claim the door
+cannot stand behind — and so is a row the Loader cannot name; a row still coming up is answered with the phase
+it is in. The reload's own line goes through the route's
 `ctx.logger`, and in this build that line reaches neither the run's stdout nor the profile's log files: the
 door's answer is the evidence a reload leaves behind, and the call stands for a profile whose logger has a
 sink.

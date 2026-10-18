@@ -23,9 +23,34 @@
  */
 
 import { createHash } from 'node:crypto'
+import { gunzipSync, gzipSync } from 'node:zlib'
 
 /** The profile files an edit of the composition or of the settings is visible in. */
 export const PROFILE_FILES = ['package.json', 'cordis.patch.yml', 'compatibility.json']
+
+/**
+ * The composition print as a record stores it: the live composition is a few hundred rows, so the print
+ * weighed some twenty kilobytes in every record that observed a change — most of a journal of a busy
+ * day — and a packed one is the same object at a ninth of the bytes.
+ * @param {object} print the composition print
+ * @returns {object} the packed value a record carries
+ */
+export function packComposition(print) {
+  return { packed: gzipSync(Buffer.from(JSON.stringify(print), 'utf8')).toString('base64') }
+}
+
+/**
+ * The composition print a record carries, unpacked — the packed shape and the earlier inline one alike, so
+ * the comparison against the baseline reads a journal written under either.
+ * @param {object} record a record
+ * @returns {object | undefined} the print, when the record carries one
+ */
+export function compositionOf(record) {
+  const composition = record?.composition
+  if (composition === undefined) return undefined
+  if (typeof composition?.packed !== 'string') return composition
+  return JSON.parse(gunzipSync(Buffer.from(composition.packed, 'base64')).toString('utf8'))
+}
 
 /**
  * The digest of a text: a short hash — it is read by eye in a record, and it is

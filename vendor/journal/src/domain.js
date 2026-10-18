@@ -78,12 +78,34 @@ const profileField = z.string().min(1)
 /** The same field where the history is read: an absent profile is the record's own state, not a gap to fill. */
 const profileMaybe = profileField.optional()
 
-/** The shell of a record: the address, the task it belongs to and the profile that wrote it. */
+/**
+ * The money a record may carry: the dollars it came to, the unit the figure was taken in and the rate
+ * between them, and whether the run was billed. A record of the older era carries none, and none is
+ * invented for it.
+ *
+ * A figure is written by whoever knows it — the price of a task is not derivable from the platform's token
+ * counts, which is why the record takes it rather than computes it. The rate travels with the figure: a
+ * re-valued rate moves the records written after it and never the ones behind.
+ */
+const costSchema = z.object({
+  usd: z.number().nonnegative(),
+  paid: z.boolean(),
+  unit: z.enum(['credits', 'cny']),
+  amount: z.number().nonnegative(),
+  rate: z.number().positive(),
+  at: instant,
+})
+
+/** The print a record carries: the object, or the packed value a busy journal writes. */
+const compositionValue = z.union([compositionSchema, z.object({ packed: z.string().min(1) })])
+
+/** The shell of a record: the address, the task it belongs to, the money it may carry, and the profile that wrote it. */
 const shellOf = profile => ({
   time: instant,
   area: z.string().min(1),
   id: z.string().min(1),
   task: z.string().min(1).optional(),
+  cost: costSchema.optional(),
   profile,
 })
 
@@ -98,8 +120,8 @@ const shellOf = profile => ({
  * @returns {object} the record schema
  */
 const recordVariants = (objectOf, profile) => z.discriminatedUnion('kind', [
-  objectOf({ ...shellOf(profile), kind: z.literal('состав'), author: z.literal('среда'), changed: z.array(z.string().min(1)).min(1), composition: compositionSchema }),
-  objectOf({ ...shellOf(profile), kind: z.literal('настройки'), author: z.literal('среда'), changed: z.array(z.string().min(1)).min(1), composition: compositionSchema }),
+  objectOf({ ...shellOf(profile), kind: z.literal('состав'), author: z.literal('среда'), changed: z.array(z.string().min(1)).min(1), composition: compositionValue }),
+  objectOf({ ...shellOf(profile), kind: z.literal('настройки'), author: z.literal('среда'), changed: z.array(z.string().min(1)).min(1), composition: compositionValue }),
   objectOf({ ...shellOf(profile), kind: z.literal('жизненный цикл'), author: z.literal('среда'), text: z.string().min(1), reason: z.string().min(1).optional() }),
   objectOf({ ...shellOf(profile), kind: z.literal('оборот'), author: z.literal('среда'), dropped: z.number().int().nonnegative(), kept: z.number().int().nonnegative(), reason: z.string().min(1) }),
   objectOf({ ...shellOf(profile), kind: z.literal('сбой'), author: z.literal('среда'), text: z.string().min(1) }),
@@ -124,9 +146,9 @@ export const recordSchema = recordVariants(z.looseObject, profileMaybe)
 
 /**
  * The record schema a write must satisfy: the same vocabulary, closed. A field the journal
- * does not know — the price of a task, for one — is refused by name at write time. The
- * price appears neither here nor anywhere else: the product does not count the price of a task
- * (the user's decision), and the donor's price part left with it.
+ * does not know is refused by name at write time. The money a note may report — dollars, the unit it was
+ * taken in, the rate between them — is the `cost` block of the shell, checked like every other field; the
+ * product does not derive a price on its own, so a figure that stands is one somebody wrote.
  *
  * The profile is required here and only here: every record this journal writes says which
  * profile wrote it, and a record without one is refused rather than stored unattributed.

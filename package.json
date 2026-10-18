@@ -1,11 +1,11 @@
 {
   "name": "@coreness/dsh",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "private": true,
   "type": "module",
   "description": "The Coreness product for a DeepSeek Harness profile (new tree).",
   "engines": {
-    "dsh": ">=0.2.1-rc.2 <0.3.0-0"
+    "dsh": ">=0.2.1-rc.2"
   },
   "dependencies": {
     "@coreness/ui": "file:./vendor/ui",
