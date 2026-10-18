@@ -1,6 +1,6 @@
 {
   "name": "@coreness/dsh",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "private": true,
   "type": "module",
   "description": "The Coreness product for a DeepSeek Harness profile (new tree).",
@@ -21,6 +21,7 @@
     "./icon": "./icon.svg"
   },
   "files": [
+    "LICENSE",
     "README.md",
     "cordis.patch.yml",
     "icon.svg",

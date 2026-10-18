@@ -1,76 +1,62 @@
-# @coreness/dsh
+# Coreness for DeepSeek Harness
 
-The bundle for one DeepSeek Harness profile: it inserts the product's page and the host packages behind its
-sections. It carries the page, the journal, the rules, MCP (with its servers file), OAuth, the Qoder route and
-the rate gate: `@coreness/dsh` 0.5.3, the local install.
+**A page, a journal and a brake for a DeepSeek Harness profile.**
 
-## What the patch inserts
+Coreness is the product for one DeepSeek Harness profile: a page with the profile's MCP servers, its Qoder provider and its rate limits and usage; the journal of what the profile and its sessions do; and the rules of the tree in force. It installs as it is: the halves the browser loads are plain files, served where they lie — nothing is built, nothing is compiled, and what is installed is what runs.
 
-```yaml
-- insert:
-    - id: coreness-ui
-      name: '@coreness/ui'
-    - id: coreness-journal
-      name: '@coreness/journal'
-      config:
-        rotationDays: 30
-        rotationBytes: 2097152
-        recordsLimit: 20
-    - id: coreness-rules
-      name: '@coreness/rules'
-    - id: coreness-mcp
-      name: '@coreness/mcp'
-    - id: mcp-servers
-      name: cordis:include
-      config:
-        path: ./mcp-servers.yml
-        initial: []
-    - id: coreness-oauth
-      name: '@coreness/oauth'
-    - id: coreness-qoder
-      name: '@coreness/qoder'
-      config:
-        apiKeyEnv: QODER_PERSONAL_ACCESS_TOKEN
-        firstByteCeilingMs: 60000
-        retryPolicy:
-          mode: normal
-          maxRetries: 5
-          retryableCodes: [EMPTY_RESPONSE, RATE_LIMIT, SERVER, TIMEOUT, TRANSPORT, MALFORMED_RESPONSE]
-          backoff: { initialDelayMs: 500, maxDelayMs: 10000, jitterRatio: 0.1 }
-        credits:
-          sweepMs: 600000
-          autoClaim: true
-    - id: coreness-rate-gate
-      name: '@coreness/rate-gate'
-      config:
-        windowMs: 60000
-        maxWaitMs: 60000
-        thresholdRatio: 0.9
-        dryRun: false
+## ⚡ Install
+
+**The application installs its own plugins.** *Plugins* → *Add plugin* takes a package name, a tarball, a git address or a local path, and the package goes into the profile the application is running — one door for the desktop application and for the web one, and no profile to name:
+
+```
+github:Vensus137/Coreness-DSH
 ```
 
-The rows' packages are `file:` dependencies of this bundle. The public tree keeps them under `vendor/`
-and rewrites the dependencies to the vendored copies, so the install resolves inside the clone; the
-development tree binds them to the sibling packages. The rules row carries no config: the order is the
-module's own default. The `mcp-servers` row is the platform's own `cordis:include`, the one writer of
-the profile's `mcp-servers.yml`. The Qoder row's models are the schema default and are not restated
-here; its token is the platform credential under `QODER_PERSONAL_ACCESS_TOKEN`, never a value in this
-file.
+The same page switches the package off without removing it, and takes it off again.
 
-## Install
+That address follows the newest release, and what stands published is a release — so the address and the newest release are one thing here. A fixed release is named by its own tag — `…Coreness-DSH#v0.5.4` — and a released tag is never moved: that line gives the same code whenever it is run.
 
-Install the latest release into a profile:
+<details>
+<summary><b>By command line</b> — for a terminal; nothing above needs it</summary>
 
-```powershell
-dsh plugin --profile <profile> add github:Vensus137/Coreness-DSH
+The line is ready to run as it stands, because the desktop application's own profile carries that name:
+
+```
+dsh plugin --profile desktop add github:Vensus137/Coreness-DSH
 ```
 
-The public repository carries the assembled tree: the bundle at the root, the seven packages under
-`vendor/`, and their `file:` dependencies rewritten to the vendored copies, so the install resolves
-inside the clone. The platform's `plugin add` creates the profile from the `web` template itself.
+Another profile is named by its own name instead — the web surface's is `web` — and naming a profile that does not stand yet creates it.
 
-## What it does not do
+`dsh` is the application's own command and is not one Windows or macOS comes with, so until the application puts it on the path a terminal answers *not recognized*. The application does that from its own menu: in the window's title bar beside the app icon, **Application** → **Manage dsh Command…** — the dialog shows the location it manages, and the same dialog takes the command off the path again. A terminal opened before that act keeps the path it started with, so open a new one afterwards.
 
-No npm registry resolution of the `file:` siblings: the public repository receives the assembled tree
-(the bundle at the root, the seven packages under `vendor/`), released by tag. No live profile. The display
-resources (`locale/en.json`, `icon.svg`) are for the plugin manager's list.
+</details>
+
+The profile's composition is read when the application starts, so the package becomes live at the next start, and the platform says itself when a change it made needs a restart. Nothing is built on the way in and no permission for install scripts is asked: the package is plain files, and the address is fetched over the network the application already uses rather than by a git client — a machine without git installs it.
+
+## ✨ What a profile gets
+
+- 🗂 **A page of its own** — the profile's MCP servers as cards, its Qoder provider and its rate limits and usage; the sections stand in the rail, and the version stands beside the name.
+- 🔌 **The MCP servers, seen and edited** — one card per server: its kind, its address, the environment it needs, and switches whose effect lands in the profile rather than in a copy.
+- 📓 **The journal** — the environment's memory: what changed in the profile and what a participant did, kept as records that carry a kind, an area, a name and an author.
+- 🚦 **A limiter that waits instead of refusing** — a call over the limit takes its turn in a queue; nothing is limited as the package ships.
+- 🧠 **A route to the Qoder models** — the account's own models, each with the reasoning levels it accepts and the output budget it allows. The account's token is entered once, in the Qoder section, and kept by the platform's own store; no value of it stands in the package. The credits foot reads the balance while the account is reachable.
+- 📜 **The rules of its own tree, in force** — one prompt section, registered through the platform's own prompt registry, so a session of the profile carries them in every request and no compaction can take them out of the model's sight.
+
+## 🧩 What it needs
+
+- **DeepSeek Harness.** The version this package was built against is declared in the manifest, and the application compares that declaration with its own before a profile imports a plugin: a mismatch leaves the plugin out and says so, instead of failing quietly later.
+- **A Qoder account,** for the Qoder route and the credits foot; the token is entered in the Qoder section and kept by the platform's own store.
+
+## 📦 What lands
+
+Exactly the list the package's manifest names — the bundle and the seven packages, each with its own README beside its code. No part of the workshop they are built in: the contracts, the checks and the notes of this project stay where the work is done.
+
+## 🧭 What it deliberately does not do
+
+- It is not a second door to the platform's own acts: enabling, disabling, installing and removing belong to the application's Plugins page, and this package reports what stands rather than competing with it.
+- It does not own the MCP side: the platform owns the servers, the connection and the registry, while this package owns the picture and the form.
+- It limits nothing until a limit is declared.
+
+## 📄 License
+
+MIT.
