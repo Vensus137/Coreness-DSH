@@ -2,7 +2,7 @@
 
 The bundle for one DeepSeek Harness profile: it inserts the product's page and the host packages behind its
 sections. It carries the page, the journal, the rules, MCP (with its servers file), OAuth, the Qoder route and
-the rate gate: `@coreness/dsh` 0.5.0, the local install.
+the rate gate: `@coreness/dsh` 0.5.1, the local install.
 
 ## What the patch inserts
 
@@ -67,13 +67,9 @@ $env:DSH_HOME = 'E:\Projects\Coreness-DSH-dev\tmp\install\<stamp>\home'
 & "$env:LOCALAPPDATA\Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" plugin --profile web add file:E:/Projects/Coreness-DSH-dev/packages/bundle
 ```
 
-The old package's return is the owner's backup restore, not a scratch install: the 0.4.4 tree is retired
-with this one. The scratch proof that it composed by `link:` was recorded while the donor tree still stood
-(`@coreness/dsh` 0.4.4 by `link:E:/Projects/Coreness-DSH-dev`, install exit 0, dump `coreness-page`,
-`coreness-mcp`, `coreness-oauth`, `coreness-journal`, `coreness-rate-gate`, `coreness-qoder`,
-`coreness-rules`, `mcp-servers`, at `tmp/install/rollback-2026-10-18T20-20-40-356Z`). That link's warning —
-peers do not resolve from the target's `node_modules` — was part of the proof, and the live switch removed
-it from the profile.
+A profile takes this bundle by a `file:` dependency. The earlier 0.4.4 install used a `link:` to the
+donor tree; its warning — peers do not resolve from the target's `node_modules` — applies to that
+form. The 0.4.4 code is not part of this tree.
 
 The `file:` spec uses forward slashes: pnpm records `file:E:/...` in the profile's manifest, and backslashes in
 that URL are not the measured form. The platform's `plugin add` creates the profile from the `web` template
