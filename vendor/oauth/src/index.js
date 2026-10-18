@@ -12,12 +12,7 @@
  * of a route. The desk and the flow are one package, so `no-flow` is not a state this product can be in,
  * and the code does not exist.
  *
- * The second door is the reason a row did not start. The platform keeps it — the error that ended the
- * row's plugin stands on the fiber the Loader holds — and publishes it nowhere: the inventory carries the
- * phase alone, and a browser reaches neither the Loader nor a fiber. The same route answers what a failed
- * row's own record says, read where it stands.
- *
- * Both doors are registered in a **scoped area**: `connection` is the web transport, and a plugin that
+ * The door is registered in a **scoped area**: `connection` is the web transport, and a plugin that
  * declares it never applies where no page is served, which would take this plugin's route away with the
  * surface it was written for. The area runs where the service stands, and the plugin stands without it.
  *
@@ -33,7 +28,6 @@ import { NO_TOKEN, bearerExpression, referenceFor, tokenKeyOf } from './referenc
 import { CALLBACK_PATH, PersonStep, callbackPathOf, redirectUrlFor } from './step.js'
 import { RecordStores, idOf, keyOf, slugOf } from './stores.js'
 import { CODES, Refusal, WORDS } from './refusals.js'
-import { reasonsOf } from './reason.js'
 import { ACTIONS as SIGNIN_ACTIONS, Refused, SignInDesk } from './signin.js'
 
 /** The name this plugin's row carries in the composition, and the name this plugin logs under. */
@@ -45,19 +39,10 @@ export const inject = ['credentials']
 /** The name the flow is published under, for the step that joins it to a row. */
 export const FLOW = 'oauthFlow'
 
-/**
- * The action that reads the reason of a row that did not start.
- *
- * It is named here rather than in the desk's own list, because it is not the desk's: the sign-in's actions
- * are acts a press starts, and this one is a reading of the platform's own record. The route takes both,
- * and this is the one place the whole list is composed.
- */
-export const REASONS = 'reasons'
-
 /** Every action this route takes, in the order they are named to a request that asks for none of them. */
-const ROUTE_ACTIONS = [...SIGNIN_ACTIONS, REASONS]
+const ROUTE_ACTIONS = [...SIGNIN_ACTIONS]
 
-/** The exact route the page's sign-in strip and reason line read this door through: one act per request. */
+/** The exact route the page's sign-in strip reads this door through: one act per request. */
 export const ROUTE = '/api/coreness.signin'
 
 /** The reason of a thrown value, in words. */
@@ -179,8 +164,7 @@ export function apply(ctx) {
 /**
  * The door's one answer: what stands, or the refusal in words — 200 whatever happened.
  *
- * Every action it takes is answered here, the sign-in's and the reading's alike, and each is refused in its own
- * vocabulary's words. The refusals here are the door's own; a sign-in that the flow itself refuses is not an
+ * Every action it takes is answered here, and each is refused in its own vocabulary's words. The refusals here are the door's own; a sign-in that the flow itself refuses is not an
  * answer to this request at all — the attempt outlives it, and its code and sentence stand in the state the
  * page reads.
  * @param {object} ctx the cordis context
@@ -199,9 +183,6 @@ async function signInAnswer(ctx, request, desk) {
     if (!ROUTE_ACTIONS.includes(action)) {
       throw new Refused('signin-action', `this route takes ${ROUTE_ACTIONS.join(', ')}, and this request asks for ${action === '' ? 'no action' : `"${action}"`}`)
     }
-    /* The reason of a row that did not start is read off the Loader itself, so it stands without a press: a
-       composition that carries no sign-in can still say why a row never came up. */
-    if (action === REASONS) return json({ ok: true, value: { reasons: await reasonsOf(ctx, body.rows) } })
     if (action === 'sign-ins') return json({ ok: true, value: { signins: await desk.states(body.rows) } })
     if (action === 'sign-in') {
       return json({ ok: true, value: { signin: await desk.start({ server: body.server, resource: body.resource, entryId: body.entryId ?? null }) } })
@@ -210,8 +191,8 @@ async function signInAnswer(ctx, request, desk) {
     if (action === 'forget') return json({ ok: true, value: { forgotten: await desk.forget({ server: body.server }) } })
     return json({ ok: true, value: { signin: await desk.cancel({ server: body.server }) } })
   } catch (error) {
-    /* One shape of refusal for the whole route, whichever vocabulary it came from: the desk's codes and the
-       reading's are named apart, and a failure of neither is the door's own. */
+    /* One shape of refusal for the whole route: the desk's codes are named apart, and a failure of them is the
+       door's own. */
     const code = error instanceof Refused ? error.code : 'signin-failed'
     const message = reasonOf(error)
     ctx.logger?.warn?.(`${name}: the sign-in door refused a request: ${code} — ${message}`)

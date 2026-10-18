@@ -59,8 +59,8 @@ window.__ModuleLoader__.load({
     const SECTION = require.async('./client.mcp.section.js');
 
     /**
-     * The refusals of the plugin's route. The host's own row reader names the same set, and a check holds
-     * the two lists together: a code one half knows and the other does not is a save nobody can read.
+     * The refusals of the plugin's route, as the host names them: the page carries its own words by code, and
+     * a code one half knows and the other does not is a save nobody can read.
      */
     const REFUSALS = [
       'bad-action',
@@ -117,17 +117,24 @@ window.__ModuleLoader__.load({
      * servers route's own codes on purpose: one code carried by two vocabularies would leave one of them
      * drawing the other's sentence.
      */
-    const DOOR_FAULTS = ['signin-action', 'signin-body', 'signin-lost', 'signin-failed', 'no-loader'];
-
-    /**
-     * The families of a failure this half has a sentence for, in the order the host names them: the host
-     * decides the family, and a check holds the two lists together.
-     */
-    const REASONS = ['forbidden', 'unauthorized', 'missing', 'broken', 'unexpected', 'closed', 'silent', 'unknown'];
+    const DOOR_FAULTS = ['signin-action', 'signin-body', 'signin-lost', 'signin-failed'];
 
     /* The section's own words. One namespace, one dictionary: the rail row's label is a thunk so it
        follows the language without a re-registration, and every failure the route can answer with
        has words here rather than a bare code. */
+    /**
+     * The dictionary key of a failure's family.
+     *
+     * The host decides the family; the page owns the words, and the dictionary is the only list of them: a
+     * family this half has no sentence for is drawn as `unknown` rather than as a key a reader cannot read.
+     * @param {string} family the family the host read off the failure
+     * @returns {string} the key to draw
+     */
+    const reasonKey = (family) => {
+      const key = `reason.${family}`;
+      return Object.prototype.hasOwnProperty.call(EN, key) ? key : 'reason.unknown';
+    };
+
     const EN = {
       section: 'MCP',
       title: 'MCP servers',
@@ -242,7 +249,6 @@ window.__ModuleLoader__.load({
       'fault.signin-body': 'The sign-in door could not read what the page sent',
       'fault.signin-lost': 'The plugin that was running this sign-in is gone; press Sign in again',
       'fault.signin-failed': 'The sign-in could not be started',
-      'fault.no-loader': 'This composition carries no Loader, so a row\'s own failure record cannot be read here',
       'reason.forbidden': 'The server understood the request and refused it — this address is out of reach from here (a region, a plan or a policy)',
       'reason.unauthorized': 'The server wants a sign-in before it answers, and no attempt was made for it',
       'reason.missing': 'No MCP endpoint answers at this address',
@@ -542,7 +548,7 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
 
     /** The one object the parts reach each other through; the entry puts its own half in before any is made. */
     const shared = {
-      ROUTE, PAGE_ROUTE, SIGNIN_POLL_MS, SEAT, ID, NS, KINDS, KIND_LABELS, REASONS, MENU,
+      ROUTE, PAGE_ROUTE, SIGNIN_POLL_MS, SEAT, ID, NS, KINDS, KIND_LABELS, reasonKey, MENU,
       SETTLE, unsettled, reasonOf, faultLines, tellTroubles, useStyles,
     };
 

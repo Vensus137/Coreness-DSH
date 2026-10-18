@@ -15,7 +15,7 @@
  */
 
 import { MCP_MODULE, keptOf, kindOf, pairsOf, publicPrefix, rawToolName, refsOf, serverNameOf } from './row.js'
-import { isTrouble, named } from './trouble.js'
+import { isTrouble, named } from './ring.js'
 
 /**
  * The server name of a row: the config's own, or the one the row's id spells.
@@ -36,9 +36,10 @@ function serverOf(row) {
  * @param {object[]} input.schemas the tools service's schemas
  * @param {string | null} input.unable why the file could not be read at all, when it could not
  * @param {object | null} input.trouble the host's own lines about the servers, as they were kept
+ * @param {Map<string, object>} input.failures the reason of every row the inventory reports as failed
  * @returns {object} the picture
  */
-export function pictureOf({ include = null, rows = [], inventory = [], schemas = [], unable = null, trouble = null } = {}) {
+export function pictureOf({ include = null, rows = [], inventory = [], schemas = [], unable = null, trouble = null, failures = new Map() } = {}) {
   const file = {
     entryId: include?.entryId ?? null,
     path: include?.path ?? null,
@@ -78,7 +79,7 @@ export function pictureOf({ include = null, rows = [], inventory = [], schemas =
     file,
     state: 'ready',
     reason: null,
-    rows: rows.map((row, at) => rowOf(row, byAddress.get(row.entryId) ?? null, schemas, servers[at], words.get(servers[at]) ?? null)),
+    rows: rows.map((row, at) => rowOf(row, byAddress.get(row.entryId) ?? null, schemas, servers[at], words.get(servers[at]) ?? null, failures.get(String(row.entryId ?? '')) ?? null)),
   }
 }
 
@@ -92,9 +93,10 @@ export function pictureOf({ include = null, rows = [], inventory = [], schemas =
  * @param {object[]} schemas the tools service's schemas
  * @param {string | null} server the server name of this row
  * @param {object | null} word the newest line of the host that names this server
+ * @param {object | null} failure the platform's own record, when the row's fiber failed
  * @returns {object} the row
  */
-function rowOf(row, live, schemas, server, word) {
+function rowOf(row, live, schemas, server, word, failure) {
   const config = row.config ?? {}
   const shape = row.module === MCP_MODULE
   /* What the row connects by: the platform's own transport, read from the row and never stored. */
@@ -138,5 +140,9 @@ function rowOf(row, live, schemas, server, word) {
        a row that is switched off carries no word at all — its client is unmounted, so the line would be
        about a connection that no longer exists, and the row's own state says it is off. */
     trouble: shape && server !== null && row.disabled !== true && isTrouble(word) ? word : null,
+    /* Why the row's fiber failed, read once here and carried by the picture every reader already takes the
+       row's facts from — the phase says it failed, and this says what the failure was. A row that came up
+       has no record, and a switched-off row's fiber never ran. */
+    failure: shape && row.disabled !== true ? failure : null,
   }
 }

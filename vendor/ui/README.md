@@ -61,6 +61,4 @@ The package is installed through the bundle, not by itself: `packages/bundle` de
 
 ## Checks
 
-`node --check` on every file, the caps (entry ≤400, kit ≤400, a section chunk and its parts ≤600, no counted
-file >800), the scratch install's read-back, and the probe's boot graph and served ids (the entry, the kit,
-the picker, the hold, the six MCP files, the six Qoder files, the credits pair and the four gate files). No test suite.
+`node --check` on every file, the caps (the entry and the kit ≤400 lines, every other `.js` or `.mjs` ≤600, `PROJECT.md` ≤250, every other text ≤150), the scratch install's read-back, and the probe's boot graph and served ids (the entry, the kit, the picker, the hold, the six MCP files, the six Qoder files, the credits pair and the four gate files). No test suite.

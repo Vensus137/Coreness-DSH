@@ -95,9 +95,6 @@ window.__ModuleLoader__.load({
            remembered across a mount, and a half-typed answer is nobody's but the person's. `joined` names the
            rows this session has already written the reference into, so one grant is joined once. */
         const [signins, setSignins] = React.useState({});
-        /* The reason of every row the platform reported as failed, by the row's own entry: read off the host's
-           own failure record, and drawn as the one sentence in the card's body. */
-        const [reasons, setReasons] = React.useState({});
         const [answers, setAnswers] = React.useState({});
         const [joined, setJoined] = React.useState({});
 
@@ -283,59 +280,21 @@ window.__ModuleLoader__.load({
          * The long words of a failure, told to the console wherever the reason is read.
          *
          * The face carries one sentence — the server's own when it wrote one, the page's own for the family
-         * otherwise — and the platform's own record of it names the status, the SDK's classification and the
-         * responder's body as it came, which is what a person repeats when asking about it. So it goes to the
-         * console through this page's one door, and once per new record: a wait reads the same picture every
+         * otherwise — and the picture carries the platform's own record beside it: the status, the SDK's
+         * classification and the responder's body as it came, which is what a person repeats when asking about
+         * it. So the detail goes to the console, once per new record: a wait reads the same picture every
          * second, and the same record is not news the second time.
-         * @param {object[]} list what the page's own door answered, one entry per row it was asked about
          */
-        const tellReasons = (list) => {
-          for (const one of list ?? []) {
-            const reason = one?.reason ?? null;
+        React.useEffect(() => {
+          for (const row of state.picture?.rows ?? []) {
+            const reason = row.failure ?? null;
             if (reason === null || typeof reason.detail !== 'string' || reason.detail === '') continue;
             const said = `${reason.family}\u0000${reason.detail}`;
-            if (toldReason.get(one.entryId) === said) continue;
-            toldReason.set(one.entryId, said);
-            kit.statusDetail(one.server ?? one.entryId, reason.detail);
+            if (toldReason.get(row.entryId) === said) continue;
+            toldReason.set(row.entryId, said);
+            kit.statusDetail(row.server ?? row.id, reason.detail);
           }
-        };
-
-        /* The rows the platform reported as failed: the only rows whose reason can be read at all, because the
-           record is kept by the fiber that failed and a row that came up has none. The rows are asked about when
-           the failing set itself changes — a row that keeps standing failed is not asked again on every read,
-           and the platform's record of a failure does not move while it stands. */
-        const failed = (state.picture?.rows ?? [])
-          .filter((row) => row.shape === true && row.enabled === true && row.phase === 'failed')
-          .map((row) => ({ entryId: row.entryId, server: row.server ?? row.id }));
-        const failedKey = JSON.stringify(failed);
-        React.useEffect(() => {
-          if (failedKey === '[]') {
-            setReasons({});
-            return undefined;
-          }
-          let live = true;
-          askPage({ action: 'reasons', rows: JSON.parse(failedKey) }).then(
-            (answer) => {
-              if (!live) return;
-              tellReasons(answer.reasons);
-              /* Keyed by the row's own entry, and the reason itself as the value: the card reads one sentence
-                 off it, and a row the door answered nothing about keeps no entry at all. */
-              setReasons(Object.fromEntries((answer.reasons ?? [])
-                .filter((one) => one?.reason != null)
-                .map((one) => [one.entryId, one.reason])));
-            },
-            (error) => {
-              /* A read that failed claims nothing: the reasons go, so no card keeps a sentence the door no
-                 longer stands behind, and the refusal itself stands where a reader who needs it looks. */
-              if (!live) return;
-              setReasons({});
-              kit.statusDetail(t('section'), `the reason of a row that did not start could not be read: ${shared.reasonOf(error)}`);
-            },
-          );
-          return () => {
-            live = false;
-          };
-        }, [failedKey]);
+        }, [state.picture]);
 
         /* A grant that stands and a row that does not read it is the other half of one press: the record was
            committed and the row was never joined to it, by a page closed mid-way or by a restart of the
@@ -551,7 +510,6 @@ window.__ModuleLoader__.load({
           open: openRows,
           menu: openMenu,
           signins,
-          reasons,
           answers,
         }, act);
       }

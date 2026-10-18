@@ -108,7 +108,7 @@ window.__ModuleLoader__.load({
        * an address that answered something that is not an MCP server. A family this page has no words for is
        * drawn as the `unknown` state rather than as a silence, and a row whose reason was not answered keeps its
        * own word and nothing else.
-       * @param {object} reason what the page's own door answered for this row, or nothing
+       * @param {object} reason the record the picture carries for this row, or nothing
        * @returns {string | null} the one sentence
        */
       function reasonWords(reason) {
@@ -116,7 +116,7 @@ window.__ModuleLoader__.load({
         const told = typeof reason.server === 'string' && reason.server !== '' ? reason.server : null;
         if (told !== null) return told;
         const family = typeof reason.family === 'string' ? reason.family : 'unknown';
-        return t(shared.REASONS.includes(family) ? `reason.${family}` : 'reason.unknown');
+        return t(shared.reasonKey(family));
       }
 
       /**
@@ -126,14 +126,19 @@ window.__ModuleLoader__.load({
        * the third room of that split — the content in the card's body — and it is the answer to the question a
        * person opens the card with: why the row is standing as it is. It stands above everything else the body
        * carries, because the tools line under it reads as a consequence of it.
+       *
+       * Two facts, in the order they are stronger: a row whose fiber failed carries the platform's record of
+       * that failure in the picture, and a row that is still being reached has no such record at all — only the
+       * client's own last line, kept there too. Both are read off the row the picture already published.
        * @param {object} row the row of the picture
-       * @param {object} view what the section holds
        * @returns {object | null} the node, or nothing
        */
-      function reasonLine(row, view) {
-        const words = reasonWords((view.reasons ?? {})[row.entryId] ?? null);
-        if (words === null) return null;
-        return h('p', { key: 'reason', className: 'coreness-mcp-warn' }, words);
+      function reasonLine(row) {
+        const words = reasonWords(row.failure ?? null);
+        if (words !== null) return h('p', { key: 'reason', className: 'coreness-mcp-warn' }, words);
+        const told = row.trouble ?? null;
+        if (told === null || typeof told.text !== 'string' || told.text === '') return null;
+        return h('p', { key: 'reason', className: 'coreness-mcp-warn' }, told.text);
       }
 
       /** The name of the input the flow's own question is answered in. */

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "The Coreness OAuth host: the flow, the person's step, and the sign-in and reason door.",
+  "description": "The Coreness OAuth host: the flow, the person's step, and the sign-in door.",
   "exports": {
     ".": "./src/index.js"
   },

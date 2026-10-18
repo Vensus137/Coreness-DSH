@@ -52,33 +52,6 @@ const DRAWN = {
 const OWNED = [...new Set(Object.values(DRAWN).flat())]
 
 /**
- * The refusals of a save: the codes the route answers with and the browser half words. The two
- * halves name the same set, and a check holds them together.
- */
-export const REFUSALS = [
-  'bad-action',
-  'bad-name',
-  'name-taken',
-  'no-file',
-  'no-row',
-  'not-an-mcp-row',
-  'bad-transport',
-  'bad-url',
-  'bad-command',
-  'bad-timeout',
-  'bad-header',
-  'bad-env',
-  'bad-value',
-  'header-ref',
-  'env-ref',
-  'config-ref',
-  'disabled-ref',
-  'not-saved',
-  'write-failed',
-  'unreadable',
-]
-
-/**
  * The row id of a server.
  * @param {string} serverName the server's name
  * @returns {string} the row id

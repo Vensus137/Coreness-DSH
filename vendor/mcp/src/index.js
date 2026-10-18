@@ -25,6 +25,7 @@
 
 import { pictureOf } from './picture.js'
 import { fileOf, includeOf, rowsOf } from './tree.js'
+import { failuresOf } from './failure.js'
 import { troubleStore } from './trouble.js'
 import { Refusal, write } from './write.js'
 
@@ -89,15 +90,17 @@ async function serverFile(ctx) {
 async function picture(ctx, trouble) {
   const file = await serverFile(ctx)
   const schemas = ctx.tools.schemas()
+  const rows = file.entry === null ? [] : rowsOf(file.entry)
   return pictureOf({
     include: file.address === null
       ? null
       : { entryId: file.address, path: file.entry === null ? null : fileOf(file.entry), enabled: file.enabled, phase: file.phase },
-    rows: file.entry === null ? [] : rowsOf(file.entry),
+    rows,
     inventory: file.inventory,
     schemas,
     unable: file.unable,
     trouble,
+    failures: await failuresOf(ctx, rows, file.inventory),
   })
 }
 

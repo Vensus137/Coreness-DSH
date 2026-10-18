@@ -315,6 +315,54 @@ async function setReference(ctx, include, row, body) {
   return { result: referenceOf(row.config) === null ? 'reference' : 'reference-updated', entryId: row.entryId, server: serverNameOf(row.id), reference }
 }
 
+/** The phases a row passes through while the Loader is still bringing it up. */
+const SETTLING = ['pending', 'loading']
+
+/**
+ * The row's own phase as the Loader reports it, waited for while the row is still coming up.
+ *
+ * The off of a reload lands at once and the on is applied beside it, so a read taken straight after meets
+ * the row in `loading`, and a row the Loader has not named at all answers nothing yet. The wait is bounded,
+ * and past the bound the phase is named as it came: a door that waits for ever is a door that hangs.
+ * @param {object} ctx the plugin's context
+ * @param {string} entryId the row's address
+ * @returns {Promise<string | null>} the phase, or null when the inventory names no row for it
+ */
+async function phaseOf(ctx, entryId) {
+  const started = Date.now()
+  for (;;) {
+    const inventory = await ctx.pluginManager.listPlugins()
+    const found = inventory.find((one) => String(one?.entryId ?? '') === entryId)
+    const phase = found?.fiberPhase ?? null
+    if ((phase !== null && !SETTLING.includes(phase)) || Date.now() - started >= 4000) return phase
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+}
+
+/**
+ * What a reload's confirmation makes of the two facts it can read: the file's switch and the Loader's own
+ * phase for the row.
+ *
+ * A row that comes back **failed** was activated and threw — the client whose own config could not resolve
+ * carries no tools and writes no line of its own, and `reloaded` over it would be a claim the door cannot
+ * stand behind. A row the Loader does not name at all is refused the same way: nothing confirms it came up.
+ * The phase a row is still coming up in is named as it came rather than guessed: the door says what it saw.
+ * @param {object} facts the row's id, the file's switch and the phase the Loader reports
+ * @returns {{refusal?: string, phase: string | null}} the refusal, or the phase the answer names
+ */
+export function reloadVerdict({ id, disabled, phase }) {
+  if (disabled) {
+    return { refusal: `the reload of "${id}" left the row switched off: the file now holds it disabled, and the next read of this profile will not connect it` }
+  }
+  if (phase === 'failed') {
+    return { refusal: `the reload of "${id}" left the row in the failed phase: the Loader activated it and its fiber threw, so it serves nothing — no tools and no line of its own — whatever the file now says` }
+  }
+  if (phase === null) {
+    return { refusal: `the reload of "${id}" left the Loader unable to name the row: no entry of it stands in the inventory, so nothing confirms the row came up` }
+  }
+  return { phase }
+}
+
 /**
  * Reload a row without changing it, so a token that was rotated in the store reaches its connection.
  *
@@ -325,11 +373,15 @@ async function setReference(ctx, include, row, body) {
  * standing as it activated, while a fresh activation reads the store again. So the row is switched off
  * and switched on — the file carries `disabled: true` for the one write in between, and neither write
  * touches anything else the row holds.
+ *
+ * The confirmation reads two facts, not one: the file's switch and the Loader's phase for the row. A row
+ * that came back failed answers a refusal that names the phase, because `reloaded` over a row that serves
+ * nothing is a claim the door cannot stand behind.
  * @param {object} ctx the plugin's context
  * @param {object} include the include entry
  * @param {object} row the row as the file holds it
- * @returns {Promise<object>} what was done
- * @throws {Refusal} `not-an-mcp-row`, or `not-saved` when the row did not come back enabled
+ * @returns {Promise<object>} what was done, with the row's phase
+ * @throws {Refusal} `not-an-mcp-row`, or `not-saved` when the row did not come back enabled and unfailed
  */
 async function reloadRow(ctx, include, row) {
   if (row.module !== MCP_MODULE) {
@@ -339,9 +391,11 @@ async function reloadRow(ctx, include, row) {
   await updateRow(ctx, row.entryId, { disabled: null })
 
   const back = readAgain(ctx, row.entryId)
-  if (back.disabled) throw new Refusal('not-saved', `the reload of "${row.id}" left the row switched off: the file now holds it disabled, and the next read of this profile will not connect it`)
+  const phase = await phaseOf(ctx, row.entryId)
+  const verdict = reloadVerdict({ id: row.id, disabled: back.disabled === true, phase })
+  if (verdict.refusal !== undefined) throw new Refusal('not-saved', verdict.refusal)
   ctx.logger?.info?.(`coreness-mcp: the row "${row.entryId}" was activated afresh, so a token that changed in the store reaches its connection again`)
-  return { result: 'reloaded', entryId: row.entryId, server: serverNameOf(row.id) }
+  return { result: 'reloaded', entryId: row.entryId, server: serverNameOf(row.id), phase: verdict.phase }
 }
 
 /**

@@ -1,12 +1,16 @@
 /**
- * The reason a row did not start, read where the platform keeps it.
+ * The reason a row did not start, read where the platform keeps it, and carried by the picture once.
  *
  * A row whose server cannot be reached is drawn with one word, and the words a person needs are already
  * standing in the process: the row's plugin never activates, and the error that ended it stays on the fiber
- * the Loader holds. Nothing publishes it — the inventory and the plugin manager carry the phase alone, and the
- * picture carries the client's newest log line, which for a row whose activation ended is the retry it will
- * never make — so this reading goes to the record itself. `fiber.await()` is the platform's own door to it:
- * it rethrows exactly the error the fiber kept, cause and all.
+ * the Loader holds. Nothing publishes it — the inventory carries the phase alone, and the picture carries the
+ * client's newest log line, which for a row whose activation ended is the retry it will never make — so this
+ * reading goes to the record itself. `fiber.await()` is the platform's own door to it: it rethrows exactly
+ * the error the fiber kept, cause and all.
+ *
+ * It lives here, beside the picture, because the picture is the one place every reader takes a row's facts
+ * from: a second reader of the Loader's fiber would be a second shape of the same record, drifting with the
+ * platform's error chain on its own.
  *
  * The record is read as a **chain** and not as a sentence, because the two ends are two different errors: the
  * platform's MCP client wraps what the SDK raised as its `cause`, and the SDK keeps the responder's own answer
@@ -25,27 +29,13 @@
  * `data.text`) and the SDK's own sentence for the body-bearing path are implementation details of the
  * installed assembly, read here as shapes because there is no published door to a failed row's record. A
  * platform that moved them would leave the family standing and the responder's own words missing, and the
- * sentence drawn would then be this page's own — which is why the family is decided before the words.
+ * sentence drawn would then be the page's own — which is why the family is decided before the words.
  *
- * @module @coreness/oauth/src/reason
+ * @module @coreness/mcp/src/failure
  */
-
-/* The shape of a refusal is one for the whole route, and the desk beside this file owns it: this reading
-   raises the same class, so a door that cannot make the reading answers the way it answers every other
-   refusal. The **codes** stay apart, each list its own. */
-import { Refused } from './signin.js'
 
 /** The state a fiber stands in when its plugin's own start threw: the one state a record is kept in. */
 const FAILED = 3
-
-/**
- * The families a failure is told apart by, and the words the page draws for each — the family alone decides a
- * sentence, and the responder's own message, when it has one, stands in the sentence's place.
- *
- * `unknown` is the honest end of the list: a record the platform kept whose shape says nothing this page can
- * name. It is drawn as its own state rather than as a silence, and its detail still goes to the console.
- */
-export const FAMILIES = ['forbidden', 'unauthorized', 'missing', 'broken', 'unexpected', 'closed', 'silent', 'unknown']
 
 /** The HTTP statuses whose meaning is a family of its own. A status outside these is read as `unknown`. */
 const BY_STATUS = new Map([[401, 'unauthorized'], [403, 'forbidden'], [404, 'missing']])
@@ -65,15 +55,6 @@ const BY_CODE = new Map([
  * failed row — yields nothing. A message read by its colons would take half a sentence for the server's words.
  */
 const POSTING = /^Error POSTing to endpoint \((?:HTTP )?(\d{3})\):\s*([\s\S]*)$/u
-
-/** The refusals of this reading, each with its own code.
- *
- * Spelled apart from the sign-in desk's own codes on purpose: the route takes both vocabularies, and one word
- * carried by two of them would leave a reader told about a sign-in where a failure's record was unreadable.
- * The **shape** of a refusal is one for the whole route and is the desk's own class — this module raises the
- * same one, so the door answers a reading that could not be made the way it answers every other refusal.
- */
-export const REASON_CODES = ['no-loader']
 
 /** How much of a responder's body is kept for the console: enough to quote, not a page of markup. */
 export const DETAIL_MAX = 400
@@ -194,22 +175,19 @@ export function readReason(error) {
 }
 
 /**
- * The reason of one row of the picture, read off the Loader's own entry.
+ * The reason of one row, read off the Loader's own entry.
  *
- * A row is asked about only while the picture says it failed, and the fiber is asked only in the failed state:
- * `await()` waits out a load in flight, and a request of the page must not stand for the length of somebody
- * else's connection attempt. A row whose entry is not in the Loader, or whose fiber is not failed any more, is
- * answered with nothing — the picture and the Loader are read a moment apart, and a row that came up in
- * between has no reason to give.
- *
+ * The fiber is asked only in the failed state: `await()` waits out a load in flight, and a request of the page
+ * must not stand for the length of somebody else's connection attempt. A row whose entry is not in the Loader,
+ * whose fiber is not failed any more, or a composition that carries no Loader at all, is answered with nothing:
+ * the picture and the Loader are read a moment apart, and a row that came up in between has no reason to give.
  * @param {object} ctx the context carrying the Loader
  * @param {string} entryId the row's own entry, as the picture names it
  * @returns {Promise<{family: string, server: string | null, detail: string | null} | null>} the reason
- * @throws {Error} `no-loader` when this composition carries no Loader to read
  */
 export async function reasonOfRow(ctx, entryId) {
   const loader = ctx.get?.('loader')
-  if (loader === undefined) throw new Refused(REASON_CODES[0], 'this composition carries no Loader, so a row\'s own failure record cannot be read here')
+  if (loader === undefined) return null
   const entries = [...(loader.entries?.() ?? [])]
   const entry = entries.find((one) => String(one?.id ?? '') === String(entryId))
   if (entry === undefined) return null
@@ -224,22 +202,25 @@ export async function reasonOfRow(ctx, entryId) {
 }
 
 /**
- * The reasons of the rows the picture reported as failed, in the order they were asked about.
+ * The reason of every row the picture reports as failed, keyed by the row's own entry.
  *
- * Each answer carries the row's own names back — its entry and the server it draws as — because the console
- * line about a record is read beside the card it belongs to, and the page's other readings name a row by its
- * server for the same reason.
+ * The rows are read only while the inventory says their fiber failed, so the reading waits on no row that is
+ * still coming up.
  * @param {object} ctx the context carrying the Loader
- * @param {object[]} rows what the page asked about: one `{entryId, server}` each
- * @returns {Promise<object[]>} one `{entryId, server, reason}` per row, the reason or nothing
+ * @param {object[]} rows the rows of the picture
+ * @param {object[]} inventory the platform's own listing, as the picture read it
+ * @returns {Promise<Map<string, object>>} entryId → the reason, one entry per failed row
  */
-export async function reasonsOf(ctx, rows) {
-  const list = Array.isArray(rows) ? rows : []
-  const out = []
-  for (const row of list) {
-    const entryId = typeof row?.entryId === 'string' ? row.entryId : null
-    const server = typeof row?.server === 'string' && row.server !== '' ? row.server : null
-    out.push({ entryId, server, reason: entryId === null ? null : await reasonOfRow(ctx, entryId) })
+export async function failuresOf(ctx, rows, inventory) {
+  const failed = new Set(inventory
+    .filter((one) => String(one?.fiberPhase ?? '') === 'failed')
+    .map((one) => String(one?.entryId ?? '')))
+  const out = new Map()
+  for (const row of rows) {
+    const entryId = String(row?.entryId ?? '')
+    if (!failed.has(entryId)) continue
+    const reason = await reasonOfRow(ctx, entryId)
+    if (reason !== null) out.set(entryId, reason)
   }
   return out
 }

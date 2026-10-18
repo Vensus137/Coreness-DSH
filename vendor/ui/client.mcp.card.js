@@ -126,7 +126,7 @@ window.__ModuleLoader__.load({
         const body = [
           /* The reason the row did not start stands first: it is the answer to the question the card is opened
              with, and the tools line under it reads as its consequence. */
-          shared.reasonLine(row, view),
+          shared.reasonLine(row),
           row.disabledRef === true ? h('p', { key: 'disabledRef', className: 'coreness-mcp-warn' }, t('fault.disabled-ref')) : null,
           shared.signinBlock(row, signin, view, act),
           h('p', { key: 'tools', className: 'coreness-mcp-dim coreness-dim' }, row.tools.length === 0

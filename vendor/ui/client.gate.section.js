@@ -1,6 +1,6 @@
 /**
  * The rate gate's section as it stands: the read on mount and on its own beat, the picture a return paints
- * before the read answers, the reserved room of the section's own sentence, and the drawing of the cards.
+ * before the read answers, the room of the section's own sentence, and the drawing of the cards.
  *
  * A package-local part of `client.gate.js`, pulled by it with `require.async` and created last, once the kit,
  * the picker, the hold and the two parts beside it are in hand. It reads the entry's two doors through
@@ -33,13 +33,14 @@ window.__ModuleLoader__.load({
       };
 
       /**
-       * The one sentence of the section's reserved room, and its tone.
+       * The one sentence of the section's room, and its tone.
        *
        * The empty case says **nothing**: "No model is limited: every request passes untouched" left by the user's
        * own word ("непонятно, зачем это. То есть он там же будет видно: если установлено, если не установлено, то
-       * тоже видно. То есть как будто бы это бесполезно") — the same fact he had already removed from the card,
-       * and the room keeps its place and its height so nothing under it moves. A room that is empty is a quiet
-       * room, not a missing one.
+       * тоже видно. То есть как будто бы это бесполезно") — the same fact he had already removed from the card.
+       * The room is drawn in every state and reserves no height: nothing on this page is reserved, so an empty
+       * room is a quiet room of no lines, the cards under it keep the list's own line of air, and a sentence that
+       * arrives takes its line and moves them by it.
        */
       /* The two words this section's notes use for a state's tone, and the page's own tone class each one wears:
          the word stays the section's — the walk and the batch read it in `data-tone` —
@@ -99,8 +100,8 @@ window.__ModuleLoader__.load({
            it is drawn always — and a line that is always drawn moves nothing when a press answers. */
         h('p', { key: 'caption', className: 'coreness-gate-caption' }, [t('caption'), ' ', t('state.standing')]),
           ]),
-          /* The one room the section's own sentence stands in, in every state, so a refusal or a conflict
-             arriving never moves the cards under it. */
+          /* The one room the section's own sentence stands in, in every state: the room keeps no height of
+             its own, so the cards move by the line an arriving sentence takes. */
           h('p', { key: 'state', className: 'coreness-gate-state' + (TONE_CLASS[note.tone] ?? ''), 'data-tone': note.tone ?? 'plain' }, note.text),
           h('ul', { key: 'cards', className: 'coreness-list coreness-gate-cards coreness-card-list' }, [
             shared.limitCard({ ...view, busy }, acting),

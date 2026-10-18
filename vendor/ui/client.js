@@ -73,8 +73,11 @@ window.__ModuleLoader__.load({
 .coreness-card-body{flex-direction:column;gap:8px;min-width:0;display:flex}
 .coreness-card-box{border:.5px solid var(--dsw-alias-settings-card-stroke);background:var(--dsw-alias-settings-card-fill);border-radius:var(--dsw-radius-xl);flex-direction:column;gap:12px;padding:12px 14px;display:flex}
 .coreness-card-head{align-items:center;gap:10px;flex-wrap:nowrap;display:flex}
-.coreness-card-list{margin:12px 0 0}
 .coreness-list{flex-direction:column;gap:8px;margin:0;padding:0;list-style:none;display:flex}
+/* A list of cards takes one line of air under the section's head. Both classes are named because the base list
+   resets its own margin: as a lone class this rule had equal specificity and stood first in the sheet, so the base
+   rule's margin:0 won and the rate limiter's card stood on its caption — measured, not judged. */
+.coreness-list.coreness-card-list{margin:12px 0 0}
 .coreness-tag{display:inline-flex;align-items:center;border-radius:var(--dsw-radius-xs);corner-shape:round;padding:1px 6px;font-size:12px;line-height:18px;font-weight:400;white-space:nowrap;color:var(--dsw-alias-label-tertiary)}
 /* A tone names the chip's own background; the colour of its words belongs to the class beside it. */
 .coreness-tag[data-tone='neutral']{background:var(--dsw-alias-bg-module-platform)}

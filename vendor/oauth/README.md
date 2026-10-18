@@ -1,7 +1,7 @@
 # @coreness/oauth
 
-The OAuth host: the flow, the person's step, and the one door the page's sign-in strip and reason line read.
-Host only: no browser half.
+The OAuth host: the flow, the person's step, and the one door the page's sign-in strip reads. A row's own
+failure record is read by the MCP picture, not here. Host only: no browser half.
 
 ## The flow
 
@@ -27,12 +27,11 @@ still gets the flow; it simply has no surface to offer and no callback to answer
 - `answer` — the value a person typed into a question the flow asked.
 - `cancel` — withdraw one attempt.
 - `forget` — drop the records the flow committed for one server.
-- `reasons` — why a row did not start, read off the Loader's fiber; it works without a press.
 
 The desk and the flow are one package, so the desk exists with the route: **`no-flow` is not a state this
 product can be in**, and the code does not exist. A press that finds no `authorization` registry is refused
 in words as `signin-failed`. The door's own codes are `signin-action`, `signin-body`, `signin-lost`,
-`signin-failed`; the reason read's is `no-loader`.
+`signin-failed`.
 
 Answers are `{ ok: true, value: … }` or `{ ok: false, error: { code, message } }`, status 200 in both cases.
 No token, code or secret is kept beyond forwarding: the flow writes only through the platform's credential
@@ -43,7 +42,7 @@ declared, and a composition without a web surface logs that the route is not ser
 
 ## Checks
 
-`node --check`, the caps, the scratch install's rows, the route smoke (`sign-ins`, `reasons`, an unknown
-action, a body that is not an object), the desk's `signin-failed` refusal when the flow or its `signIn` is
-absent (a sandbox call — the scratch web carries the registry), and the owner's live sign-in against a real
-server. No test suite.
+`node --check`, the caps, the scratch install's rows, the route smoke (`sign-ins`, an unknown action, a body
+that is not an object), the desk's `signin-failed` refusal when the flow or its `signIn` is absent (a sandbox
+call — the scratch web carries the registry), and the owner's live sign-in against a real server. No test
+suite.

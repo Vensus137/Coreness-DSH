@@ -1,28 +1,25 @@
 /**
- * The platform's own words about a server, taken where the platform writes them.
+ * The receiver of the host's own words about a server, and the ring they are kept in.
  *
  * The harness's MCP client says exactly what is wrong with a row — `connection failed; retrying in
  * 4000ms (attempt 5/10)`, `giving up after 10 consecutive failed reconnect attempts`, `reconnected and
  * re-synced tools (attempt 2/10)` — and writes it through `ctx.logger`. This build mounts no console
  * sink for that service, and the one sink it has, the service's own in-memory ring, names no severity
  * and is therefore handed errors and info only: the client's warnings are dropped before any sink sees
- * them, and nothing reaches the page, the launcher's stdout or the host's own log files either. The plugin registers
- * a receiver of its own, asking for the severities the client speaks with, and keeps the lines.
+ * them, and nothing reaches the page, the launcher's stdout or the host's own log files either. The
+ * plugin registers a receiver of its own, asking for the severities the client speaks with, and keeps
+ * the lines; which line speaks for a row, and what the row's sentence says, is the rules' own reading,
+ * which touches nothing of the platform.
  *
  * The receiver is held by the plugin's own effect rather than left to the service's bookkeeping:
  * `ctx.logger.exporter()` registers on the root, so a receiver it owns outlives the plugin.
- *
- * A line is attributed to a row by the label the client builds for that row's server name,
- * `mcp-client(<serverName>): ` — composed for the row, not guessed out of the text, so a server named
- * `scratch` cannot claim a line of `scratchy`. The labels of the declared servers are compared with the
- * longest first, because the platform builds its label by interpolation: a hand-edited name carrying
- * `): ` inside it makes one line start with two rows' labels, and the longest is the one the client
- * actually wrote. A line no declared label matches belongs to nobody here and is dropped.
  *
  * @module @coreness/mcp/src/trouble
  */
 
 import { Logger } from '@deepseek-ai/cordis'
+
+import { PREFIX } from './ring.js'
 
 /**
  * How many lines the host's own logger may write before the oldest fall out of the store.
@@ -33,9 +30,6 @@ import { Logger } from '@deepseek-ai/cordis'
  * one of them stays inside a ring of this size.
  */
 export const RING = 200
-
-/** The levels that count as trouble: the platform's own names for the two severities it cries with. */
-const TROUBLE = ['warn', 'error']
 
 /**
  * The severities this receiver is handed, as the service gates them: a
@@ -51,31 +45,6 @@ const LEVELS = { default: 2 }
 
 /** A receiver that keeps text, not colour: the page draws plain words. */
 const PLAIN = { colors: false }
-
-/** The label the platform's client puts in front of every sentence about one server. */
-export const labelOf = (server) => `mcp-client(${server}): `
-
-/** Whether a line is the host crying rather than reporting: its own severity decides. */
-export const isTrouble = (line) => line !== null && line !== undefined && TROUBLE.includes(line.level)
-
-/**
- * The newest line naming each of these servers.
- * @param {object[]} lines the kept lines, oldest first
- * @param {(string | null)[]} servers the server names of the rows of the picture
- * @returns {Map<string, object>} server name → the newest line naming it
- */
-export function named(lines, servers) {
-  const labels = [...new Set(servers.filter((server) => typeof server === 'string' && server !== ''))]
-    .map((server) => ({ server, label: labelOf(server) }))
-    .sort((left, right) => right.label.length - left.label.length)
-
-  const namedBy = new Map()
-  for (const line of lines) {
-    const hit = labels.find(({ label }) => line.text.startsWith(label))
-    if (hit !== undefined) namedBy.set(hit.server, line)
-  }
-  return namedBy
-}
 
 /**
  * Keep the lines the host writes about the servers of this profile.
@@ -97,7 +66,7 @@ export function troubleStore() {
       /* The platform's own formatter: the line as the host would print it, verbatim. */
       const text = Logger.format(PLAIN, message)
       /* Every sentence the client writes about one server carries its label; the rest is not ours. */
-      if (!text.startsWith('mcp-client(')) return
+      if (!text.startsWith(PREFIX)) return
 
       const at = typeof message.ts === 'number' ? new Date(message.ts).toISOString() : null
       kept.push({ at, level: String(message.type ?? ''), text })

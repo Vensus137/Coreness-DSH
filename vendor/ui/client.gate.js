@@ -20,9 +20,9 @@
  * section's state. The gate's route is never asked to write — it answers a picture.
  *
  * What the section draws follows the two sections beside it: cards in the host's own sheets, carried by
- * `--dsw-alias-*` tokens alone, and every sentence that can appear with the arrival of a state stands in a
- * **reserved room** — two lines of 18px, the rest scrolling inside them, the words whole in the DOM — so a
- * state never moves what stands under it.
+ * `--dsw-alias-*` tokens alone, and the section's own sentence in a room drawn in every state — a room that
+ * reserves no height, so a sentence takes the lines it says and the cards under it keep the list's own line of
+ * air. What is reserved on this page is the width of an answer strip, never its height.
  */
 window.__ModuleLoader__.load({
   id: '@coreness/ui/client.gate.js',
