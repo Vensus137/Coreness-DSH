@@ -1,0 +1,21 @@
+{
+  "name": "@coreness/oauth",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The Coreness OAuth host: the flow, the person's step, and the sign-in and reason door.",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "dsh": ">=0.2.1-rc.2 <0.3.0-0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.0.5",
+    "@deepseek-ai/dsh-client-connection": "0.2.1-rc.2"
+  }
+}

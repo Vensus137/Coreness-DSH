@@ -1,0 +1,25 @@
+{
+  "name": "@coreness/qoder",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The Qoder provider host: the transport, the adapter's declaration, and the credits and probe doors.",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "dsh": ">=0.2.1-rc.2 <0.3.0-0"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "~3.18.4"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.0.5",
+    "@deepseek-ai/dsh-client-connection": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-timeout": "0.2.1-rc.2"
+  }
+}
