@@ -24,12 +24,17 @@ window.__ModuleLoader__.load({
         return t('target.none');
       }
 
-      /** The target of a row, as the user reads it: an address, or the command with its arguments. */
-      function targetOf(row) {
+      /** The target of a row, as the user reads it: an address, or the command with its arguments. A limit
+          cuts the words and keeps the whole behind a hover: a roster line is not the place to read a URL with
+          a query of twelve parameters, and a cut says so instead of taking the line for it. */
+      function targetOf(row, limit = 0) {
         const words = targetWords(row);
-        if (row.url !== null && row.url !== '') return h('code', null, words);
-        if (row.command !== null && row.command !== '') return h('code', null, words);
-        return h('span', { className: 'coreness-mcp-dim coreness-dim' }, words);
+        const trimmed = limit > 0 && words.length > limit;
+        const shown = trimmed ? `${words.slice(0, limit).trimEnd()}…` : words;
+        const attribute = trimmed ? { title: words } : null;
+        if (row.url !== null && row.url !== '') return h('code', attribute, shown);
+        if (row.command !== null && row.command !== '') return h('code', attribute, shown);
+        return h('span', { className: 'coreness-mcp-dim coreness-dim', ...attribute }, shown);
       }
 
       /** The count line over the section: the total, then only the states that occur. */

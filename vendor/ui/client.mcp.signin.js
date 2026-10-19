@@ -237,12 +237,13 @@ window.__ModuleLoader__.load({
         if (signin.state === 'refused' || signin.state === 'cancelled') {
           const code = typeof signin.code === 'string' && signin.code !== '' ? signin.code : 'signin-failed';
           /* One short sentence and the code, on the one line the person reads: the page's own words for that
-             code — never a generic "the sign-in failed", so a reader tells a scope the server refuses from a
-             refresh that expired — and the code itself, which is what a person repeats when asking about it.
-             The flow's own sentence names the address, the endpoint and the parameter, and it goes to the
-             console where the answer arrives, by the same door every other reason this page may not draw takes. */
+             code — never a generic "the sign-in failed" — and the flow's own sentence after it, because the
+             server's answer ("Required parameter: client_secret", "invalid_grant") is the one fact a person can
+             act on, and it used to reach only the console. The server's words are the endpoint's message; they
+             carry no secret. The code stands last, as the word a person repeats when asking about it. */
+          const lines = shared.faultLines(code, signin.message);
           parts.push(h('span', { key: 'words', className: 'coreness-mcp-signinWords' }, [
-            shared.faultLines(code, null)[0],
+            lines.join(' — '),
             ' ',
             h('code', { key: 'code', 'data-code': code }, code),
           ]));

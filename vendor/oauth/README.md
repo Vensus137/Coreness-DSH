@@ -9,10 +9,18 @@ failure record is read by the MCP picture, not here. Host only: no browser half.
 `stores`, `forget`, the stores' helpers (`idOf`, `slugOf`, `keyOf`, `tokenKeyOf`), the reference
 (`bearerExpression`, `reference`, `noTokenCode`), the callback path, the discovery and metadata readers
 (`discover`, `resourceMetadata`, `serverMetadata`, `pointerOf`), the client registration, the token exchange,
-the PKCE and the refusal vocabulary (`words`, `codes`, `Refusal`).
+the PKCE and the refusal vocabulary (`words`, `codes`, `Refusal`). A registration keeps the secret the server
+answered with; `authMethodFor` names the method the flow registers and signs with.
 
 The credential service is injected and resolved at every call, never held: a composition may replace the
 credential provider underneath this plugin, and a captured reference then answers "disposed" for every store.
+
+A registration is a client the server answered with, and its secret is part of it: the method the
+registration asked for is the first this flow can use among the server's `token_endpoint_auth_methods_supported`
+(the secret in the body, the secret in a Basic header, a public client), and the grant is signed that way at the
+exchange and at every refresh. A server that requires client authentication refuses an exchange without it — the
+person reads its own sentence, because a refusal carries the endpoint's words, the standard's `error_description`
+or the bare `message` a platform's API answers with.
 
 The person's step (`PersonStep`) is published only where the platform's own two seams stand — the
 `authorization` registry and the `webServer` carrier — and is withdrawn with them. A composition without them

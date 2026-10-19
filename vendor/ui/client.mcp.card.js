@@ -12,6 +12,9 @@ window.__ModuleLoader__.load({
     const h = React.createElement;
 
     /** The card's own functions, made once over the section's words and the parts beside them. */
+    /** How much of a target the roster line shows: enough for a host and a path, not for a query. */
+    const TARGET_CHARS = 68;
+
     function create({ t, kit, picker, hold, ctx, shared }) {
       /**
        * A row's actions in a menu, the donor's own place for them.
@@ -108,13 +111,14 @@ window.__ModuleLoader__.load({
            a word in this line said the same thing twice. The platform's fiber phase is not drawn: `active` was
            withdrawn as a word the reader cannot act on, and `unloading` is withdrawn for the same reason — the row
            itself shows what it is doing, and a phase that flickers in a line of text is noise, not news. */
-        const subtitle = [
-          shared.targetOf(row),
-          ' · ',
-          row.transport === null || row.transport === undefined
-            ? '—'
-            : (shared.KIND_LABELS[row.transport] === undefined ? row.transport : t(shared.KIND_LABELS[row.transport])),
-        ].filter((part) => part !== null);
+        /* The protocol first: it is the one stable part of the line — a fixed word where the address and the
+           command change with every row — so a reader learns what a row is before the parameters it is opened
+           with. The target follows, cut at a limit: a roster line is not the place for a URL with a query of
+           twelve parameters, nor for a command whose arguments run for a screen. */
+        const protocol = row.transport === null || row.transport === undefined
+          ? '—'
+          : (shared.KIND_LABELS[row.transport] === undefined ? row.transport : t(shared.KIND_LABELS[row.transport]));
+        const subtitle = [protocol, ' · ', shared.targetOf(row, TARGET_CHARS)];
 
         const items = row.shape
           ? [

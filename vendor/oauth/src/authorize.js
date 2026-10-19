@@ -11,7 +11,7 @@
 
 import { randomBytes } from 'node:crypto'
 import { discover } from './discovery.js'
-import { authorizationUrlFor, exchangeCode, refreshTokens, registerClient } from './flow.js'
+import { AUTH_METHODS, authorizationUrlFor, exchangeCode, refreshTokens, registerClient } from './flow.js'
 import { challengeOf, verifier } from './pkce.js'
 import { RecordStores } from './stores.js'
 import { CLIENT_NAME } from './flow.js'
@@ -82,6 +82,18 @@ export async function begin({ credentials, server, resource, redirectUrl, pointe
 }
 
 /**
+ * The method a stored registration signs a grant with: the one the registration answered with, or — for a
+ * record made before the field was read — the method its own secret implies, and a public client otherwise.
+ * @param {object} client the stored registration
+ * @returns {string} one of `AUTH_METHODS`
+ */
+function authMethodOf(client) {
+  const named = typeof client?.token_endpoint_auth_method === 'string' ? client.token_endpoint_auth_method : ''
+  if (AUTH_METHODS.includes(named)) return named
+  return typeof client?.client_secret === 'string' && client.client_secret !== '' ? 'client_secret_post' : 'none'
+}
+
+/**
  * Whether a stored registration names addresses, and none of them the one this sign-in comes back to.
  *
  * A registration that names none is not a mismatch: a client id a caller brought has no address to hold
@@ -137,6 +149,8 @@ export async function finish({ credentials, server, resource, code, state, redir
   const found = await discover(resource, { pointer, fetch })
   const tokens = await exchangeCode(found.server, {
     clientId: client.client_id,
+    clientSecret: typeof client.client_secret === 'string' ? client.client_secret : '',
+    authMethod: authMethodOf(client),
     code,
     verifier: await stores.codeVerifier(),
     redirectUrl,

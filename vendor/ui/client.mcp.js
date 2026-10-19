@@ -308,7 +308,7 @@ window.__ModuleLoader__.load({
 /* The right side of the head: the row's own controls, held to the right of the head and parted by the 8 the
    page's card action lines stand on; the free room in front of them, and not this number, is what holds them
    there. */
-.coreness-mcp-actions{align-items:center;gap:8px;margin-left:auto;display:inline-flex}
+.coreness-mcp-actions{align-items:center;gap:8px;margin-left:auto;display:inline-flex;flex:none}
 /* The strip an answer to a press lives in: the free place in the head, on the right, reserved before the
    answer arrives so that nothing else in the head moves when it comes or goes. It takes the room that is
    left over (flex:1 1 auto, below) and cuts a long sentence with an ellipsis rather than pushing the
@@ -335,7 +335,7 @@ window.__ModuleLoader__.load({
    It is written as a height and not as a padding because the page's
    own scale of distances has no 5 — 18 + 5 + 5 is the platform's arithmetic, and the platform states its result, not
    the sum. Any control of this page that is small takes this role. */
-.coreness-mcp-actions .coreness-mcp-button{border-radius:var(--dsw-radius-sm);height:28px;padding:0 10px;font-size:12px;line-height:18px}
+.coreness-mcp-actions .coreness-mcp-button{border-radius:var(--dsw-radius-sm);height:28px;padding:0 10px;font-size:12px;line-height:18px;white-space:nowrap}
 /* The row's state drawn as a switch, property by property from the host's own General settings. Its track is 36 by 20
    with the pill radius and 2 px of padding; its thumb is 16 by 16, a circle, resting 2 px in from each end; and it
    slides by 16 px, so 2 + 16 + 16 leaves 2 px of air at the round end — a thumb sitting flush against that end reads
@@ -417,7 +417,7 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
    walk's own picture each MCP row carried a ~15 px bar at x 878 with a thumb the height of one line. The bar is
    hidden here (the wheel and the keyboard still scroll the room); the reserved height, the user's own decision,
    stays where it was. */
-.coreness-mcp-subtitle{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;overflow-wrap:anywhere}
+.coreness-mcp-subtitle{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .coreness-mcp-subtitle::-webkit-scrollbar{width:0;height:0}
 .coreness-mcp-marker{box-sizing:border-box;border:none;background:0 0;color:var(--dsw-alias-label-secondary);flex:none;width:24px;height:24px;cursor:pointer;justify-content:center;align-items:center;display:inline-flex}
 .coreness-mcp-marker svg{transition:transform .15s ease}
@@ -437,7 +437,7 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
    the pointer — and those hold a shared value still while the shared rule moves. */
 /* An item is a line the pointer takes whole: its own padding is the room between its word and the list's edge,
    and two items touch, because a menu is read by moving from one row to the next and not by the air between them. */
-.coreness-mcp-menuItem{border:none;padding:6px 10px;justify-content:flex-start}
+.coreness-mcp-menuList .coreness-mcp-menuItem{border:none;box-shadow:none;background:0 0;border-radius:var(--dsw-radius-sm);padding:6px 10px;justify-content:flex-start;width:100%;text-align:left}
 /* The item's own focus fill, kept with the item and not carried by the shared hover: the shared selector takes
    hover and the picker's active state, and widening it to focus would fill every button of the page on a keyboard
    walk — a page-wide change this member's own state does not make. The body matches the shared hover's on purpose,
