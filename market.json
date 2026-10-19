@@ -1,0 +1,55 @@
+{
+  "format": 1,
+  "title": "Coreness",
+  "description": "A page, a journal and a brake for a DeepSeek Harness profile.",
+  "metadata": {
+    "categories": {
+      "product": {
+        "title": {
+          "en": "Product",
+          "zh": "产品"
+        }
+      }
+    },
+    "labels": {},
+    "sortKeys": {}
+  },
+  "plugins": [
+    {
+      "name": "@coreness/dsh",
+      "title": "Coreness",
+      "description": "The profile page, its sections and the journal behind them.",
+      "icon": "icon.svg",
+      "author": "Vensus137",
+      "homepage": "https://github.com/Vensus137/Coreness-DSH",
+      "repository": {
+        "url": "https://github.com/Vensus137/Coreness-DSH"
+      },
+      "metadata": {
+        "category": "product",
+        "keywords": [
+          "mcp",
+          "journal",
+          "qoder",
+          "rate-limit"
+        ],
+        "labels": [],
+        "sortKeys": {}
+      },
+      "versions": [
+        {
+          "version": "0.6.2",
+          "publishTimestamp": 1792415495,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/Vensus137/Coreness-DSH",
+            "commit": "d210f26f1008e38566f7465033e3a85d80aecbb5"
+          },
+          "engines": {
+            "dsh": ">=0.2.1-rc.2"
+          }
+        }
+      ]
+    }
+  ]
+}

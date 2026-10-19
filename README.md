@@ -14,7 +14,7 @@ github:Vensus137/Coreness-DSH
 
 The same page switches the package off without removing it, and takes it off again.
 
-That address follows the newest release, and what stands published is a release — so the address and the newest release are one thing here. A fixed release is named by its own tag — `…Coreness-DSH#v0.6.1` — and a released tag is never moved: that line gives the same code whenever it is run.
+That address follows the newest release, and what stands published is a release — so the address and the newest release are one thing here. A fixed release is named by its own tag — `…Coreness-DSH#v0.6.2` — and a released tag is never moved: that line gives the same code whenever it is run.
 
 <details>
 <summary><b>By command line</b> — for a terminal; nothing above needs it</summary>
@@ -32,6 +32,23 @@ Another profile is named by its own name instead — the web surface's is `web` 
 </details>
 
 The profile's composition is read when the application starts, so the package becomes live at the next start, and the platform says itself when a change it made needs a restart. Nothing is built on the way in and no permission for install scripts is asked: the package is plain files, and the address is fetched over the network the application already uses rather than by a git client — a machine without git installs it.
+
+### Updates through the market
+
+The application has its own **Discover** tab: it reads a plugin market, and the market is a list you add. Turn
+on *Custom plugin markets* once — **Plugins → More** beside *Experimental plugins* — then add this address in
+Discover:
+
+```
+https://raw.githubusercontent.com/Vensus137/Coreness-DSH/main/market.json
+```
+
+The plugin stands listed with its versions, and from then on an update is one press on its card: the
+application compares the versions itself, installs the newer one and says when a restart is needed. Nothing
+checks in the background and nothing notifies — the market is read when the page is opened.
+
+A profile that mounts a working tree (`file:` dependency) is the development case: the market's install would
+replace that mount with the published copy, so a development profile updates by re-mounting instead.
 
 ## ✨ What a profile gets
 
