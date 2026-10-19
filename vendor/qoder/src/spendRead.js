@@ -22,7 +22,7 @@ import { createInterface } from 'node:readline'
 import { USD_PER_CREDIT } from './spend.js'
 
 /** The breakdowns an answer carries. */
-export const SPEND_BY = ['none', 'day', 'model']
+export const SPEND_BY = ['none', 'day', 'model', 'finish']
 
 /**
  * The files the ledger is made of, oldest era first: the donor's generation kept aside, the previous
@@ -42,13 +42,15 @@ function numberOrNull(value) {
 /**
  * The money one row carries: its credits as the wire counted them, and its dollars at the row's own rate.
  * @param {object} row a ledger row
- * @returns {{ credits: number | null, usd: number }} the money
+ * @returns {{ credits: number | null, usd: number, billed: boolean }} the money; `billed` is the vendor's own
+ * flag, and a row without it counts as unbilled rather than as spend
  */
 export function moneyOf(row) {
   const credits = numberOrNull(row?.vendor?.credits)
-  if (Number.isFinite(row?.usd)) return { credits, usd: row.usd }
-  if (credits === null) return { credits, usd: 0 }
-  return { credits, usd: credits * (numberOrNull(row?.rate) ?? USD_PER_CREDIT) }
+  const billed = row?.vendor?.billable === true
+  if (Number.isFinite(row?.usd)) return { credits, usd: row.usd, billed }
+  if (credits === null) return { credits, usd: 0, billed }
+  return { credits, usd: credits * (numberOrNull(row?.rate) ?? USD_PER_CREDIT), billed }
 }
 
 /**
@@ -75,20 +77,23 @@ export function countersOf(row) {
  * tail of binary fractions no reader can act on.
  * @param {object[]} rows the ledger's rows
  * @param {object} [filter] the selection and the breakdown: `since`, `until`, `by`
- * @returns {object} the answer without the ledger's own facts: window, by, requests, usd, credits, tokens, groups
+ * @returns {object} the answer without the ledger's own facts: by, requests, usd, billed, unbilled, credits,
+ * tokens and groups
  */
 export function sumOf(rows, filter = {}) {
   const { since, until, by = 'none' } = filter
   if (SPEND_BY.includes(by) === false) throw new Error(`the breakdown is one of ${SPEND_BY.join(', ')}: ${String(by)}`)
   const inside = rows.filter((row) => (since === undefined || String(row?.time ?? '') >= since)
     && (until === undefined || String(row?.time ?? '') <= until))
-  const total = { requests: 0, usd: 0, credits: 0, input: 0, output: 0, cacheRead: 0, reasoning: 0, total: 0 }
+  const total = { requests: 0, usd: 0, billed: 0, unbilled: 0, credits: 0, input: 0, output: 0, cacheRead: 0, reasoning: 0, total: 0 }
   const groups = new Map()
   for (const row of inside) {
     const money = moneyOf(row)
     const counters = countersOf(row)
     total.requests += 1
     total.usd += money.usd
+    if (money.billed) total.billed += money.usd
+    else total.unbilled += money.usd
     total.credits += money.credits ?? 0
     total.input += counters.input
     total.output += counters.output
@@ -96,7 +101,9 @@ export function sumOf(rows, filter = {}) {
     total.reasoning += counters.reasoning
     total.total += counters.total
     if (by === 'none') continue
-    const key = by === 'day' ? String(row.time ?? '').slice(0, 10) : String(row.model ?? '')
+    const key = by === 'day' ? String(row.time ?? '').slice(0, 10)
+      : by === 'finish' ? String(row.finish?.kind ?? row.finish ?? 'unknown')
+        : String(row.model ?? '')
     const item = groups.get(key) ?? { key, usd: 0, credits: 0, requests: 0 }
     item.usd += money.usd
     item.credits += money.credits ?? 0
@@ -112,10 +119,13 @@ export function sumOf(rows, filter = {}) {
   }))
   if (by === 'day') ordered.sort((left, right) => left.key.localeCompare(right.key))
   if (by === 'model') ordered.sort((left, right) => right.usd - left.usd || left.key.localeCompare(right.key))
+  if (by === 'finish') ordered.sort((left, right) => right.requests - left.requests || left.key.localeCompare(right.key))
   return {
     by,
     requests: total.requests,
     usd: round(total.usd),
+    billed: round(total.billed),
+    unbilled: round(total.unbilled),
     credits: round(total.credits),
     tokens: {
       input: total.input,
@@ -146,7 +156,10 @@ async function* linesOf(file) {
  * @param {object} [filter] the selection: `since`, `until`, `by`
  * @returns {Promise<object>} the answer
  */
-export async function spendOf(path, filter = {}) {
+export async function spendOf(path, filter = {}, failures) {
+  if (typeof failures !== 'number') {
+    throw new Error('the count of rows a failed write took is not optional: the writer holds it, and a reader that assumes zero reports a loss it never checked')
+  }
   const files = generationsOf(path)
   if (files.length === 0) {
     throw new Error(`the spend ledger stands nowhere under ${path}: no request was counted here, and an empty answer would read as a free one`)
@@ -171,6 +184,7 @@ export async function spendOf(path, filter = {}) {
     window: { since: filter.since ?? null, until: filter.until ?? null },
     ...sums,
     torn,
+    failures,
     ledger: { path, files: files.map((file) => basename(file)) },
   }
 }

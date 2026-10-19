@@ -471,7 +471,7 @@ async function* translate(response, call, { transport, log, journal, startedAt }
    */
   function recordSpend(finish) {
     if (usage === undefined) return
-    journal?.record({ model: call.model, finish, durationMs: Date.now() - startedAt, usage })
+    journal?.record({ model: call.model, session: call.sessionId, finish, durationMs: Date.now() - startedAt, usage })
   }
 
   // The wire's terminal, held back until the usage has arrived: the harness's rule is that the usage

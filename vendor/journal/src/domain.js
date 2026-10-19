@@ -111,6 +111,7 @@ const shellOf = (profile, objectOf) => ({
   area: z.string().min(1),
   id: z.string().min(1),
   task: z.string().min(1).optional(),
+  session: z.string().min(1).optional(),
   cost: costSchemaOf(objectOf).optional(),
   profile,
 })
@@ -126,10 +127,10 @@ const shellOf = (profile, objectOf) => ({
  * @returns {object} the record schema
  */
 const recordVariants = (objectOf, profile) => z.discriminatedUnion('kind', [
-  objectOf({ ...shellOf(profile, objectOf), kind: z.literal('состав'), author: z.literal('среда'), changed: z.array(z.string().min(1)).min(1), composition: compositionValue }),
-  objectOf({ ...shellOf(profile, objectOf), kind: z.literal('настройки'), author: z.literal('среда'), changed: z.array(z.string().min(1)).min(1), composition: compositionValue }),
+  objectOf({ ...shellOf(profile, objectOf), kind: z.literal('состав'), author: z.literal('среда'), changed: z.array(z.string().min(1)).min(1), composition: compositionValue, text: z.string().min(1).optional() }),
+  objectOf({ ...shellOf(profile, objectOf), kind: z.literal('настройки'), author: z.literal('среда'), changed: z.array(z.string().min(1)).min(1), composition: compositionValue, text: z.string().min(1).optional() }),
   objectOf({ ...shellOf(profile, objectOf), kind: z.literal('жизненный цикл'), author: z.literal('среда'), text: z.string().min(1), reason: z.string().min(1).optional() }),
-  objectOf({ ...shellOf(profile, objectOf), kind: z.literal('оборот'), author: z.literal('среда'), dropped: z.number().int().nonnegative(), kept: z.number().int().nonnegative(), reason: z.string().min(1) }),
+  objectOf({ ...shellOf(profile, objectOf), kind: z.literal('оборот'), author: z.literal('среда'), dropped: z.number().int().nonnegative(), kept: z.number().int().nonnegative(), reason: z.string().min(1), droppedKinds: z.array(z.object({ kind: z.string().min(1), count: z.number().int().nonnegative() })).optional(), droppedBytes: z.number().int().nonnegative().optional(), droppedUsd: z.number().nonnegative().optional() }),
   objectOf({ ...shellOf(profile, objectOf), kind: z.literal('сбой'), author: z.literal('среда'), text: z.string().min(1) }),
   objectOf({ ...shellOf(profile, objectOf), kind: z.literal('задача'), author: z.literal('участник'), task: z.string().min(1), text: z.string().min(1) }),
   objectOf({ ...shellOf(profile, objectOf), kind: z.literal('шаг'), author: z.literal('участник'), task: z.string().min(1), stepMs: z.number().int().nonnegative(), text: z.string().optional(), reread: z.string().optional() }),

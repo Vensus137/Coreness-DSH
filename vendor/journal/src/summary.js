@@ -41,11 +41,11 @@ export function lineOf(record) {
   switch (record.kind) {
     case 'состав':
     case 'настройки':
-      return `changed: ${record.changed.join(', ')}`
+      return `changed: ${record.changed.join(', ')}${record.text === undefined ? '' : ` — ${record.text}`}`
     case 'жизненный цикл':
       return record.reason === undefined ? record.text : `${record.text}: ${record.reason}`
     case 'оборот':
-      return `dropped ${record.dropped} records (${record.reason})`
+      return `dropped ${record.dropped} records (${record.reason})${record.droppedKinds === undefined ? '' : `: ${record.droppedKinds.map(item => `${item.kind} ${item.count}`).join(', ')}, ${record.droppedBytes ?? 0} bytes, $${record.droppedUsd ?? 0}`}`
     case 'сбой':
       return record.text
     case 'задача':
@@ -96,6 +96,8 @@ export function buildSummary(records, options = {}) {
     refusals: refusalsOf(inside),
     steps: stepsOf(inside),
     cost: costOf(inside),
+    // What the sweeps took, as the `оборот` records report it: the rows are gone and this is their tail.
+    dropped: droppedOf(inside),
   }
 }
 
@@ -130,6 +132,16 @@ function refusalsOf(records) {
  * The money over the selection: the whole figure and the part written by runs that were billed, at six
  * decimals — the ledger's own precision.
  */
+function droppedOf(records) {
+  const rollups = records.filter(record => record.kind === 'оборот' && record.droppedUsd !== undefined)
+  const round = value => Math.round(value * 1e6) / 1e6
+  return {
+    usd: round(rollups.reduce((sum, record) => sum + (record.droppedUsd ?? 0), 0)),
+    records: rollups.reduce((sum, record) => sum + (record.dropped ?? 0), 0),
+    bytes: rollups.reduce((sum, record) => sum + (record.droppedBytes ?? 0), 0),
+  }
+}
+
 function costOf(records) {
   const withCost = records.filter(record => record.cost !== undefined)
   const round = value => Math.round(value * 1e6) / 1e6

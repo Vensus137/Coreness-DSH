@@ -14,14 +14,17 @@ packed print is a ninth of the bytes — and both the packed and the earlier inl
 Records live in the platform's storage domain `coreness_journal` (version 1, table `records`) — the same
 name, version and record schema the donor wrote, so the records already in a home read. The kinds are
 closed: `состав`, `настройки`, `жизненный цикл`, `оборот`, `сбой`, `задача`, `шаг`, `отказ`, `сдача` (five
-environment kinds and four participant ones). A record's address is `time|kind|area|id`; a write with an
+environment kinds and four participant ones). A record's address is `time|kind|area|id`; `id` is a name
+('запуск', 'база', 'сравнение'), the cause is the sentence in `text`; a record written by a participant
+carries the session the platform stamped it with, so an act joins the run it belongs to. A write with an
 unknown field is refused by name, a stored record with an unknown field is read through. The storage root is
 the home: the records lie in `$DSH_HOME/storages/coreness_journal.json`, one file for every profile, and the
 `profile` field says whose they are.
 
 The journal opens on first use through the storage domain; rotation is planned from `rotationDays` (30) and
 `rotationBytes` (2 MiB); the faults of observation are kept to 20, a fixed cap of the journal itself, not a
-config value.
+config value. What a sweep drops survives as one `оборот` record of its own: the kinds it took and how
+many of each, the bytes, and the money the dropped notes reported — the month's statistics outlive the rows.
 
 ## The tools
 

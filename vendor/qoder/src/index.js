@@ -153,22 +153,23 @@ export function apply(ctx, config) {
   })
   ctx.provide(SERVICE, transport)
 
+  /* The spend journal is the donor provider's own file, continued rather than started again: the account's
+     history reads as one ledger, and the boundary between its rows and ours is the time they carry. One
+     binding feeds both readers — the adapter that writes and the tool that answers. */
+  const journal = createSpendJournal({ path: spendJournalPath(home), log: warn })
   const adapter = createAdapter({
     transport,
     settings: () => config,
     displayName: DISPLAY_NAME,
     log,
     imageData: createImageReader(ctx),
-    /* The spend journal is the donor provider's own file, continued rather than started again: the
-       account's history reads as one ledger, and the boundary between its rows and ours is the time they
-       carry. */
-    journal: createSpendJournal({ path: spendJournalPath(home), log: warn }),
+    journal,
   })
   ctx.llm.registerAdapter([ROUTE], adapter)
   /* The ledger's reader: the money one window holds, by day and model. It reads the file the adapter
      writes, through the one place the path is resolved — a second join of the two halves would drift the
      first time the ledger moves. */
-  for (const tool of spendTools(spendJournalPath(home))) {
+  for (const tool of spendTools(spendJournalPath(home), journal.failures)) {
     ctx.effect(() => ctx.tools.register(tool))
   }
   /* The row's own id is the settings namespace the platform's page reads the profile from: the config

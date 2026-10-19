@@ -33,13 +33,13 @@
 
 import { DEFAULT_RECORD_ID, addressOf, answerSchema, refusalOf, strictRecordSchema } from './domain.js'
 import { PROFILE_FILES, compositionDiff, compositionOf, compositionPrint, kindOfChange, packComposition, profilePrint } from './fingerprint.js'
-import { planRotation } from './rotation.js'
+import { breakdownOf, planRotation } from './rotation.js'
 import { buildSummary, selectRecords } from './summary.js'
 
 /** The plugin's name: it signs the records about the lifecycle and about rotation. */
 export const PLUGIN_NAME = 'coreness-journal'
 /** The fields a note may carry: the address, the author and the profile are the journal's own. */
-const NOTE_FIELDS = ['kind', 'area', 'id', 'task', 'text', 'reason', 'stepMs', 'reread', 'cost']
+const NOTE_FIELDS = ['kind', 'area', 'id', 'task', 'session', 'text', 'reason', 'stepMs', 'reread', 'cost']
 /** The fields a query may name: everything else is a refusal rather than a silent omission. */
 const QUERY_FIELDS = ['since', 'until', 'kind', 'area', 'id', 'limit']
 /** How many observation faults are remembered for the summary: a list is an observation, not a history. */
@@ -154,6 +154,7 @@ export function createJournal(deps) {
       bytes: config.rotationBytes,
     })
     if (plan.drop.length === 0) return undefined
+    const breakdown = breakdownOf(entryList(), plan.drop)
     for (const key of plan.drop) await table.delete(key)
     return await write({
       time: now(),
@@ -164,6 +165,9 @@ export function createJournal(deps) {
       dropped: plan.drop.length,
       kept: plan.kept,
       reason: plan.reason,
+      droppedKinds: breakdown.kinds,
+      droppedBytes: breakdown.bytes,
+      droppedUsd: breakdown.usd,
     })
   }
 
@@ -181,8 +185,9 @@ export function createJournal(deps) {
           time: now(),
           kind: kindOfChange(changed),
           area: 'профиль',
-          id: first ? 'база' : cause,
+          id: first ? 'база' : 'сравнение',
           author: 'среда',
+          text: cause,
           changed,
           composition: packComposition(print),
         })
@@ -212,6 +217,7 @@ export function createJournal(deps) {
         id: input.id ?? DEFAULT_RECORD_ID[input.kind],
         author: 'участник',
         ...named('task', input.task),
+        ...named('session', input.session),
         ...named('text', input.text),
         ...named('reason', input.reason),
         ...named('stepMs', input.stepMs),

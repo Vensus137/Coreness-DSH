@@ -85,11 +85,13 @@ export function journalTools(journal) {
         schema: { type: 'json' },
         render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
       },
-      async execute(args) {
-        // The arguments are handed over as they came. The platform's schema checks the fields
-        // it declares and says nothing about the rest, so a tool that picked out the fields it
-        // knows would drop an undeclared one in silence; the journal's own guard refuses it.
-        return lossless(await journal.note(args))
+      async execute(args, exec) {
+        // The arguments are handed over as they came, and the session is the platform's own: the
+        // call carries the agent that made it, so a note joins the session it belongs to.
+        // The platform's schema checks the fields it declares and says nothing about the rest,
+        // so a tool that picked out the fields it knows would drop an undeclared one in silence;
+        // the journal's own guard refuses it.
+        return lossless(await journal.note({ ...args, session: exec?.agent?.id ?? args.session }))
       },
     }),
   ]

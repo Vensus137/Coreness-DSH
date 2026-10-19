@@ -33,7 +33,9 @@
  * which is what the bound is for.
  *
  * A write never fails a turn and never throws: a path that cannot be written — no rights, a directory that
- * went away, a full disk — is said in the log with the path and the reason, and the turn goes on.
+ * went away, a full disk — is said in the log with the path and the reason, and the turn goes on. The count of
+ * those misses is the journal's own and the reader tells it: a loss that only a log line knows is a loss the
+ * tool denies.
  *
  * @module @coreness/qoder/src/spend
  */
@@ -92,6 +94,9 @@ function timeOf(line) {
  * @returns {object} the journal
  */
 export function createSpendJournal({ path, now = () => Date.now(), log = () => {}, rotateAt = ROTATE_AT }) {
+  /** The rows a failed write lost: the reader tells this count instead of leaving it to the log. */
+  let failures = 0
+
   /**
    * The donor's own generation, kept before the first rotation of this route's own (see the header).
    * The test is the rows' own times: a generation that ended before the file began is an earlier era,
@@ -119,7 +124,7 @@ export function createSpendJournal({ path, now = () => Date.now(), log = () => {
      * @param {object} turn.usage the wire's usage object, as it arrived
      * @returns {void}
      */
-    record({ model, finish, durationMs, usage }) {
+    record({ model, finish, durationMs, usage, session }) {
       try {
         /* A file that is not there yet needs no rotation: the first row of a fresh home makes it, and
            `statSync` of nothing is the same answer as a file of nothing. */
@@ -133,6 +138,7 @@ export function createSpendJournal({ path, now = () => Date.now(), log = () => {
         const row = {
           time: new Date(now()).toISOString(),
           model,
+          ...(typeof session === 'string' && session !== '' ? { session } : {}),
           finish,
           durationMs,
           usage: usageOf(usage),
@@ -143,8 +149,10 @@ export function createSpendJournal({ path, now = () => Date.now(), log = () => {
         }
         appendFileSync(path, `${JSON.stringify(row)}\n`)
       } catch (error) {
+        failures += 1
         log(`the spend journal could not be written at ${path}: ${error instanceof Error ? error.message : String(error)}`)
       }
     },
+    failures: () => failures,
   }
 }

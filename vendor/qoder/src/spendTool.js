@@ -34,17 +34,21 @@ const INSTANT = '2026-10-05T18:00:00.000Z'
  * @param {string} path the ledger's path, resolved by the plugin once
  * @returns {object[]} the tool definitions
  */
-export function spendTools(path) {
+export function spendTools(path, failures) {
+  if (typeof failures !== 'function') {
+    throw new Error('the spend tool needs the writer\'s count of failed rows: a tool without it reports every loss as none')
+  }
   return [
     defineTool({
       name: SPEND_TOOL,
       description: 'The money the spend journal holds for a window: dollars, the vendor\'s credits, the requests '
         + 'and the tokens, optionally broken down by day or by model. Every row is one request; a row whose wire '
-        + 'counted no credits adds no money, and the answer says how many lines of the ledger were not rows.',
+        + 'counted no credits adds no money; the answer says how many lines of the ledger were not rows, how many '
+        + 'rows the plugin failed to write, and which part of the money was billed. Days are UTC dates.',
       parameters: {
         since: { type: 'string', description: `Window start, an instant like ${INSTANT}. By default there is no lower bound.` },
         until: { type: 'string', description: `Window end, an instant like ${INSTANT}. By default — now.` },
-        by: { type: 'string', enum: SPEND_BY, description: 'Breakdown: none, day (the UTC date) or model.' },
+        by: { type: 'string', enum: SPEND_BY, description: 'Breakdown: none, day (the UTC date), model, or finish (how the attempt ended).' },
       },
       output: {
         schema: { type: 'json' },
@@ -55,7 +59,7 @@ export function spendTools(path) {
           since: instantOf(args.since, 'since'),
           until: instantOf(args.until, 'until'),
           by: args.by ?? 'none',
-        })
+        }, failures())
       },
     }),
   ]
