@@ -38,6 +38,18 @@
       },
       "versions": [
         {
+          "version": "0.6.4",
+          "publishTimestamp": 1792505281,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/Vensus137/Coreness-DSH",
+            "commit": "70f944a29414d4729d1e72a10ac498839042fc38"
+          },
+          "engines": {
+            "dsh": ">=0.2.1-rc.2"
+          }
+        },
+        {
           "version": "0.6.3",
           "publishTimestamp": 1792502858,
           "source": {

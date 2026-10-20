@@ -88,8 +88,8 @@ window.__ModuleLoader__.load({
       rewardPlain: 'Reward',
       days: 'days',
       available: 'available',
-      nothingToTake: 'nothing to take right now',
-      already: 'already collected',
+      nothingToTake: 'Nothing to take right now',
+      claimed: 'claimed',
       notCollected: 'nothing was collected',
       refused: 'refused',
     };

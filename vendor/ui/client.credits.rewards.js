@@ -127,10 +127,16 @@ window.__ModuleLoader__.load({
        * is, and the rows it returns are appended where they stood.
        */
       function rewardRows(picture) {
-        /* Only what may be taken is drawn: a taken, blocked or expired campaign, and one that only asks
-           for a look at its details, stands as nothing rather than as a mark beside text nobody can act
-           on. The answer's own silence about a reward is not the same as a reward that was passed over. */
-        const rewards = picture.rewards.filter((entry) => entry.claimable === true);
+        /* An open campaign is offered and a taken one is marked, never hidden: the list shows what the
+           contour handed out. A campaign whose action is only a look, and one the contour blocked or let
+           expire, is not a reward this account can use now, so it stands as nothing. The answer's own
+           silence about a reward is not the same as a reward that was passed over. */
+        const rewards = picture.rewards.filter((entry) => {
+          const status = String(entry.status ?? '').toUpperCase();
+          if (status === 'EXPIRED' || status === 'BLOCKED') return false;
+          if (String(entry.actionType ?? '').toUpperCase() === 'VIEW_DETAILS') return false;
+          return entry.claimable === true || status === 'CLAIMED';
+        });
         const rows = [];
         rows.push(h('p', { key: 'rewards', className: 'coreness-credits-blockTitle' }, t('rewards')));
         // A hidden list and an empty one are different things: hidden means the contour did not
@@ -144,8 +150,11 @@ window.__ModuleLoader__.load({
             className: 'coreness-credits-reward',
           }, [
             h('span', { key: 'text', className: 'coreness-credits-rewardText' }, rewardText(entry)),
-            // Every drawn campaign may be taken: the mark says so and nothing else is drawn to skip.
-            h('span', { key: 'mark', className: 'coreness-credits-rewardMarkOn' }, t('available')),
+            // What was taken is marked, never hidden: the list shows what the contour offers and what was taken.
+            h('span', {
+              key: 'mark',
+              className: entry.claimable === true ? 'coreness-credits-rewardMarkOn' : 'coreness-credits-rewardMark',
+            }, entry.claimable === true ? t('available') : t('claimed')),
           ]))));
         }
         return rows;
