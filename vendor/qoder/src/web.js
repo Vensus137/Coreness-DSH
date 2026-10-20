@@ -20,8 +20,8 @@ import { causesOf, liveValue } from './adapter.js'
 /** The provider id both providers carry. */
 export const PROVIDER_ID = 'qoder'
 
-/** How long one fetch may take; the platform's own fetch provider uses a comparable ceiling. */
-export const FETCH_TIMEOUT_MS = 15_000
+/** How long one fetch may take: the platform's own HTTP provider default, so a slow page gets the allowance the platform itself would give it. */
+export const FETCH_TIMEOUT_MS = 30_000
 
 /** The response byte and char cap handed to the platform: a declared length over it is refused, a stream that grows past it is cut and marked truncated. */
 export const FETCH_MAX_BYTES = 2 * 1024 * 1024
