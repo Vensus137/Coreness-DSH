@@ -14,7 +14,7 @@ github:Vensus137/Coreness-DSH
 
 The same page switches the package off without removing it, and takes it off again.
 
-That address follows the newest release, and what stands published is a release — so the address and the newest release are one thing here. A fixed release is named by its own tag — `…Coreness-DSH#v0.6.2` — and a released tag is never moved: that line gives the same code whenever it is run.
+That address follows the newest release, and what stands published is a release — so the address and the newest release are one thing here. A fixed release is named by its own tag — `…Coreness-DSH#v0.6.3` — and a released tag is never moved: that line gives the same code whenever it is run.
 
 <details>
 <summary><b>By command line</b> — for a terminal; nothing above needs it</summary>
@@ -43,9 +43,15 @@ Discover:
 https://raw.githubusercontent.com/Vensus137/Coreness-DSH/main/market.json
 ```
 
-The plugin stands listed with its versions, and from then on an update is one press on its card: the
-application compares the versions itself, installs the newer one and says when a restart is needed. Nothing
-checks in the background and nothing notifies — the market is read when the page is opened.
+The plugin stands listed with its versions, and the market tells you when a newer one exists: the
+application compares the versions itself.
+
+The market lists and compares; it does not upgrade. Its own note says so — *no upgrade action* — and its
+**Update available** press only opens the plugin's page. The update is the same act as the install:
+**Add plugin** with the same address picks up the newest release, and the application says when a restart is
+needed. A version that does not move after that is a pinned lockfile: take the plugin off and add it again.
+
+Nothing checks in the background and nothing notifies — the market is read when the page is opened.
 
 A profile that mounts a working tree (`file:` dependency) is the development case: the market's install would
 replace that mount with the published copy, so a development profile updates by re-mounting instead.

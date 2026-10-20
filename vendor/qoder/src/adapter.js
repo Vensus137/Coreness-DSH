@@ -94,26 +94,90 @@ export function resolveRetryPolicy(config = {}) {
 }
 
 /**
+ * Node's network causes, the ones a `fetch` failure carries instead of its own code.
+ *
+ * The outer `TypeError: fetch failed` is the same for a reset, a refused connection and a dead DNS; the
+ * reason a reader routes on is one level down, in `cause.code` — and, for a host with several addresses,
+ * in `cause.errors[].code`. Only these causes are transport: a certificate failure is permanent, and a
+ * retry would spend the budget without healing it.
+ */
+const TRANSPORT_CAUSES = new Set([
+  'ECONNRESET', 'ECONNREFUSED', 'ECONNABORTED', 'EPIPE', 'ETIMEDOUT',
+  'ENOTFOUND', 'EAI_AGAIN', 'EHOSTUNREACH', 'ENETUNREACH', 'ENETDOWN',
+  'UND_ERR_SOCKET', 'UND_ERR_CLOSED', 'UND_ERR_CONNECT_TIMEOUT',
+  'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT',
+])
+
+/**
+ * The transport reason in an error and its cause chain, and whether any node at all carried a code.
+ *
+ * The walk is breadth-first, bounded and skips a node it has already seen: an `AggregateError` with
+ * several addresses, a self-referencing cause and a cycle all return. The `coded` flag is what keeps a
+ * permanent cause — a certificate failure, whose code is not transport — from falling into the generic
+ * `fetch failed` door.
+ * @param {unknown} error what was thrown
+ * @param {number} [depth] how many cause levels to read
+ * @returns {{code?: string, first?: string, coded: boolean}} the first transport code, the first code seen, and whether any node carried one
+ */
+function causesOf(error, depth = 5) {
+  let level = [error]
+  const seen = new Set()
+  let coded = false
+  let first
+  for (let step = 0; step < depth && level.length > 0; step += 1) {
+    const next = []
+    for (const node of level) {
+      if (node === null || typeof node !== 'object' || seen.has(node)) continue
+      seen.add(node)
+      if (typeof node.code === 'string' && node.code !== '') {
+        coded = true
+        first ??= node.code
+        if (TRANSPORT_CAUSES.has(node.code)) return { code: node.code, first, coded: true }
+      }
+      if (node.cause !== undefined) next.push(node.cause)
+      if (Array.isArray(node.errors)) next.push(...node.errors)
+    }
+    level = next
+  }
+  return { code: undefined, first, coded }
+}
+
+/** Whether the value is the TypeError Node's `fetch` rejects a network failure with. */
+function fetchFailure(error) {
+  return error?.name === 'TypeError' && error?.message === 'fetch failed'
+}
+
+/**
  * The failure a thrown value stands for, in the platform's words.
  *
  * The kind is the platform's distinction, not a courtesy: a caller's cancellation is `aborted` — an
  * outcome of its own in the contract, which the loop and the retry policy both read — while everything
  * else is `error`. The status travels when the contour gave one, because a reader looking at a refusal
  * wants the number the vendor sent.
+ *
+ * A transport failure from Node's `fetch` is the case the outer value cannot name: its `TypeError` has no
+ * `code`, and the reason is in the cause chain (or `cause.errors`), so the code travels from there. An
+ * explicit code still wins; a cause code outside the transport set is not turned into one.
  * @param {unknown} error what was thrown
  * @param {AbortSignal} [signal] the caller's signal
  * @returns {{kind: 'aborted' | 'error', failure: object}} the terminal reason
  */
 export function terminalOfFailure(error, signal) {
+  const explicit = typeof error?.code === 'string' && error.code !== ''
+  const causes = causesOf(error)
   const code = error instanceof FrameError ? 'MALFORMED_RESPONSE'
-    : typeof error?.code === 'string' && error.code !== '' ? PLATFORM_CODES[error.code] ?? error.code
-      : 'UNKNOWN'
+    : explicit ? PLATFORM_CODES[error.code] ?? (TRANSPORT_CAUSES.has(error.code) ? 'TRANSPORT' : error.code)
+      : causes.code !== undefined || (fetchFailure(error) && !causes.coded) ? 'TRANSPORT'
+        : 'UNKNOWN'
   const aborted = signal?.aborted === true || code === 'ABORTED'
   const status = Number.isInteger(error?.status) && error.status >= 100 && error.status <= 599 ? error.status : undefined
+  const fallback = `${code}: the Qoder route failed`
+  const base = typeof error?.message === 'string' && error.message !== '' ? error.message : fallback
+  const cause = causes.code ?? (explicit ? undefined : causes.first)
   return {
     kind: aborted ? 'aborted' : 'error',
     failure: {
-      message: typeof error?.message === 'string' && error.message !== '' ? error.message : `${code}: the Qoder route failed`,
+      message: cause === undefined || base.includes(cause) ? base : `${base} (${cause})`,
       code: aborted ? 'ABORTED' : code,
       ...status === undefined ? {} : { status },
     },
