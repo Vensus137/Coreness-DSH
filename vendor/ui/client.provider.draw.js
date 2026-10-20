@@ -45,8 +45,8 @@ window.__ModuleLoader__.load({
        * The section as it stands before the read answers: the frames of what is coming.
        *
        * The read is a round trip — the platform's own doors, then the vendor's catalogue — and a section
-       * drawn from it alone is one line until the answer lands, when it becomes two cards and every block
-       * under it moves. So the frames stand first: the same two cards, the same heads with the room a state
+       * drawn from it alone is one line until the answer lands, when it becomes three cards and every block
+       * under it moves. So the frames stand first: the same three cards, the same heads with the room a state
        * keeps, and the sentences the section owns — a title, a hint, a phrase read the same before and after
        * the read, so drawing them is not a claim about the answer. Where the read's own content will land —
        * the value, the address, a control, a row — a bar stands instead, wearing the class of the part it
@@ -60,7 +60,7 @@ window.__ModuleLoader__.load({
        * this function's. Every frame carries the card's answer strip as the settled card carries it — drawn
        * and empty — so the room a press's sentence will stand in is the room the frame already gives it, and the
        * word arriving moves no box of the frame it arrives in. A profile that declares no route, or whose settings
-       * are unmounted, is a case only the read can answer; until it lands, two frames are what is coming for every
+       * are unmounted, is a case only the read can answer; until it lands, three frames are what is coming for every
        * profile that carries the route.
        */
       function firstPaint() {
@@ -88,6 +88,13 @@ window.__ModuleLoader__.load({
               bar('where', 'line', 'coreness-qoder-line'),
               bar('check', 'button', 'coreness-qoder-button coreness-button'),
             ]),
+          ]),
+          h('div', { key: 'web', className: 'coreness-qoder-card' }, [
+            frame(t('web.title'), null),
+            h('div', { key: 'row', className: 'coreness-qoder-check' }, [
+              h('div', { key: 'box', className: 'coreness-qoder-line coreness-qoder-skeleton', 'data-skeleton': 'check' }),
+            ]),
+            h('p', { key: 'foot', className: 'coreness-qoder-dim coreness-dim' }, t('web.footnote')),
           ]),
           h('div', { key: 'models', className: 'coreness-qoder-card' }, [
             frame(t('models.label'), null),
@@ -134,7 +141,7 @@ window.__ModuleLoader__.load({
        * is not this value: it is the section's own words, and it stands in the card's answer room
        * (`answerStrip`) beside the state.
        */
-      const SUBJECTS = { credential: 'status.subject.token', node: 'status.subject.node', models: 'status.subject.models' };
+      const SUBJECTS = { credential: 'status.subject.token', node: 'status.subject.node', models: 'status.subject.models', web: 'web.title' };
       const statusOf = (view, where) => {
         const subject = t(SUBJECTS[where]);
         const state = view.view;
@@ -157,7 +164,7 @@ window.__ModuleLoader__.load({
             return { subject, value: 'unwritable', detail: t('state.readonly') };
           }
         }
-        if (readFailure !== null && where === 'credential') return { subject, value: 'unread', detail: readFailure };
+        if (readFailure !== null && (where === 'credential' || where === 'web')) return { subject, value: 'unread', detail: readFailure };
         /* Nothing is read yet: the frames of the wait draw their own word, and a card that does not exist yet
            states nothing. The account asks this function on every render, and the first render of a section
            holds no picture at all — the guard stood here as a dereference of what the ready path always had. */
@@ -180,6 +187,18 @@ window.__ModuleLoader__.load({
           if (state.ref === null) return { subject, value: null, detail: t('detail.noplace') };
           if (!writable) return { subject, value: 'unwritable', detail: t('detail.external') };
           return { subject, value: state.credential?.configured === true ? 'set' : 'unset' };
+        }
+        /* Web: the card states the switch's own value; a row that could not be read is a fault, not
+           "off", and a read-only row cannot be pressed. A missing token or an off flag is off in effect
+           even where a stale row still names Qoder: the card's note says the default search stands, and
+           the section's read clears that row. */
+        if (where === 'web') {
+          if (state.web === undefined || state.web === null) return { subject, value: null };
+          if (state.web.ok !== true) return { subject, value: 'unread', detail: state.web.fault };
+          if (state.web.writable !== true) return { subject, value: 'unwritable', detail: t('state.readonly') };
+          const tokenMissing = state.ref === null || state.ref === undefined || state.credential?.configured !== true;
+          if (tokenMissing || state.webEnabled !== true) return { subject, value: 'unset' };
+          return { subject, value: shared.checkedOf(state.web.value) ? 'set' : 'unset' };
         }
         /* Models: the draft's own first refusal outranks the reading, and the reading outranks the
            route's own list, which is the oldest news of the three. */
@@ -263,15 +282,15 @@ window.__ModuleLoader__.load({
           /* A card states one thing, and a press is the newer fact: the head may be handed the status standing for
              the card's newest news (`shown`), and reads its own subject's status otherwise. */
           const one = shown ?? statusOf(view, key);
-          /* The connection's own state, which its dot is about: the corner may be saying the node's newer news
-             instead, and the dot keeps saying the token's state — beside the name of the thing it is about. */
-          const own = key === 'credential' ? statusOf(view, 'credential') : null;
-          /* The two states a reader is simply *in* keep no word in this card's corner: the dot beside the name
-             says them, and `Token is set` / `Token is not set` left the face on the user's word — the
+          /* The card's own state, which its dot is about: the connection's corner may say the node's newer
+             news, and the web switch's may say a press's word — the dot keeps the state beside the name. */
+          const own = key === 'credential' || key === 'web' ? statusOf(view, key) : null;
+          /* The on/off states a reader is simply *in* keep no word in this card's corner: the dot beside the
+             name says them, and `Token is set` and `Web access is set` left the face on the user's word — the
              state is not news and the sentence said nothing a reader could act on. Every other value keeps its
              sentence: a fault, a verdict, a press's own outcome, and the node's answer standing here as the
              newer fact. What the head drops, the dot carries out loud (`statusMark`). */
-          const silent = key === 'credential' && (one.value === 'set' || one.value === 'unset');
+          const silent = (key === 'credential' || key === 'web') && (one.value === 'set' || one.value === 'unset');
           const word = silent ? null : kit.statusNode({ subject: one.subject, value: one.value, data: one.data });
           /* The card's own strip: the room a press's sentence stands in, drawn on every card of this section as it
              is on every card of the MCP's and the gate's — reserved and empty while that press's news is gone, so
@@ -282,17 +301,19 @@ window.__ModuleLoader__.load({
             : null;
           return h('div', { key: 'head', className: 'coreness-qoder-head coreness-card-head', 'data-state': key }, [
             h('span', { key: 'name', className: 'coreness-qoder-name' }, label),
-            /* The connection's mark stands **beside the name of the thing it is about** — this card is the
-               Connection — and only where a state is known: a card that read nothing draws no dot rather than
-               claiming a connection nobody asked about. Its tone is the mark's own: nothing
-               stored — grey, something stored — green, something wrong — red; and it says that state out loud
-               exactly where the corner draws no word of it, because `Token is set` and `Token is not set` left
-               the face and a dot a reader cannot see is a state a reader cannot read. Where the corner says that
-               same state in words — a fault, an outcome — the dot is silent: one fact, said once. The head's own
-               gap places it, so this chunk's sheet needs no rule for it. */
+            /* The connection's and the web switch's marks stand **beside the name of the thing they are
+               about** — the token's state and the switch's on/off — and only where a state is known: a card
+               that read nothing draws no dot. The connection's dot keeps its three tones; the web dot is
+               green while Qoder is on and is absent while it is off, because the checkbox itself says off.
+               Where the corner says the state in words — a fault, an outcome — the dot is silent: one fact,
+               said once. The head's own gap places it, so this chunk's sheet needs no rule for it. */
             own === null || own.value === null || own.value === undefined
               ? null
-              : kit.statusMark(own.value, { key: 'mark', subject: own.subject, spoken: word !== null && one.value === own.value }),
+              : key === 'web'
+                ? (own.value === 'set'
+                  ? kit.statusMark('set', { key: 'mark', subject: own.subject })
+                  : null)
+                : kit.statusMark(own.value, { key: 'mark', subject: own.subject, spoken: word !== null && one.value === own.value }),
             ...extras,
             /* One component, one place, one value: the words, the tones and the place rule are
                the status component's, and the account this section learned travels beside the value. */
@@ -318,16 +339,17 @@ window.__ModuleLoader__.load({
             'data-node': one.node,
           }, t('node.failedNode', { node: one.node, reason: one.error ?? '' })));
 
-        /* The connection card: its head, the token's field and presses, and the node's own row, all drawn by
-           the parts beside this one with the head maker made here — one head, one status, every card. */
+        /* The connection card and the web card: each is its own subject, with its own head and status.
+           The connection carries the token and the node; the web switch carries the shared web row. */
         const credential = shared.credentialCard(view, act, headOf, headFact(), writable);
+        const webCard = shared.webCard(view, act, headOf);
 
         /* Names two entries of the vendor's listing share, computed once for the whole list: the picker's
            options carry the vendor's own names, and only a clash brings the wire id back (`optionWords`). */
         const clashing = shared.clashingNames(state.catalogue.models);
         const models = shared.modelsCard(view, act, headOf, rows, problems, clashing);
 
-        return h('div', { className: 'coreness-still coreness-qoder coreness-sectionBody', 'data-status': 'ready' }, [...head, credential, models,
+        return h('div', { className: 'coreness-still coreness-qoder coreness-sectionBody', 'data-status': 'ready' }, [...head, credential, webCard, models,
           /* The reasons the sweep's nodes gave: a block of its own, under every card, so the list grows
              downward and moves nothing the reader is looking at. */
           refusals.length === 0 ? null : h('div', { key: 'refused', className: 'coreness-qoder-refused' }, [

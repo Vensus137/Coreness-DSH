@@ -8,9 +8,9 @@
 import crypto from 'node:crypto'
 import { MAX_TIMER_DELAY_MS, clampTimeout, deadline } from '@deepseek-ai/dsh-timeout'
 import { buildChatBody, encodeBody, toWireMessages, toWireTools, DEFAULT_MAX_TOKENS } from './body.js'
-import { CHAT_PATH, DEFAULT_CENTER_ORIGIN, DEFAULT_CONTROL_CEILING_MS, DEFAULT_FIRST_BYTE_CEILING_MS, DEFAULT_IDLE_CEILING_MS, DEFAULT_OPENAPI_ORIGIN, EXCHANGE_PATH, FIRST_BYTE_CODE, MODEL_LIST_PATH, QoderError, REFRESH_PATH, USERINFO_PATH, bounded, expiryOf, jsonOf, modelsOf, refusalInText, refusalOf, sessionExpired } from './in.js'
+import { CHAT_PATH, DEFAULT_CENTER_ORIGIN, DEFAULT_CONTROL_CEILING_MS, DEFAULT_FIRST_BYTE_CEILING_MS, DEFAULT_IDLE_CEILING_MS, DEFAULT_OPENAPI_ORIGIN, EXCHANGE_PATH, FIRST_BYTE_CODE, MODEL_LIST_PATH, QoderError, REFRESH_PATH, USERINFO_PATH, WEB_SEARCH_PATH, bounded, expiryOf, jsonOf, modelsOf, refusalInText, refusalOf, sessionExpired } from './in.js'
 import { abortOf, bodyFrom, firstByteRefusal, normalizeNode, readEndpointMap, readFrames } from './read.js'
-import { cosyHeaders, machineIdOf, tokenHeaders } from './sign.js'
+import { CLIENT_TYPE, WEB_COSY_VERSION, WEB_MACHINE_OS, cosyHeaders, machineIdOf, tokenHeaders } from './sign.js'
 
 /**
  * The transport of one route: the facts it needs, the caches it keeps, and the calls.
@@ -234,10 +234,16 @@ export function createTransport(options) {
     return { 'user-agent': options.userAgent ?? 'coreness-dsh' }
   }
 
-  /** The headers of one signed call, with the machine id and the identity already resolved. */
-  async function signedHeaders({ url, body, signal }) {
+  /**
+   * The headers of one signed call, with the machine id and the identity already resolved.
+   *
+   * `cosy` is the call's own COSY shape when it is not the chat's: the web search names a newer
+   * COSY version, its client and its business, and leaves out the body-hash headers the chat
+   * carries. The defaults stay the chat's, so the chat call is unchanged.
+   */
+  async function signedHeaders({ url, body, signal, cosy }) {
     const { session, identity } = await identityOf(signal)
-    return cosyHeaders({ body, url, credentials: { ...identity, jobToken: session.jobToken }, machineId: machineIdValue() })
+    return cosyHeaders({ body, url, credentials: { ...identity, jobToken: session.jobToken }, machineId: machineIdValue(), ...cosy })
   }
 
   /**
@@ -261,6 +267,70 @@ export function createTransport(options) {
       if (!response.ok) throw await refusalOf(response, 'the Qoder model listing', warn)
       const payload = await jsonOf(response, 'the Qoder model listing')
       return modelsOf(payload)
+    })
+  }
+
+  /**
+   * One web search through the Qoder centre.
+   *
+   * The body is the vendor client's own envelope, encoded and signed the way its web-search client
+   * does: the endpoint demands `Encode=1` and answers `400` without it; the COSY payload names
+   * `1.1.44` and the client's business, and the path carries the `/algo` prefix the signature
+   * strips. A backend error and a malformed answer are thrown, not read as no results — an empty
+   * page list is the only shape that means "nothing found".
+   * @param {{query: string}} request the search
+   * @param {AbortSignal} [signal] the caller's cancellation
+   * @returns {Promise<{pageItems: object[], status: number}>} the centre's page items and their HTTP status
+   */
+  async function search(request, signal) {
+    const query = request?.query
+    if (typeof query !== 'string' || query.trim() === '') {
+      throw new QoderError('the Qoder web search was asked without a query', 'REQUEST')
+    }
+    const payload = {
+      query,
+      timeRange: 'NoLimit',
+      contents: { mainText: false, markdownText: false, summary: false },
+    }
+    const plain = JSON.stringify({ payload: JSON.stringify(payload), encodeVersion: '1' })
+    const body = encodeBody(plain)
+    const url = `${centerOrigin}${WEB_SEARCH_PATH}?Encode=1`
+    return ceiling('the Qoder web search', signal, async (inner) => {
+      const headers = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'Accept-Encoding': 'identity',
+        'X-Session-ID': crypto.randomUUID(),
+        ...await signedHeaders({
+          url,
+          body,
+          signal: inner,
+          cosy: {
+            cosyVersion: WEB_COSY_VERSION,
+            clientType: CLIENT_TYPE,
+            clientIp: machineIdValue(),
+            machineOs: WEB_MACHINE_OS,
+            businessProduct: 'cli',
+            businessType: 'agent',
+            scene: 'assistant',
+            extras: false,
+          },
+        }),
+      }
+      const response = await fetchImpl(url, { method: 'POST', headers, body, signal: inner })
+      if (!response.ok) throw await refusalOf(response, 'the Qoder web search', warn)
+      const answer = await jsonOf(response, 'the Qoder web search')
+      if (answer.errorCode !== undefined && answer.errorCode !== null && answer.errorCode !== 0) {
+        const words = typeof answer.errorMsg === 'string' && answer.errorMsg !== '' ? `: ${answer.errorMsg}` : ''
+        throw new QoderError(`the Qoder web search was refused (${answer.errorCode})${words}`, 'UPSTREAM', {
+          status: response.status,
+          vendor: JSON.stringify(answer),
+        })
+      }
+      if (!Array.isArray(answer.pageItems)) {
+        throw new QoderError('the Qoder web search returned no page list', 'MALFORMED_RESPONSE', { status: response.status })
+      }
+      return { pageItems: answer.pageItems, status: response.status }
     })
   }
 
@@ -494,6 +564,7 @@ export function createTransport(options) {
     profile,
     identity: identityOf,
     catalogue,
+    search: (request, signal) => search(request, signal),
     chat,
     frames,
     renew,

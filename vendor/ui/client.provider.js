@@ -70,10 +70,10 @@ window.__ModuleLoader__.load({
     const VERIFY_ACTION = 'verify';
     /**
      * The row's own fields this section writes, by name: the model list, the fallback window and the
-     * node. All three are volatile in the plugin's schema, which is what makes a write here apply to
+     * node. All four are volatile in the plugin's schema, which is what makes a write here apply to
      * the running route; a name missing from the settings mirror is named instead of attempted.
      */
-    const WRITTEN_PATHS = ['models', 'defaultContextWindow', 'inferBase'];
+    const WRITTEN_PATHS = ['models', 'defaultContextWindow', 'inferBase', 'webAccess'];
     /**
      * The one level that is ours: no vendor menu publishes it — their own client expresses a switch-off
      * as a budget of zero — and this route carries it by leaving
@@ -110,7 +110,7 @@ window.__ModuleLoader__.load({
     const EN = {
       section: 'Qoder',
       title: 'The Qoder route',
-      intro: 'The provider this product ships: the state of its credential, the node its requests go to and the models it offers. The token is written to the platform\'s credential store under the reference the profile names, the route\'s own settings are written through the platform\'s settings section, and the platform\'s own Settings → Models is the other door to the same values.',
+      intro: 'The provider this product ships: the state of its credential, the node its requests go to, the models it offers and its web switch. The token is written to the platform\'s credential store under the reference the profile names, the route\'s own settings are written through the platform\'s settings section, and the platform\'s own Settings → Models is the other door to the same values.',
       'state.failed': 'The route could not be read',
       'state.undeclared': 'This profile declares no Qoder route, so there is nowhere here to keep a token',
       'state.undeclared.hint': 'Without the plugin that provides the route there is nothing to write a token to, and a place invented here would be one the route never reads.',
@@ -212,12 +212,14 @@ window.__ModuleLoader__.load({
       'reset': 'Reset to defaults',
       'cancel': 'Cancel',
       'apply': 'Apply',
+      'web.title': 'Web access',
+      'web.label': 'Use Qoder for web search and fetch',
+      'web.unread': 'The web settings could not be read',
+      'web.noToken': 'The Qoder token is not set, so the standard DeepSeek web search and fetch are used. Fill the Personal access token field above to use Qoder.',
+      'web.footnote': 'On replaces the DeepSeek web search and fetch with Qoder. The DeepSeek search URL, API key and result count stay stored but are not used. Off returns the standard DeepSeek search. The platform\'s Web search page is the DeepSeek page; the latest save of the shared web settings wins. Off by default.',
     };
-
-    /* The host's own settings sheet, copied rule for rule and renamed, carried by its tokens alone —
-       the same sheet the MCP section copies (the
-       card, the field, the input, the buttons; the credential dot). One
-       departure, named: the section's own block is a card with one field, so its actions stand under
+    /* The host's own settings sheet, copied rule for rule and renamed, carried by its tokens alone. One
+       departure is named: the section's own block is a card with one field, so its actions stand under
        the field rather than in a row of the editor. */
     const CSS = `
 .coreness-qoder-title{margin:0;font-size:16px;font-weight:500;line-height:24px;color:var(--dsw-alias-label-primary)}
@@ -299,14 +301,10 @@ window.__ModuleLoader__.load({
    so its rhythm is tighter — the 2 against the shared 8. */
 .coreness-qoder-refusedList{gap:2px}
 /* The first paint: the read is a round trip, and the section stands in the shape the answer will take
-   before it lands — the two card frames, the sentences the section owns (they read the same before and
-   after the read) and a bar where the read's own content will land: a value, an address, a control, a row.
-   A bar wears the class of the part it stands for, so its box is that part's own rule and not a second
-   number here: that part's padding, its hairline and one line of the type it carries. The two widths below
-   stand for the parts that are as wide as their own words, and nothing depends on them — a bar is never
-   flex:none, so it cannot push the card it waits in. The bars do not pulse: the wait they stand in is the
-   platform's own round trip, and an animation would owe this sheet a stilling rule that the
-   page's own reduced-motion rule does not give it. */
+   before it lands — the three card frames, the sentences the section owns and a bar where the read's
+   own content will land: a value, an address, a control, a row. A bar wears the class of the part it
+   stands for, so its box is that part's own rule and not a second number here; it is never flex:none,
+   so it cannot push the card it waits in. The bars do not pulse. */
 .coreness-qoder-skeleton{background:var(--dsw-alias-bg-skeleton,var(--dsw-alias-interactive-bg-hover));border-color:transparent;border-radius:var(--dsw-radius-xs);color:transparent}
 /* The line a bar stands in for, which is what makes its box the part's box: a box with no content is its
    padding and its hairline alone, and the walk read that frame at 14 px where the control it wears stands
@@ -323,7 +321,7 @@ window.__ModuleLoader__.load({
 
     /**
      * The parts beside this entry, pulled at materialisation and in hand before the section is seated: the
-     * page's picker and hold, the kit's status surface, and the five drawings. A pull that failed is named
+     * page's picker and hold, the kit's status surface, and the six drawings. A pull that failed is named
      * on the console and seats nothing.
      */
     const PICKER = require.async('./client.picker.js');
@@ -334,6 +332,7 @@ window.__ModuleLoader__.load({
     const MODELS = require.async('./client.provider.models.js');
     const CREDENTIAL = require.async('./client.provider.credential.js');
     const NODE = require.async('./client.provider.node.js');
+    const WEB = require.async('./client.provider.web.js');
 
     /**
      * The section's sheet, held for as long as the section stands: put in here, put back if it is taken.
@@ -422,14 +421,13 @@ window.__ModuleLoader__.load({
       const profile = view === undefined ? undefined : atPath(view.value, declared.settingsPath ?? []);
       const named = profile?.apiKeyEnv;
       const ref = typeof named === 'string' && named !== '' ? named : null;
-
+      const webEnabled = profile?.webAccess == null ? 'unknown' : profile.webAccess.enabled === true;
       let credential = null;
       if (ref !== null) {
         const described = await remote.credentials.describe([ref]);
         if (!described.ok) return failed(described);
         credential = described.value[ref] ?? null;
       }
-
       const catalog = await remote.session.modelCatalog();
       const group = catalog.ok ? catalog.value.groups.find((one) => one.id === ROUTE) ?? null : null;
       const failure = catalog.ok ? catalog.value.failures.find((one) => one.id === ROUTE) ?? null : null;
@@ -489,6 +487,10 @@ window.__ModuleLoader__.load({
             writable: settings.value.writable === true,
             missing: WRITTEN_PATHS.filter((name) => !Object.hasOwn(profile ?? {}, name)),
           },
+        /* The platform's web row, read in the same settings answer as the Qoder row: one read carries
+           both subjects, and `settings/document-updated` refreshes them together. */
+        web: shared.webRowOf(settings.value),
+        webEnabled,
         ns: declared?.settingsNs ?? null,
         /* What stands in force for a model that names no effort of its own: the row's own answer. */
         rowEffort,
@@ -565,13 +567,14 @@ window.__ModuleLoader__.load({
         pluginCtx.effect(() => {
           let live = true;
           let armed = null;
-          Promise.all([PICKER, HOLD, KIT, SECTION, DRAW, MODELS, CREDENTIAL, NODE]).then(
-            ([pickerModule, holdModule, kitModule, sectionModule, drawModule, modelsModule, credentialModule, nodeModule]) => {
+          Promise.all([PICKER, HOLD, KIT, SECTION, DRAW, MODELS, CREDENTIAL, NODE, WEB]).then(
+            ([pickerModule, holdModule, kitModule, sectionModule, drawModule, modelsModule, credentialModule, nodeModule, webModule]) => {
               if (!live) return;
               const parts = { t, kit: kitModule, picker: pickerModule, hold: holdModule, ctx: pluginCtx, shared };
               Object.assign(shared, modelsModule.create(parts));
               Object.assign(shared, credentialModule.create(parts));
               Object.assign(shared, nodeModule.create(parts));
+              Object.assign(shared, webModule.create(parts));
               Object.assign(shared, drawModule.create(parts));
               const { QoderSection } = sectionModule.create(parts);
               armed = pluginCtx.slots.inject(SEAT, () => pluginCtx.slots.register({

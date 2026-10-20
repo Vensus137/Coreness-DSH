@@ -50,6 +50,11 @@ window.__ModuleLoader__.load({
            pin. The pin itself is not taken from here — it is read back from the settings section. */
         const [sweep, setSweep] = React.useState(null);
         const [draft, setDraft] = React.useState(null);
+        const [webBusy, setWebBusy] = React.useState(false);
+        const [webNote, setWebNote] = React.useState(null);
+        /* Which published read the cleanup below may act on: a mount paints `lastRead` first, and that
+           picture can be older than the store. The cleanup waits for `take` to publish a fresh read. */
+        const [readGeneration, setReadGeneration] = React.useState(0);
 
         const take = (view) => {
           /* The vendor's live catalogue is not part of this read and is kept across every re-read of the
@@ -66,6 +71,7 @@ window.__ModuleLoader__.load({
           /* Every read drops the draft: what the fields show after a write is the section, not what was
              typed before it. */
           setDraft(null);
+          setReadGeneration((count) => count + 1);
         };
 
         /* One door for the settings read, so every reader is ticketed the same way: `readState` is asked
@@ -314,6 +320,112 @@ window.__ModuleLoader__.load({
           }
         };
 
+        /* One write pair, in the documented order: the flag first on the way on, the two provider values
+           first on the way off. The web row is re-read after the flag on the way on, because the first
+           write moves the revision the second one must carry. A failed write is shown and the section is
+           read again, so the box reports the live value rather than the value the press hoped for. */
+        const toggleWeb = async (checked) => {
+          setWebBusy(true);
+          setWebNote(null);
+          try {
+            const qoder = state.view?.settings;
+            if (qoder === null || qoder === undefined) throw new Error(t('web.unread'));
+            if (checked) {
+              const flag = await shared.writeSettings(ctx.remote, qoder, [
+                { op: 'set', path: [...qoder.path, 'webAccess', 'enabled'], value: true },
+              ]);
+              if (!flag.wrote) throw new Error(flag.fault);
+              const webNow = await shared.readWeb(ctx.remote);
+              if (!webNow.ok) throw new Error(webNow.fault);
+              const selected = await shared.writeSettings(ctx.remote, webNow, [
+                { op: 'set', path: ['searchProvider'], value: 'qoder' },
+                { op: 'set', path: ['fetchProvider'], value: 'qoder' },
+              ]);
+              if (!selected.wrote) throw new Error(selected.fault);
+            } else {
+              const webNow = await shared.readWeb(ctx.remote);
+              if (!webNow.ok) throw new Error(webNow.fault);
+              const selected = await shared.writeSettings(ctx.remote, webNow, [
+                { op: 'set', path: ['searchProvider'], value: null },
+                { op: 'set', path: ['fetchProvider'], value: null },
+              ]);
+              if (!selected.wrote) throw new Error(selected.fault);
+              const flag = await shared.writeSettings(ctx.remote, qoder, [
+                { op: 'set', path: [...qoder.path, 'webAccess', 'enabled'], value: false },
+              ]);
+              if (!flag.wrote) throw new Error(flag.fault);
+            }
+            await read();
+          } catch (error) {
+            setWebNote(shared.reasonOf(error));
+            try {
+              await read();
+            } catch (readError) {
+              setWebNote(`${shared.reasonOf(error)} — ${shared.reasonOf(readError)}`);
+            }
+          } finally {
+            setWebBusy(false);
+          }
+        };
+
+        const namesQoder = (value) => value?.searchProvider === 'qoder' || value?.fetchProvider === 'qoder';
+
+        /**
+         * A selection outliving its switch or its token still stands in the row: the Qoder half is cleared
+         * on the read, so the platform's search returns; a DeepSeek half stays. The box is drawn off while
+         * the flag is off or the token is missing; the failure word is the switch's, one attempt per read.
+         */
+        const clearStaleWeb = async () => {
+          setWebBusy(true);
+          setWebNote(null);
+          try {
+            const webNow = await shared.readWeb(ctx.remote);
+            if (!webNow.ok) throw new Error(webNow.fault);
+            const stale = [];
+            if (webNow.value?.searchProvider === 'qoder') stale.push({ op: 'set', path: ['searchProvider'], value: null });
+            if (webNow.value?.fetchProvider === 'qoder') stale.push({ op: 'set', path: ['fetchProvider'], value: null });
+            if (stale.length === 0) {
+              await read();
+              return;
+            }
+            const selected = await shared.writeSettings(ctx.remote, webNow, stale);
+            if (!selected.wrote) throw new Error(selected.fault);
+            const qoder = state.view?.settings;
+            if (qoder !== null && qoder !== undefined) {
+              const flag = await shared.writeSettings(ctx.remote, qoder, [
+                { op: 'set', path: [...qoder.path, 'webAccess', 'enabled'], value: false },
+              ]);
+              if (!flag.wrote) throw new Error(flag.fault);
+            }
+            await read();
+          } catch (error) {
+            setWebNote(shared.reasonOf(error));
+            try {
+              await read();
+            } catch (readError) {
+              setWebNote(`${shared.reasonOf(error)} — ${shared.reasonOf(readError)}`);
+            }
+          } finally {
+            setWebBusy(false);
+          }
+        };
+
+        /* The switch or the token can leave by either door — this section's clear or the platform's own
+           Settings → Models. The section already re-reads on the credential announcement; this effect is
+           the read's consequence: with the flag off or no token and a stale selection, one cleanup write,
+           then the section is read again. A failure stands in the card's note and is not retried on every
+           read. */
+        const tokenMissing = state.view?.ref === null || state.view?.ref === undefined
+          || state.view?.credential?.configured !== true;
+        const webSelected = state.view?.web?.ok === true && namesQoder(state.view.web.value);
+        React.useEffect(() => {
+          if (readGeneration === 0 || state.status !== 'ready') return;
+          if (state.view?.webEnabled === 'unknown') return;
+          if (webSelected !== true || (tokenMissing !== true && state.view?.webEnabled !== false)) return;
+          if (webBusy || webNote !== null) return;
+          void clearStaleWeb();
+        }, [readGeneration, state.status, tokenMissing, webSelected, state.view?.webEnabled, webBusy, webNote]);
+
         /* The editor's own draft: built from the read rows the first time a field or a button is touched,
            and dropped by every read. */
         const editing = draft ?? (state.view?.status === 'ready' ? state.view.models.map(shared.draftRow) : []);
@@ -438,6 +550,8 @@ window.__ModuleLoader__.load({
           busy,
           note,
           sweep,
+          webBusy,
+          webNote,
           draft: state.view?.status === 'ready' ? (draft === null ? null : editing) : null,
         };
 
@@ -451,7 +565,7 @@ window.__ModuleLoader__.load({
            is made rather than once per state; the object is built fresh each render, so the account follows
            every render and a state learned by any door reaches the console. */
         React.useEffect(() => {
-          for (const where of ['credential', 'node', 'models']) {
+          for (const where of ['credential', 'node', 'models', 'web']) {
             const one = shared.statusOf(picture, where);
             if (one.detail !== undefined && one.detail !== null) kit.statusDetail(one.subject, one.detail);
           }
@@ -466,6 +580,7 @@ window.__ModuleLoader__.load({
           clear,
           verify,
           check,
+          toggleWeb,
           patchRow,
           chooseModel,
           addRow,

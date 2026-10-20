@@ -34,6 +34,12 @@ export const EXCHANGE_PATH = '/api/v1/jobToken/exchange'
 export const REFRESH_PATH = '/api/v1/jobToken/refresh'
 /** The profile path. */
 export const USERINFO_PATH = '/api/v1/userinfo'
+/**
+ * The web-search path on the centre. The vendor's own `prepareRequest` prefixes the centre path
+ * with `/algo`; the signature strips it again. The bare `/api` path answers `401` to every COSY
+ * shape — measured live — so the `/algo` form is the address, not a decoration.
+ */
+export const WEB_SEARCH_PATH = '/algo/api/v1/webSearch/oneSearch'
 
 /** How long a job token lives when the answer names no expiry. */
 const ASSUMED_TTL_MS = 24 * 60 * 60 * 1000

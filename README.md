@@ -14,7 +14,7 @@ github:Vensus137/Coreness-DSH
 
 The same page switches the package off without removing it, and takes it off again.
 
-That address follows the newest release, and what stands published is a release — so the address and the newest release are one thing here. A fixed release is named by its own tag — `…Coreness-DSH#v0.6.4` — and a released tag is never moved: that line gives the same code whenever it is run.
+That address follows the newest release, and what stands published is a release — so the address and the newest release are one thing here. A fixed release is named by its own tag — `…Coreness-DSH#v0.6.5` — and a released tag is never moved: that line gives the same code whenever it is run.
 
 <details>
 <summary><b>By command line</b> — for a terminal; nothing above needs it</summary>

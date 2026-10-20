@@ -31,13 +31,14 @@ import { QoderError } from './in.js'
 import { createTransport } from './transport.js'
 import { DISPLAY_NAME, ROUTE, createAdapter, liveValue } from './adapter.js'
 import { sweepMsOf } from './config.js'
-import { CATALOGUE_ACTION, VERIFY_ACTION, answerOf, answerOfRoute } from './routes.js'
+import { CATALOGUE_ACTION, VERIFY_ACTION, WEB_SEARCH_ACTION, answerOf, answerOfRoute } from './routes.js'
 import { createImageReader } from './images.js'
 import { createCredits } from './credits.js'
 import { createAccount } from './account.js'
 import { createSpendJournal } from './spend.js'
 import { spendTools } from './spendTool.js'
 import { PROBE_ACTION } from './probe.js'
+import { PROVIDER_ID, registerWebProviders } from './web.js'
 
 export { Config, DEFAULT_MODELS, DEFAULT_SWEEP_MS, MAX_SWEEP_MS, MIN_SWEEP_MS, sweepMsOf } from './config.js'
 export { CATALOGUE_ACTION, VALUE_REFUSED_CODES, VERIFY_ACTION, verifyToken } from './routes.js'
@@ -198,6 +199,19 @@ export function apply(ctx, config) {
     log,
   })
 
+  /* The two web providers are an optional surface: a composition without `web` still mounts the model
+     route, and the providers remain registered but unavailable while the row's flag is off. */
+  ctx.inject(['web'], (webCtx) => {
+    webCtx.effect(() => {
+      const dispose = registerWebProviders(webCtx.web, { transport, config })
+      log(`the Qoder web providers are registered (search "${PROVIDER_ID}", fetch "${PROVIDER_ID}")`)
+      return dispose
+    }, `${name}: the Qoder web providers`)
+  })
+  if (ctx.get('web') === undefined) {
+    log('this composition carries no web service, so the Qoder web providers are not registered')
+  }
+
   /* The two HTTP routes the page reads, in the scoped area Cordis gives a service that may be absent.
      The area runs where `connection` is — at the mount, or in a composition that gains the web surface
      later — and its effects live and die with the area, so the routes stand exactly as long as the
@@ -228,7 +242,7 @@ export function apply(ctx, config) {
     }, `${name}: the page's route`)
 
     log(`the credits route stands at ${CREDITS_ROUTE}, sweeping every ${everyMs} ms (collection ${config.credits?.autoClaim !== false ? 'on' : 'off'})`)
-    log(`the page's route stands at ${PROBE_ROUTE} (actions "${PROBE_ACTION}", "${CATALOGUE_ACTION}" and "${VERIFY_ACTION}")`)
+    log(`the page's route stands at ${PROBE_ROUTE} (actions "${PROBE_ACTION}", "${CATALOGUE_ACTION}", "${VERIFY_ACTION}" and "${WEB_SEARCH_ACTION}")`)
   })
   if (ctx.get('connection') === undefined) {
     log(`this composition carries no web surface, so nothing serves ${CREDITS_ROUTE} or ${PROBE_ROUTE}: the route's transport, its adapter and the credits sweep stand without them`)

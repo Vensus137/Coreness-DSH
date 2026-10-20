@@ -71,7 +71,7 @@ export const DEFAULT_MODELS = Object.freeze([
  * applies to the running plugin without re-mounting the row", and it is also the condition a write goes
  * through: the settings service refuses every path that is not volatile. Exactly the fields the product's
  * page moves are volatile and no others — the credential reference, the model list and its fallback window,
- * and the node the page pins after its own sweep. Everything else stays ordinary: a write there would
+ * the node the page pins after its own sweep, and the web switch. Everything else stays ordinary: a write there would
  * re-mount the route, and the page draws no control for it.
  *
  * The price, paid where the fields are read: a volatile field arrives as a **live reference**, not as a
@@ -178,6 +178,14 @@ export const Config = z.object({
     sweepMs: z.number().default(DEFAULT_SWEEP_MS),
     autoClaim: z.boolean().default(true),
   }).default({}),
+  /**
+   * The product's one switch for the two web providers. It is volatile because the checkbox writes it
+   * while the route runs; the providers read it live and stay registered while it is off, so the
+   * platform's own provider choice is untouched on a profile that never opted in.
+   */
+  webAccess: z.object({
+    enabled: z.boolean().default(false),
+  }).default({}).volatile(),
 })
 
 /**

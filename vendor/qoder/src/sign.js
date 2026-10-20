@@ -31,6 +31,18 @@ export const CLIENT_TYPE = '5'
 export const IDE_VERSION = '1.0.0'
 /** Schema version of the payload envelope. */
 export const COSY_VERSION = '1.0.0'
+/**
+ * The COSY version the vendor's web-search client names: the encoded shape with `1.1.44` is
+ * what the live centre accepted. The chat contour uses the older `1.0.0`; the two are
+ * different wire facts, not a setting.
+ */
+export const WEB_COSY_VERSION = '1.1.44'
+/**
+ * The machine OS string the vendor's request wrapper adds to its web-search call, in the
+ * runtime's own spelling (`x86_64_win32`, not `x86_64_windows`): the value is derived from
+ * the running client, exactly as the vendor derives it.
+ */
+export const WEB_MACHINE_OS = `${process.arch === 'arm64' ? 'aarch64' : process.arch === 'x64' ? 'x86_64' : process.arch}_${process.platform}`
 /** Login-version header; its value is the contour's, not a choice. */
 export const LOGIN_VERSION = 'v2'
 /** Machine type field. */
@@ -96,15 +108,16 @@ export function wrappedKey(aesKey) {
 
 /**
  * The payload envelope that carries the user envelope.
- * @param {{requestId: string, info: string}} input the fresh request id and the base64 user envelope
+ * @param {{requestId: string, info: string, cosyVersion?: string}} input the fresh request id, the
+ *   base64 user envelope and the COSY version the client names
  * @returns {string} base64 payload; the middle part of `Authorization`
  */
-export function signaturePayload({ requestId, info }) {
+export function signaturePayload({ requestId, info, cosyVersion = COSY_VERSION }) {
   const payload = {
     version: 'v1',
     requestId,
     info,
-    cosyVersion: COSY_VERSION,
+    cosyVersion,
     ideVersion: '',
   }
   return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64')
@@ -182,12 +195,34 @@ export function machineIdOf(options) {
  * Everything is fresh per call except the machine id and the contour's constants: the
  * key, the payload and the signature are built from a new UUID and a new timestamp every
  * time, which is what makes two calls to the same address different by construction.
+ *
+ * The COSY version, the client type, the client address, the machine OS and the optional
+ * business triplet are the caller's, with the contour's chat values as defaults: the web
+ * search enters through the same signature but names the client that made it, while the
+ * chat keeps its older shape.
  * @param {{body: Buffer | string | null, url: string, credentials: object, machineId: string,
- *   now?: () => number, uuid?: () => string}} input the body as it goes on the wire, the
- *   absolute address, the profile identity plus the current job token, and the machine id
+ *   now?: () => number, uuid?: () => string, cosyVersion?: string, clientType?: string,
+ *   clientIp?: string, machineOs?: string, businessProduct?: string, businessType?: string,
+ *   scene?: string, extras?: boolean}} input the body as it goes on the wire, the absolute
+ *   address, the profile identity plus the current job token, and the machine id
  * @returns {Record<string, string>} headers to merge into the request
  */
-export function cosyHeaders({ body, url, credentials, machineId, now = () => Date.now(), uuid = () => crypto.randomUUID() }) {
+export function cosyHeaders({
+  body,
+  url,
+  credentials,
+  machineId,
+  now = () => Date.now(),
+  uuid = () => crypto.randomUUID(),
+  cosyVersion = COSY_VERSION,
+  clientType = CLIENT_TYPE,
+  clientIp = CLIENT_IP,
+  machineOs = MACHINE_OS,
+  businessProduct,
+  businessType,
+  scene,
+  extras = true,
+}) {
   if (typeof credentials?.userID !== 'string' || credentials.userID === '') {
     throw new Error('cosy: the user id is empty — the profile call answers it, and no signature can be built without it')
   }
@@ -199,7 +234,7 @@ export function cosyHeaders({ body, url, credentials, machineId, now = () => Dat
   const info = userEnvelope(credentials, aesKey)
   const cosyKey = wrappedKey(aesKey)
   const date = String(Math.floor(now() / 1000))
-  const payload = signaturePayload({ requestId, info })
+  const payload = signaturePayload({ requestId, info, cosyVersion })
   const path = signaturePath(url)
   const bodyText = body === null || body === undefined ? '' : Buffer.isBuffer(body) ? body.toString('utf8') : body
   const signature = signatureOf({ payload, cosyKey, date, body: bodyText, path })
@@ -208,21 +243,26 @@ export function cosyHeaders({ body, url, credentials, machineId, now = () => Dat
     'Cosy-Key': cosyKey,
     'Cosy-User': credentials.userID,
     'Cosy-Date': date,
-    'Cosy-Version': COSY_VERSION,
+    'Cosy-Version': cosyVersion,
     'Cosy-Machineid': machineId,
     'Cosy-Machinetoken': machineId,
     'Cosy-Machinetype': MACHINE_TYPE,
-    'Cosy-Machineos': MACHINE_OS,
-    'Cosy-Clienttype': CLIENT_TYPE,
-    'Cosy-Clientip': CLIENT_IP,
-    'Cosy-Bodyhash': bodyHashOf(body),
-    'Cosy-Bodylength': bodyLengthOf(body),
-    'Cosy-Sigpath': path,
+    'Cosy-Machineos': machineOs,
+    'Cosy-Clienttype': clientType,
+    'Cosy-Clientip': clientIp,
+    ...businessProduct === undefined ? {} : { 'Cosy-Business-Product': businessProduct },
+    ...businessType === undefined ? {} : { 'Cosy-Business-Type': businessType },
+    ...scene === undefined ? {} : { 'Cosy-Scene': scene },
     'Cosy-Data-Policy': DATA_POLICY,
-    'Cosy-Organization-Id': '',
-    'Cosy-Organization-Tags': '',
     'Login-Version': LOGIN_VERSION,
-    'X-Request-Id': requestId,
+    ...extras === false ? {} : {
+      'Cosy-Bodyhash': bodyHashOf(body),
+      'Cosy-Bodylength': bodyLengthOf(body),
+      'Cosy-Sigpath': path,
+      'Cosy-Organization-Id': '',
+      'Cosy-Organization-Tags': '',
+      'X-Request-Id': requestId,
+    },
   }
 }
 

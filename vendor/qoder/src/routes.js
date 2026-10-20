@@ -6,6 +6,7 @@
  */
 
 import { QoderError, requestIdOf, vendorWordsOf } from './in.js'
+import { readQuota } from './credits.js'
 import { PROBE_ACTION, sweepNodes } from './probe.js'
 
 /**
@@ -30,6 +31,15 @@ export const CATALOGUE_ACTION = 'catalogue'
  * (two live job tokens of one personal token coexist).
  */
 export const VERIFY_ACTION = 'verify'
+
+/**
+ * The action that runs one live web search through the route's own transport.
+ *
+ * It exists so the host resolves the same credential a turn uses: no token is copied into a shell, a
+ * file or a test environment. The answer carries the HTTP status, the latency, the page items and the
+ * account's quota on either side, which is what a live check needs to see.
+ */
+export const WEB_SEARCH_ACTION = 'webSearch'
 
 /**
  * The vendor's own codes that are a statement **about the value**, and the whole list of them.
@@ -116,11 +126,39 @@ export async function answerOfRoute(transport, request, warn, credential) {
     if (body.action === PROBE_ACTION) return json({ ok: true, value: await sweepNodes(transport) })
     if (body.action === CATALOGUE_ACTION) return json({ ok: true, value: { models: await transport.catalogue({ signal: request.signal }) } })
     if (body.action === VERIFY_ACTION) return json({ ok: true, value: await verifyToken(transport, credential, request.signal) })
-    throw new QoderError(`this route knows no action "${String(body.action)}": it answers "${PROBE_ACTION}", "${CATALOGUE_ACTION}" and "${VERIFY_ACTION}"`, 'BAD_REQUEST')
+    if (body.action === WEB_SEARCH_ACTION) {
+      const query = typeof body.query === 'string' ? body.query.trim() : ''
+      if (query === '') throw new QoderError('the web-search action was asked without a query', 'BAD_REQUEST')
+      const quotaBefore = await quotaOf(transport)
+      const startedAt = Date.now()
+      const result = await transport.search({ query }, request.signal)
+      const elapsedMs = Date.now() - startedAt
+      const quotaAfter = await quotaOf(transport)
+      return json({ ok: true, value: { status: result.status, elapsedMs, pageItems: result.pageItems, quotaBefore, quotaAfter } })
+    }
+    throw new QoderError(`this route knows no action "${String(body.action)}": it answers "${PROBE_ACTION}", "${CATALOGUE_ACTION}", "${VERIFY_ACTION}" and "${WEB_SEARCH_ACTION}"`, 'BAD_REQUEST')
   } catch (error) {
     warn(`the page's route refused a ${request.method}: ${codeOf(error)} — ${messageOf(error)}`)
     return json({ ok: false, error: { code: codeOf(error), message: messageOf(error), vendor: vendorDetailOf(error) } })
   }
+}
+
+/**
+ * The account's quota, read through the transport's own token and machine id — the same joint the
+ * credits reader uses, without a second credential door.
+ * @param {object} transport the route's transport
+ * @returns {Promise<object>} the plan and bonus balances and the exceeded flag
+ */
+async function quotaOf(transport) {
+  const { session } = await transport.identity()
+  const { openapiOrigin } = transport.origins()
+  const quota = await readQuota({
+    jobToken: session.jobToken,
+    openapiOrigin,
+    machineId: transport.machineId(),
+    ceilingMs: transport.ceilings().controlCeilingMs,
+  })
+  return { plan: quota.plan, bonus: quota.bonus, exceeded: quota.exceeded }
 }
 
 /**

@@ -119,7 +119,7 @@ const TRANSPORT_CAUSES = new Set([
  * @param {number} [depth] how many cause levels to read
  * @returns {{code?: string, first?: string, coded: boolean}} the first transport code, the first code seen, and whether any node carried one
  */
-function causesOf(error, depth = 5) {
+export function causesOf(error, depth = 5) {
   let level = [error]
   const seen = new Set()
   let coded = false

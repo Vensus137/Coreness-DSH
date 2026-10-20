@@ -13,9 +13,9 @@ namespace, registers the model discovery (`ctx.llm.registerModelDiscovery`), han
 image reader (`imageData`) and the spend journal (`journal`), and starts the credits sweep.
 
 The transport is one closure over the vendor's facts: the node map, the token exchange and refresh,
-the profile, the signed catalogue, the signed chat turn, the frames, and the machine id. The account's
-credits are read through it with the same job token. No token is captured: the row names a credential
-reference and the value is resolved per call.
+the profile, the signed catalogue, the signed web search, the signed chat turn, the frames, and the
+machine id. The account's credits and the search are read through it with the same job token. No token
+is captured: the row names a credential reference and the value is resolved per call.
 
 The model list and the effort vocabulary are the donor's: `auto` 400,000, `efficient` 200,000,
 `dfmodel` 400,000, `qmodel_38max` 400,000, `qfmodel` 400,000; `DEFAULT_CONTEXT_WINDOW` (200,000) is
@@ -38,6 +38,11 @@ the bodies are JSON objects.
 - `POST /api/coreness.qoder` `{ action: 'catalogue' }` — the vendor's live listing, menus included.
 - `POST /api/coreness.qoder` `{ action: 'verify' }` — the closed verdict on the stored value
   (`accepted`/`refused`/`unsettled`).
+- `POST /api/coreness.qoder` `{ action: 'webSearch', query }` — one live Qoder web search through the
+  route's own credential: HTTP status, latency, page items and the account quota either side. It is the
+  host-side live check; no token is read or copied by the caller.
+
+The web search is the one call with its own COSY shape: `POST {centerOrigin}/algo/api/v1/webSearch/oneSearch?Encode=1`, the JSON envelope encoded by the body encoder, COSY `1.1.44` (the version the vendor's web-search client names; the chat keeps `1.0.0`), client type `5`, business `cli`/`agent`/`assistant`, and the body-hash headers left out. The bare `/api` path and the plain body answer `401`/`400`; the shape is measured live, not inferred.
 
 The credits sweep starts with the plugin: one reading at the mount, then every `credits.sweepMs`. It
 holds the account's picture in memory and writes no file and no patch. `verify` is one exchange per
@@ -60,9 +65,17 @@ module's `Config` export). Defaults:
 - `machineIdStoreDir` — empty: the harness home's `qoder/` is used.
 - `reasoningEffort` — empty: a model's own row names the level.
 - `credits` — `sweepMs` 600,000 (clamped to 60,000 … 86,400,000 with a warning), `autoClaim` true.
+- `webAccess` — `{ enabled: false }`: the one switch for the two web providers. Off by default; the
+  providers stay registered but unavailable while it is off.
 
-`apiKeyEnv`, `models`, `defaultContextWindow` and `inferBase` are volatile, so the platform's settings
-service can write them without re-mounting the row; readers resolve them through `liveValue`.
+`apiKeyEnv`, `models`, `defaultContextWindow`, `inferBase` and `webAccess` are volatile, so the platform's
+settings service can write them without re-mounting the row; readers resolve them through `liveValue`.
+
+## The web switch
+
+The Qoder section's one checkbox writes the Qoder row and the platform's `web` row in the documented order: on — `webAccess.enabled`, then `web.searchProvider`/`web.fetchProvider` = `qoder`; off — the two provider values = `null`, then the flag. The web row is re-read after the flag on the way on, because the first write moves the revision the second one carries. While the flag is off or the credential reference is unset, the providers answer `available() === false`; a stored token that is missing still selects Qoder and surfaces at the call as a missing-credential error (the local fetch works without it); a failed write is shown and the box reads the live row again. The box reads the flag as well as the shared row: a row that names Qoder while the flag is explicitly off is drawn off, and the section's read unsets it. A flag that could not be read is unknown: the box stays off with the unread word and the row is not touched. A missing token shows the box off and disabled; the section's read then unsets a stale Qoder half in the shared row, so the standard DeepSeek search stands; a DeepSeek half in a mixed row is left alone. The cleanup is a write on that read, not a host watcher. The platform's standard DeepSeek search returns when the row is unset; its URL, key and result count stay stored but unused. The platform's Web search page is the DeepSeek page; the latest save of the shared `web` row wins.
+
+The fetch provider runs the platform's own `HttpFetchProvider` with the browser `User-Agent`, the platform's content negotiation and the limits this product needs: a 15 s timeout, a 2 MiB byte cap, same-origin redirects up to five, and `html`/`text` by content type (XHTML as `html`); a non-2xx answer is a result, not a thrown error. On the direct route the platform checks a public destination before the connection and pins the checked address on it; a configured proxy is the platform's own route. The private-address and redirect policy has one owner; the Qoder provider restates a network failure, a timeout and a caller abort with the URL and the cause, while a blocked, invalid or redirected address keeps the platform's own code. The search is the transport's signed `oneSearch` call; a vendor refusal and a malformed answer are thrown, never turned into an empty answer.
 
 ## The credential
 
@@ -100,10 +113,15 @@ scratch install's row and the dump; the route smoke (`credits` `read` with no to
 `MISSING_CREDENTIAL` in words; `qoder` `catalogue` answers the models or a refusal in words); the
 owner's live token, provider call and page.
 
-The one fixture is `scripts/check-parser.mjs` (not in `files`: it is a hand-run check, not a shipped
-file). It imports the four wire modules and asserts 29 cases — `markup`, `frames`, `body`, `sign` —
-against values captured from the donor's own functions before the port, at
-`tmp/qoder-vectors.json` + `tmp/qoder-vectors.mjs`; it exits non-zero on a mismatch or a case with no
-value. One captured case was dropped: `sign.cosyHeaders` is not deterministic (RSA PKCS#1 v1.5
-padding), so two runs of the same call differ and no byte-for-byte oracle exists. No test suite, no
-coverage, no per-bug guards.
+The fixtures (not in `files`: hand-run checks, not shipped) are `scripts/check-parser.mjs`,
+`scripts/check-web-search.mjs`, `scripts/check-web-route.mjs` and `scripts/check-web-providers.mjs`.
+The parser check imports the four wire modules and asserts 29 cases —
+`markup`, `frames`, `body`, `sign` — against values captured from the donor's own functions before the
+port, at `tmp/qoder-vectors.json` + `tmp/qoder-vectors.mjs`; it exits non-zero on a mismatch or a case
+with no value. One captured case was dropped: `sign.cosyHeaders` is not deterministic (RSA PKCS#1 v1.5
+padding), so two runs of the same call differ and no byte-for-byte oracle exists. The web-search check
+runs the transport against a fake centre with the harness timeout surface supplied by a local loader:
+`node --experimental-loader ./packages/qoder/scripts/support/loader.mjs packages/qoder/scripts/check-web-search.mjs`.
+The provider fixture also needs the extracted app tree for the platform's own provider:
+`$env:DSH_APP_ROOT = '<extracted app>'; node --experimental-loader ./packages/qoder/scripts/support/loader.mjs packages/qoder/scripts/check-web-providers.mjs`.
+It holds the signed body and headers and the answer shapes — one page item, a backend refusal, a 401, a 500, an empty answer, a missing page list, a null page list and a malformed one. The route fixture holds the `webSearch` action against a fake transport and a fake quota answer; the provider fixture holds both providers against a fake transport and a fake platform fetch — mapping, the availability switch, the product default's browser identity and limits, a named network failure with its code, a timeout, an abort, the XHTML mapping, the credential redaction, the registration/disposal pair — and the product's default provider for the private, credential and malformed-URL refusals. No token is read by either. No test suite, no coverage, no per-bug guards.
