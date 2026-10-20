@@ -15,7 +15,7 @@
  */
 
 import { MCP_MODULE, keptOf, kindOf, pairsOf, publicPrefix, rawToolName, refsOf, serverNameOf } from './row.js'
-import { isTrouble, named } from './ring.js'
+import { named, speaks } from './ring.js'
 
 /**
  * The server name of a row: the config's own, or the one the row's id spells.
@@ -72,14 +72,20 @@ export function pictureOf({ include = null, rows = [], inventory = [], schemas =
 
   const byAddress = new Map(inventory.map((row) => [String(row?.entryId ?? ''), row]))
   /* The host's own lines are attributed once for the whole roster: with every declared name at hand, a
-     line that starts with two of their labels goes to the longest — the one the client actually wrote. */
+     line that starts with two of their labels goes to the longest — the one the client actually wrote.
+     A line speaks only while the retry it promises is still due, and every row is read at one moment, so
+     one clock answers for the whole picture. */
   const servers = rows.map((row) => serverOf(row))
   const words = trouble === null ? new Map() : named(trouble.lines(), servers)
+  const now = Date.now()
   return {
     file,
     state: 'ready',
     reason: null,
-    rows: rows.map((row, at) => rowOf(row, byAddress.get(row.entryId) ?? null, schemas, servers[at], words.get(servers[at]) ?? null, failures.get(String(row.entryId ?? '')) ?? null)),
+    rows: rows.map((row, at) => {
+      const word = words.get(servers[at]) ?? null
+      return rowOf(row, byAddress.get(row.entryId) ?? null, schemas, servers[at], speaks(word, now) ? word : null, failures.get(String(row.entryId ?? '')) ?? null)
+    }),
   }
 }
 
@@ -92,7 +98,7 @@ export function pictureOf({ include = null, rows = [], inventory = [], schemas =
  * @param {object | null} live the same row as the plugin manager reports it
  * @param {object[]} schemas the tools service's schemas
  * @param {string | null} server the server name of this row
- * @param {object | null} word the newest line of the host that names this server
+ * @param {object | null} word the newest line of the host that names this server and still speaks for it
  * @param {object | null} failure the platform's own record, when the row's fiber failed
  * @returns {object} the row
  */
@@ -136,10 +142,12 @@ function rowOf(row, live, schemas, server, word, failure) {
       : [],
     /* The host's own last word about this server, when it was a warning or an error — the reason a row
        looks like a row with no tools, in the platform's own words rather than a guess of ours. The
-       newest word decides: a server that came back has the client's own "reconnected" line newest, and
-       a row that is switched off carries no word at all — its client is unmounted, so the line would be
-       about a connection that no longer exists, and the row's own state says it is off. */
-    trouble: shape && server !== null && row.disabled !== true && isTrouble(word) ? word : null,
+       newest word decides: a server that came back has the client's own "reconnected" line newest, a
+       row whose instance was replaced has nothing newer than the line before it and that line has
+       stopped speaking by its own promise, and a row that is switched off carries no word at all — its
+       client is unmounted, so the line would be about a connection that no longer exists, and the
+       row's own state says it is off. */
+    trouble: shape && server !== null && row.disabled !== true && word !== null ? word : null,
     /* Why the row's fiber failed, read once here and carried by the picture every reader already takes the
        row's facts from — the phase says it failed, and this says what the failure was. A row that came up
        has no record, and a switched-off row's fiber never ran. */

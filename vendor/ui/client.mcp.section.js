@@ -121,10 +121,11 @@ window.__ModuleLoader__.load({
          * A picture the user asked for: drawn, and followed while something in it is still moving.
          *
          * The host's own sentence about a row is taken **here**, where the reading arrives, and not where the
-         * row's word is drawn: the face carries the one word (`rowState`) and the platform's line — with the
-         * address, the attempt count and the delay it names — goes to the console, which is this page's own
-         * door for a reason that may not stand on the face. It is said once per new sentence: a wait reads
-         * the same picture every second, and a log line repeated sixty times says less than one.
+         * row's word is drawn: the face carries the one word (`rowState`) and the platform's sentence — with the
+         * client's label and the retry promise cut off, because neither is news the row can keep — goes to the
+         * console, which is this page's own door for a reason that may not stand on the face. It is said once per
+         * new sentence: a wait reads the same picture every second, and a log line repeated sixty times says less
+         * than one.
          */
         const take = (picture) => {
           shared.tellTroubles(picture);

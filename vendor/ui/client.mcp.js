@@ -532,18 +532,19 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
 
     /**
      * Whether the picture still holds something the user would see change on its own: a row in a transient
-     * phase; an enabled row at rest with neither a tool nor a word yet; and a row whose newest word is the
-     * client still trying.
+     * phase; an enabled row at rest with neither a tool nor a word yet; and a row whose word still waits on
+     * the retry it names — the deadline the host puts beside the sentence is the one moment a read can end
+     * it, and a read is the only way the page learns that it has.
      */
     function unsettled(picture) {
       const rows = picture?.rows ?? [];
       const trying = (row) => {
         const word = row.trouble ?? null;
-        return word !== null && word.level !== 'error';
+        return word !== null && typeof word.due === 'number' && word.due > Date.now();
       };
       return rows.some((row) => row.phase === 'loading' || row.phase === 'unloading')
         || rows.some((row) => row.enabled === true && row.phase === 'active' && (row.tools ?? []).length === 0 && (row.trouble ?? null) === null)
-        || rows.some((row) => row.enabled === true && (row.tools ?? []).length === 0 && trying(row));
+        || rows.some((row) => row.enabled === true && trying(row));
     }
 
     /** The one object the parts reach each other through; the entry puts its own half in before any is made. */
