@@ -438,6 +438,12 @@ export async function bounded({ what, ms, signal, run, strike = () => {} }) {
  * channel's length, the dropped summary when there was one, and the delta keys this reader did not act
  * on — and it is carried there rather than logged because the platform writes a failure into its session
  * log, which is the only durable place a figure of one attempt reaches on this route.
+ *
+ * A cut at the contour's output ceiling is a `max-tokens` ending only when text survived it: the
+ * platform drops every tool call a cut answer carries, so a cut with no text left is an empty step,
+ * refused as the same `EMPTY_RESPONSE` and re-asked by the route's policy. The alternative — a
+ * terminal `max-tokens` over no answer — also commits the cut's reasoning as an assistant message,
+ * which the next request replays as `reasoning_content`; the refusal keeps it out of the history.
  * @param {object} input what the attempt saw
  * @returns {object} the terminal reason
  */
@@ -483,7 +489,18 @@ export function reasonOf({ finishReason, sawTerminal, textChars, callCount, coun
     case 'tool_calls':
       return hasAnswer ? { kind: 'tool-calls' } : empty()
     case 'length':
-      return { kind: 'max-tokens' }
+      // The contour cuts the answer at its own output ceiling and says `length`; the platform's
+      // assembly drops every tool call the cut answer carries, so text is the only work left standing.
+      // A cut with no text is an empty step wearing a terminal ending: refused with the retryable
+      // empty-turn code, and re-asked by the route's policy.
+      if (textChars > 0) return { kind: 'max-tokens' }
+      return {
+        kind: 'error',
+        failure: {
+          code: 'EMPTY_RESPONSE',
+          message: `the Qoder contour cut the turn at its output ceiling with nothing to continue: ${counters.reasoningChars ?? 0} characters of reasoning${callCount === 0 ? '' : `, ${callCount} tool call${callCount === 1 ? '' : 's'} a cut answer cannot execute`}, no text`,
+        },
+      }
     default:
       // A reason this route does not map is a response it cannot read: refused with the platform's own
       // code for that, which is retryable, rather than settled as a `stop` nobody asked for.

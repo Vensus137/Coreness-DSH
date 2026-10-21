@@ -566,6 +566,9 @@ async function* translate(response, call, { transport, log, journal, startedAt }
     }
   }
   const reason = reasonOf({ finishReason, sawTerminal, textChars, callCount, counters })
-  recordSpend(reason)
+  // The ledger records the wire's own ending: a `length` cut is the vendor's ceiling whether or not
+  // anything survived it. The platform is told the empty-turn code when nothing did, and re-asks the
+  // step; the money's row still says what the request was.
+  recordSpend(finishReason === 'length' ? { kind: 'max-tokens' } : reason)
   yield { type: 'finish', reason }
 }

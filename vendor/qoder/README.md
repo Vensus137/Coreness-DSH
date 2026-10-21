@@ -57,7 +57,9 @@ module's `Config` export). Defaults:
 - `models` — the five default models above, each with its window, `vision` and effort.
 - `defaultContextWindow` — 200,000.
 - `retryPolicy` — `normal`, 5 retries, the six retryable codes (`EMPTY_RESPONSE`, `RATE_LIMIT`, `SERVER`,
-  `TIMEOUT`, `TRANSPORT`, `MALFORMED_RESPONSE`), backoff 500 ms → 10 s with jitter.
+  `TIMEOUT`, `TRANSPORT`, `MALFORMED_RESPONSE`), backoff 500 ms → 10 s with jitter. A turn the contour
+  cuts at its output ceiling with no text left is reported as `EMPTY_RESPONSE`, so the policy re-asks the
+  step; the spend journal still records that request's ending as `max-tokens`.
 - `centerOrigin` — `https://center.qoder.sh`; `openapiOrigin` — `https://openapi.qoder.sh`.
 - `controlCeilingMs` 10,000; `firstByteCeilingMs` 15,000; `idleCeilingMs` 300,000 (the bundle row pins
   `firstByteCeilingMs` to 60,000).
