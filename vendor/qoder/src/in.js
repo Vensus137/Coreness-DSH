@@ -105,11 +105,9 @@ export class QoderError extends Error {
  * The contour's own code out of a refusal body — the `code` it sends, or the `errorCode` of a rejected
  * request — and `null` where the body carries none this route can read.
  *
- * This is the fact the check convicts a value by and nothing else is: a status is what the *envelope*
- * says, and this contour answers `403` both for a value that is not active (`{"code":"105"}`) and for an
- * account whose counted allowance is spent (`{"code":"110"}`), which are statements about different
- * things. A body that is not JSON, or one without a code, answers `null` — "the vendor said nothing about
- * a code" — and a reader must treat that as unknown rather than as a refusal (`verifyToken`).
+ * A status is what the envelope says; this contour answers `403` both for a value that is not active
+ * (`{"code":"105"}`) and for a spent allowance (`{"code":"110"}`). A body that is not JSON, or one
+ * without a code, answers `null` and must be treated as unknown, not as a refusal (`verifyToken`).
  * @param {string} text the refusal's own words, as `refusalOf` read them
  * @returns {string|null} the code, as a string, or null
  */
@@ -129,13 +127,10 @@ export function vendorCodeOf(text) {
 /**
  * The vendor's own request id out of a refusal body, when it sent one.
  *
- * The one field of that body a support question needs — measured on the exchange door:
- * `{"errorCode":"BadRequest","errorMessage":"Bad request","requestId":"7ceed3ff-…"}` — and the only
- * thing the sentence a reader acts on may carry out of it. The body itself belongs to the log and to
- * `QoderError.vendor`, not to a message a surface draws whole: the panel draws the message as its own
- * reason ("the vendor refused this token: {reason}"), where a body welded in is the whole of what the
- * reader sees and the sentence that matters is lost inside it. A
- * body that is not JSON, or one without a usable id, answers `null` and nothing is invented for it.
+ * Measured on the exchange door: `{"errorCode":"BadRequest","errorMessage":"Bad request","requestId":
+ * "7ceed3ff-…"}`. It is the field a support question needs, and the body itself stays in the log and in
+ * `QoderError.vendor`, never in a sentence a reader acts on. A body that is not JSON, or one without a
+ * usable id, answers `null`.
  * @param {string} text the refusal's own words, as `refusalOf` read them
  * @returns {string|null} the id, or null
  */
@@ -156,14 +151,11 @@ const VENDOR_WORDS_LIMIT = 160
 /**
  * The vendor's own words out of a refusal body, for the shape that carries no request id.
  *
- * The second measured shape of the same door — `403 {"code":"105","message":"Login expired"}`, a dead
- * credential — where the message is the whole of what a user can act on and there is no id at all.
- * They are read only where the id is absent: a body that carries **both** shows the id alone, because an
- * id is the vendor asking for a request to be traced while its message is a formality (`Bad request` is
- * the measured one). That is the price of the rule, and it is revisited on a measurement rather than
- * broadened on a guess. The bound is a line's budget — the log keeps the whole body — and the cut ends
- * at a word, with the ellipsis saying it was cut. A body that is not JSON, or one without words,
- * answers `null` and nothing is invented for it.
+ * The second measured shape — `403 {"code":"105","message":"Login expired"}` — where the message is all
+ * a user can act on. Read only where the id is absent: a body with both shows the id alone, because the
+ * id is what asks for a trace and the message is a formality (`Bad request` is the measured one). The
+ * bound is a line's budget; the cut ends at a word and the ellipsis says it was cut. A body that is not
+ * JSON, or one without words, answers `null`.
  * @param {string} text the refusal's own words, as `refusalOf` read them
  * @returns {string|null} the vendor's words, one line and bounded, or null
  */
@@ -188,14 +180,10 @@ export function vendorWordsOf(text) {
  * The contour's own refusal of an allowance it counts, rather than of a credential.
  *
  * `403 {"code":"110","message":"Billing daily count exceeded"}` — measured on the live route while the
- * stored personal token exchanged, the balance and the campaigns answered `200` and the catalogue was
- * read. Read as an authentication failure it sends every reader to the
- * credential store and nowhere else: the platform paints **every** `AUTH` as "API key is invalid"
- * (`message.failure.auth`, in the application's own bundle) whatever the vendor said, and the route then
- * looks broken in a way no restart repairs. The platform's own reading of a quota does not know this
- * wording either — "daily count exceeded" matches none of the phrases of `isQuotaExceededError` — so the
- * contour's shape is read here: the code it sends for a
- * counted allowance, and the words it says it in.
+ * personal token exchanged and the balance answered `200`. Read as an authentication failure it sends
+ * every reader to the credential store on a claim the vendor never made: the platform paints every
+ * `AUTH` as "API key is invalid". The platform's own quota reading does not know this wording either,
+ * so the contour's code and words are read here.
  * @param {string} text the refusal's own words
  * @returns {boolean} true when the refusal is over an allowance, not over a credential
  */
@@ -205,15 +193,18 @@ function allowanceRefused(text) {
 
 /**
  * The contour's own codes for a credential or a signature that is not good — and the only ones a **turn**
- * convicts the store by. `401`/`403` are what the envelope says; what the vendor says is its code, and this
- * contour answers `403` for a plan without seats (`{"code":"999"}`), for a body a proxy wrote and for no
- * body at all, none of which is a statement about the credential. Reading those as `AUTH` sends a reader to
- * the credential store on a claim the vendor never made: the platform paints **every** `AUTH` as "API key is
- * invalid" (`message.failure.auth`, in the application's own bundle). The value check reads the same fact
- * with its own list (`VALUE_REFUSED_CODES`: `105`, `TOKEN_EXPIRE`, `BadRequest` — the shape a wrong paste
- * gets on the exchange door, which no turn travels).
+ * convicts the store by. The contour answers `403` for a plan without seats (`{"code":"999"}`), for a
+ * proxy's body and for no body at all, none of which is a statement about the credential; the platform
+ * paints every `AUTH` as "API key is invalid", so a status alone is not enough to convict a value.
  */
 export const TURN_REFUSED_CODES = Object.freeze(['105', 'TOKEN_EXPIRE', '101'])
+
+/**
+ * The vendor's own codes that are a statement about the **value**: the two spellings of a token that is
+ * not active and the exchange door's answer to a wrong paste. This is the list the page's verify and the
+ * contour detection convict a value by; a code outside it never is one.
+ */
+export const VALUE_REFUSED_CODES = Object.freeze(['105', 'TOKEN_EXPIRE', 'BadRequest'])
 
 /**
  * The stable code for a refusal, by the status the contour named.
@@ -231,7 +222,9 @@ export const TURN_REFUSED_CODES = Object.freeze(['105', 'TOKEN_EXPIRE', '101'])
  * @returns {string} the code the caller routes on
  */
 export function codeFor(status, text = '', { credentialDoor = false } = {}) {
-  if (/"(?:isQueued|queueCount|serviceAvailable|retryAfterSeconds)"/u.test(text)) return 'RATE_LIMIT'
+  // The Chinese node nests the queue JSON as an escaped string inside the outer message, so the closing
+  // quote may stand behind a backslash (or three); the direct form is matched by the same expression.
+  if (/"(?:isQueued|queueCount|serviceAvailable|retryAfterSeconds)\\*"/u.test(text)) return 'RATE_LIMIT'
   if (allowanceRefused(text)) return 'QUOTA'
   if (status === 429) return 'RATE_LIMIT'
   if (status === 401 || status === 403) {

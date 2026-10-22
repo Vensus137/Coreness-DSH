@@ -139,6 +139,7 @@ export function apply(ctx, config) {
   const credential = () => readCredential(ctx, referenceOf(config))
   const transport = createTransport({
     apiKey: credential,
+    region: liveValue(config.region) ?? 'auto',
     centerOrigin: config.centerOrigin,
     openapiOrigin: config.openapiOrigin,
     /* Read per call and never captured: the row's node is a live field, and the page pins it while the

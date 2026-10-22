@@ -1,5 +1,5 @@
 /**
- * The COSY signature of the international Qoder contour.
+ * The COSY signature of a Qoder contour.
  *
  * The ten steps of the signature, in our own code. The gateway
  * checks the constants against its own client, so they are wire facts and not settings:
@@ -14,7 +14,6 @@
 
 import crypto from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 
 /** The key the gateway publishes to its clients; every request wraps its AES key with it. */
@@ -163,29 +162,27 @@ export function bodyLengthOf(body) {
   return String(Buffer.isBuffer(body) ? body.byteLength : Buffer.byteLength(body, 'utf8'))
 }
 
-/** Where the vendor's CLI leaves its own machine id. */
-const CLI_MACHINE_ID_PARTS = ['.qoder', '.auth', 'machine_id']
-
 /**
- * The machine id: stable across runs, never random per request.
+ * The machine id: the plugin's own, stable across runs, never random per request.
  *
- * The vendor's own CLI leaves one under the user's home; when it is there it is used.
- * Otherwise the provider keeps its own under the harness home, and generates and stores
- * one if neither exists — an id that changes between runs is a visible anomaly.
- * @param {{storeDir: string, home?: string, fs?: object}} options where to look and to store
+ * It is a local fingerprint the signed calls carry, not a credential and not a value the vendor issues:
+ * the plugin keeps it under the harness home and generates one on first use. The vendor client's own
+ * home is never read — the plugin is its own client, and a fingerprint that changed between runs would
+ * be the anomaly.
+ * @param {{storeDir: string, fs?: object}} options where to look and to store
  * @returns {string} the machine id
  */
 export function machineIdOf(options) {
-  const { storeDir, home = homedir() } = options
+  const { storeDir } = options
   const io = options.fs ?? { existsSync, mkdirSync, readFileSync, writeFileSync }
-  for (const path of [join(home, ...CLI_MACHINE_ID_PARTS), join(storeDir, MACHINE_ID_FILE)]) {
-    if (!io.existsSync(path)) continue
+  const path = join(storeDir, MACHINE_ID_FILE)
+  if (io.existsSync(path)) {
     const value = io.readFileSync(path, 'utf8').trim()
     if (value !== '') return value
   }
   const generated = crypto.randomUUID()
   io.mkdirSync(storeDir, { recursive: true, mode: 0o700 })
-  io.writeFileSync(join(storeDir, MACHINE_ID_FILE), generated, { encoding: 'utf8', mode: 0o600 })
+  io.writeFileSync(path, generated, { encoding: 'utf8', mode: 0o600 })
   return generated
 }
 

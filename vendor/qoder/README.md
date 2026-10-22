@@ -12,14 +12,19 @@ credential reference and the image inputs. It registers the configurable provide
 namespace, registers the model discovery (`ctx.llm.registerModelDiscovery`), hands the adapter the
 image reader (`imageData`) and the spend journal (`journal`), and starts the credits sweep.
 
-The transport is one closure over the vendor's facts: the node map, the token exchange and refresh,
-the profile, the signed catalogue, the signed web search, the signed chat turn, the frames, and the
-machine id. The account's credits and the search are read through it with the same job token. No token
-is captured: the row names a credential reference and the value is resolved per call.
+The transport is one closure over the vendor's facts: the token's contour, the node map, the token
+exchange and refresh, the profile, the signed catalogue, the signed web search, the signed chat turn,
+the frames, and the machine id. The account's credits, the data policy and the search are read through
+it with the same job token. No token is captured: the row names a credential reference and the value is
+resolved per call.
 
-The model list and the effort vocabulary are the donor's: `auto` 400,000, `efficient` 200,000,
-`dfmodel` 400,000, `qmodel_38max` 400,000, `qfmodel` 400,000; `DEFAULT_CONTEXT_WINDOW` (200,000) is
-the fallback for an undeclared model, never the declaration's window.
+The token calls of one contour live in `src/contour.js`; the transport keeps the caches and the calls
+that resolve through them. A token is exchanged on both contours together and kept on the one that
+answers — the choice is cached by the token's fingerprint, and `region` may pin it. The model defaults
+are `auto` 200,000, `dfmodel` 400,000, `qmodel_38max` 400,000 and `qfmodel` 400,000; `efficient` is not
+a default (the Chinese node refuses it) but the live catalogue still offers it on the international
+node. `DEFAULT_CONTEXT_WINDOW` (200,000) is the fallback for an undeclared model, never the
+declaration's window.
 
 ## Routes and actions
 
@@ -29,10 +34,12 @@ the adapter and the sweep. Answers are `{ ok: true, value: … }` or `{ ok: fals
 (the probe route also carries the vendor's detail where its body had one), status 200 in both cases;
 the bodies are JSON objects.
 
-- `GET /api/coreness.credits` — the held picture: the balance, the campaigns and the cadence.
+- `GET /api/coreness.credits` — the held picture: the balance, the campaigns, the data policy and the cadence.
 - `POST /api/coreness.credits` `{ action: 'read' }` — one reading, then the picture.
 - `POST /api/coreness.credits` `{ action: 'claim', campaignId? }` — take one reward (or every claimable
   one), then the picture.
+- `POST /api/coreness.credits` `{ action: 'privacySet' }` — read the data policy fresh, turn sharing off
+  while the account shares, read again; the after state.
 - `POST /api/coreness.qoder` `{ action: 'probe' }` — the node sweep: one result per node and the node to
   pin.
 - `POST /api/coreness.qoder` `{ action: 'catalogue' }` — the vendor's live listing, menus included.
@@ -42,7 +49,7 @@ the bodies are JSON objects.
   route's own credential: HTTP status, latency, page items and the account quota either side. It is the
   host-side live check; no token is read or copied by the caller.
 
-The web search is the one call with its own COSY shape: `POST {centerOrigin}/algo/api/v1/webSearch/oneSearch?Encode=1`, the JSON envelope encoded by the body encoder, COSY `1.1.44` (the version the vendor's web-search client names; the chat keeps `1.0.0`), client type `5`, business `cli`/`agent`/`assistant`, and the body-hash headers left out. The bare `/api` path and the plain body answer `401`/`400`; the shape is measured live, not inferred.
+The web search is the one call with its own COSY shape: `POST {the token contour's centre}/algo/api/v1/webSearch/oneSearch?Encode=1`, the JSON envelope encoded by the body encoder, COSY `1.1.44` (the version the vendor's web-search client names; the chat keeps `1.0.0`), client type `5`, business `cli`/`agent`/`assistant`, and the body-hash headers left out. The bare `/api` path and the plain body answer `401`/`400`; the shape is measured live, not inferred. The centre is the contour's own: the Chinese one serves the Chinese index — a global-market query returns Chinese-market pages — and the international one the international index; the route names no region.
 
 The credits sweep starts with the plugin: one reading at the mount, then every `credits.sweepMs`. It
 holds the account's picture in memory and writes no file and no patch. `verify` is one exchange per
@@ -54,13 +61,16 @@ The row's schema is `Config`, declared in `src/config.js` and re-exported by `sr
 module's `Config` export). Defaults:
 
 - `apiKeyEnv` — `QODER_PERSONAL_ACCESS_TOKEN` (a credential reference, never a value).
-- `models` — the five default models above, each with its window, `vision` and effort.
+- `models` — the four default models above, each with its window, `vision` and effort.
 - `defaultContextWindow` — 200,000.
 - `retryPolicy` — `normal`, 5 retries, the six retryable codes (`EMPTY_RESPONSE`, `RATE_LIMIT`, `SERVER`,
   `TIMEOUT`, `TRANSPORT`, `MALFORMED_RESPONSE`), backoff 500 ms → 10 s with jitter. A turn the contour
   cuts at its output ceiling with no text left is reported as `EMPTY_RESPONSE`, so the policy re-asks the
   step; the spend journal still records that request's ending as `max-tokens`.
-- `centerOrigin` — `https://center.qoder.sh`; `openapiOrigin` — `https://openapi.qoder.sh`.
+- `centerOrigin` — `https://center.qoder.sh`; `openapiOrigin` — `https://openapi.qoder.sh`; a value
+  other than these two makes a custom contour and skips the detection.
+- `region` — `auto`: the token's two exchanges decide; `global` or `cn` pins one and skips the
+  detection. Not volatile.
 - `controlCeilingMs` 10,000; `firstByteCeilingMs` 15,000; `idleCeilingMs` 300,000 (the bundle row pins
   `firstByteCeilingMs` to 60,000).
 - `inferBase` — empty: the node map is asked; a pinned node is read per call.
@@ -82,9 +92,14 @@ The fetch provider runs the platform's own `HttpFetchProvider` with the browser 
 ## The credential
 
 The token is the platform credential stored under the reference the row names. `ctx.credentials.resolve`
-is called per request; a missing or empty value throws `MISSING_CREDENTIAL` in words. The platform's
-Settings → Models is the other door to the same reference. No token value stands in a config, a patch, a
-log or a message.
+is called per request; a missing or empty value throws `MISSING_CREDENTIAL` in words. A token from either
+Qoder contour is entered the same way, and a token neither contour accepts is refused by name without
+being echoed. The platform's Settings → Models is the other door to the same reference. No token value
+stands in a config, a patch, a log or a message.
+
+## The data policy
+
+The account's data-sharing policy is server-side and account-level: `GET`/`PUT {openapi}/api/v1/me/data-policy` with the **job token** (the personal token alone is `401`), answering `{share_enabled, can_update, source, plan_tier?}`. The `Cosy-Data-Policy` header the chat sends is a different thing and is not read as the policy. The credits popover draws no data-sharing; the one `Stop sharing` press stands in the Qoder section's node row beside `Check node`, drawn only while the account shares, so the row keeps its height when it goes (the button's title carries the state and the plan lock; the row reads the held picture the popover's own read leaves). The host reads the policy fresh, writes `{share_enabled:false, lingma_version}` only while the account shares, reads again, and reports what stands — a plan that locks it answers `can_update:false`, and a `200` to the write changes nothing there. Nothing writes in the background; a turn and a search see the cached read, a sweep and a press read afresh.
 
 ## Files under the home
 
@@ -93,8 +108,8 @@ log or a message.
   the rate written with them); rotated at 64 MiB, two generations. `inputTokens` excludes the cache,
   `totalTokens` includes it; the ending is the platform's own object (`{kind: 'stop' | 'tool-calls' |
   'max-tokens' | 'aborted' | 'error'}`).
-- `$DSH_HOME/qoder/qoder-machine-id` — the machine id, written only when neither this file nor the
-  vendor CLI's own `~/.qoder/.auth/machine_id` exists (the CLI's id is read first and never written).
+- `$DSH_HOME/qoder/qoder-machine-id` — the machine id: the plugin's own, generated here on first use and
+  reused across runs; the vendor client's home is never read.
 
 No other host file. The sweep and the routes write neither the profile's patch nor a log file.
 
@@ -116,7 +131,8 @@ scratch install's row and the dump; the route smoke (`credits` `read` with no to
 owner's live token, provider call and page.
 
 The fixtures (not in `files`: hand-run checks, not shipped) are `scripts/check-parser.mjs`,
-`scripts/check-web-search.mjs`, `scripts/check-web-route.mjs` and `scripts/check-web-providers.mjs`.
+`scripts/check-web-search.mjs`, `scripts/check-web-route.mjs`, `scripts/check-web-providers.mjs`,
+`scripts/check-contour.mjs` and `scripts/check-privacy.mjs`.
 The parser check imports the four wire modules and asserts 29 cases —
 `markup`, `frames`, `body`, `sign` — against values captured from the donor's own functions before the
 port, at `tmp/qoder-vectors.json` + `tmp/qoder-vectors.mjs`; it exits non-zero on a mismatch or a case
@@ -124,6 +140,10 @@ with no value. One captured case was dropped: `sign.cosyHeaders` is not determin
 padding), so two runs of the same call differ and no byte-for-byte oracle exists. The web-search check
 runs the transport against a fake centre with the harness timeout surface supplied by a local loader:
 `node --experimental-loader ./packages/qoder/scripts/support/loader.mjs packages/qoder/scripts/check-web-search.mjs`.
+The contour and policy checks run the same way over `check-contour.mjs` and `check-privacy.mjs`: the
+detection on both contours, the pinned region, custom origins, both refusals, the machine id, the nested
+queue body as a rate limit, the policy cache, the press and the plan lock; no token is read and no
+network is used.
 The provider fixture also needs the extracted app tree for the platform's own provider:
 `$env:DSH_APP_ROOT = '<extracted app>'; node --experimental-loader ./packages/qoder/scripts/support/loader.mjs packages/qoder/scripts/check-web-providers.mjs`.
 It holds the signed body and headers and the answer shapes — one page item, a backend refusal, a 401, a 500, an empty answer, a missing page list, a null page list and a malformed one. The route fixture holds the `webSearch` action against a fake transport and a fake quota answer; the provider fixture holds both providers against a fake transport and a fake platform fetch — mapping, the availability switch, the product default's browser identity and limits, a named network failure with its code, a timeout, an abort, the XHTML mapping, the credential redaction, the registration/disposal pair — and the product's default provider for the private, credential and malformed-URL refusals. No token is read by either. No test suite, no coverage, no per-bug guards.

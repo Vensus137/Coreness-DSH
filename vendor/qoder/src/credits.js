@@ -95,10 +95,20 @@ export function parseQuotaPart(value, name) {
   return { total, used, remaining }
 }
 
+/** An HTTPS address the account's own page may be opened at, or nothing. */
+function httpsOrUndefined(value) {
+  if (typeof value !== 'string' || value === '') return undefined
+  try {
+    return new URL(value).protocol === 'https:' ? value : undefined
+  } catch {
+    return undefined
+  }
+}
+
 /**
  * The balance: the plan, the bonus account, and what the contour says about the account itself.
  * @param {unknown} payload the answer's body
- * @returns {{plan: object, bonus: object, exceeded: boolean, expiresAt: number | undefined, userType: string | undefined}} the balance
+ * @returns {{plan: object, bonus: object, exceeded: boolean, expiresAt: number | undefined, userType: string | undefined, usageUrl: string | undefined}} the balance
  * @throws {QoderError} `MALFORMED_RESPONSE` when the body is not an object
  */
 export function parseQuota(payload) {
@@ -110,6 +120,9 @@ export function parseQuota(payload) {
     exceeded: data.isQuotaExceeded === true,
     expiresAt: numberOrUndefined(data.expiresAt),
     userType: stringOrUndefined(data.userType),
+    // The account's own usage page: the add-on's link first, the plan's when there is none. Only an
+    // HTTPS address ever reaches the widget; anything else keeps its fallback.
+    usageUrl: httpsOrUndefined(objectOrUndefined(data.addOnQuota)?.detailUrl) ?? httpsOrUndefined(objectOrUndefined(data.userQuota)?.detailUrl),
   }
 }
 
@@ -210,17 +223,18 @@ export function parseClaim(payload) {
  * @param {string} token the job token
  * @param {string} [machineId] the machine id, as the contour's own clients name themselves
  * @param {boolean} [desktop] whether to introduce the client as the desktop one
+ * @param {string} [siteOrigin] the account's own site origin, for the `Origin` and `Referer` headers
  * @returns {Record<string, string>} the headers
  */
-export function accountHeaders(token, machineId = '', desktop = false) {
+export function accountHeaders(token, machineId = '', desktop = false, siteOrigin = SITE_ORIGIN) {
   return {
     Accept: 'application/json, text/plain, */*',
     Authorization: `Bearer ${token}`,
     'User-Agent': 'Qoder',
     'X-Machine-ID': machineId,
     'X-Session-ID': machineId,
-    Origin: SITE_ORIGIN,
-    Referer: `${SITE_ORIGIN}/`,
+    Origin: siteOrigin,
+    Referer: `${siteOrigin}/`,
     ...desktop ? { 'cosy-clienttype': DESKTOP_CLIENT_TYPE, 'cosy-version': DESKTOP_VERSION } : {},
   }
 }
@@ -264,17 +278,18 @@ async function accountCall({ what, url, init, fetchImpl, ceilingMs, signal }) {
  * @param {object} call the call
  * @param {string} call.jobToken the job token
  * @param {string} call.openapiOrigin the OpenAPI host
+ * @param {string} [call.siteOrigin] the account's own site origin
  * @param {string} [call.machineId] the machine id
  * @param {typeof fetch} [call.fetchImpl] the transport
  * @param {number} [call.ceilingMs] how long the call may take
  * @param {AbortSignal} [call.signal] the caller's cancellation
  * @returns {Promise<object>} the balance
  */
-export async function readQuota({ jobToken, openapiOrigin, machineId = '', fetchImpl = globalThis.fetch, ceilingMs = DEFAULT_CONTROL_CEILING_MS, signal }) {
+export async function readQuota({ jobToken, openapiOrigin, siteOrigin = SITE_ORIGIN, machineId = '', fetchImpl = globalThis.fetch, ceilingMs = DEFAULT_CONTROL_CEILING_MS, signal }) {
   const payload = await accountCall({
     what: 'the Qoder balance read',
     url: `${openapiOrigin}${QUOTA_PATH}`,
-    init: { method: 'GET', headers: accountHeaders(jobToken, machineId, false) },
+    init: { method: 'GET', headers: accountHeaders(jobToken, machineId, false, siteOrigin) },
     fetchImpl,
     ceilingMs,
     signal,
@@ -287,11 +302,11 @@ export async function readQuota({ jobToken, openapiOrigin, machineId = '', fetch
  * @param {object} call the call, as {@link readQuota}'s
  * @returns {Promise<object>} the list and whether the contour showed it
  */
-export async function readCampaigns({ jobToken, openapiOrigin, machineId = '', fetchImpl = globalThis.fetch, ceilingMs = DEFAULT_CONTROL_CEILING_MS, signal }) {
+export async function readCampaigns({ jobToken, openapiOrigin, siteOrigin = SITE_ORIGIN, machineId = '', fetchImpl = globalThis.fetch, ceilingMs = DEFAULT_CONTROL_CEILING_MS, signal }) {
   const payload = await accountCall({
     what: 'the Qoder campaign read',
     url: `${openapiOrigin}${CAMPAIGNS_PATH}`,
-    init: { method: 'GET', headers: accountHeaders(jobToken, machineId, true) },
+    init: { method: 'GET', headers: accountHeaders(jobToken, machineId, true, siteOrigin) },
     fetchImpl,
     ceilingMs,
     signal,
@@ -309,6 +324,7 @@ export async function readCampaigns({ jobToken, openapiOrigin, machineId = '', f
  * @param {object} call the call
  * @param {string} call.jobToken the job token
  * @param {string} call.openapiOrigin the OpenAPI host
+ * @param {string} [call.siteOrigin] the account's own site origin
  * @param {string} call.campaignId the campaign to take
  * @param {string} [call.machineId] the machine id
  * @param {typeof fetch} [call.fetchImpl] the transport
@@ -318,7 +334,7 @@ export async function readCampaigns({ jobToken, openapiOrigin, machineId = '', f
  *   nothing new — a repeat, a reward closed to this account, or one it already has
  * @throws {QoderError} `MALFORMED_RESPONSE` when no campaign was named
  */
-export async function claimReward({ jobToken, openapiOrigin, campaignId, machineId = '', fetchImpl = globalThis.fetch, ceilingMs = DEFAULT_CONTROL_CEILING_MS, signal }) {
+export async function claimReward({ jobToken, openapiOrigin, siteOrigin = SITE_ORIGIN, campaignId, machineId = '', fetchImpl = globalThis.fetch, ceilingMs = DEFAULT_CONTROL_CEILING_MS, signal }) {
   if (typeof campaignId !== 'string' || campaignId === '') {
     throw new QoderError('the Qoder claim names no campaign', 'MALFORMED_RESPONSE')
   }
@@ -328,7 +344,7 @@ export async function claimReward({ jobToken, openapiOrigin, campaignId, machine
     payload = await accountCall({
       what: 'the Qoder claim',
       url,
-      init: { method: 'POST', headers: { ...accountHeaders(jobToken, machineId, true), 'Content-Type': 'application/json' }, body: '{}' },
+      init: { method: 'POST', headers: { ...accountHeaders(jobToken, machineId, true, siteOrigin), 'Content-Type': 'application/json' }, body: '{}' },
       fetchImpl,
       ceilingMs,
       signal,
@@ -363,21 +379,29 @@ export async function claimReward({ jobToken, openapiOrigin, campaignId, machine
  */
 export function createCredits({ transport, fetchImpl = globalThis.fetch, now = () => Date.now() }) {
   const ceilingMs = transport.ceilings().controlCeilingMs
+  const reasonOf = (error) => (error instanceof Error ? error.message : String(error))
 
-  /** What the widget draws, from one read of the account. */
+  /** What the widget draws, from one read of the account: the balances, the campaigns and the policy. */
   async function read(signal) {
     const { session } = await transport.identity(signal)
-    const { openapiOrigin } = transport.origins()
+    const { openapiOrigin, siteOrigin } = transport.origins()
     const call = {
       jobToken: session.jobToken,
       machineId: transport.machineId(),
       openapiOrigin,
+      siteOrigin,
       fetchImpl,
       ceilingMs,
       signal,
     }
-    const [quota, campaigns] = await Promise.all([readQuota(call), readCampaigns(call)])
-    return { at: now(), quota, campaigns }
+    const [quota, campaigns, privacy] = await Promise.all([
+      readQuota(call),
+      readCampaigns(call),
+      transport.dataPolicy({ signal })
+        .then((policy) => ({ kind: 'read', ...policy }))
+        .catch((error) => ({ kind: 'failed', reason: reasonOf(error) })),
+    ])
+    return { at: now(), quota, campaigns, privacy }
   }
 
   return {
@@ -388,16 +412,31 @@ export function createCredits({ transport, fetchImpl = globalThis.fetch, now = (
      */
     async claim(campaignId, signal) {
       const { session } = await transport.identity(signal)
-      const { openapiOrigin } = transport.origins()
+      const { openapiOrigin, siteOrigin } = transport.origins()
       return claimReward({
         campaignId,
         jobToken: session.jobToken,
         machineId: transport.machineId(),
         openapiOrigin,
+        siteOrigin,
         fetchImpl,
         ceilingMs,
         signal,
       })
+    },
+    /**
+     * The one press: read the policy fresh, ask for sharing off only while it shares, read again.
+     *
+     * A `200` is not proof — the Chinese trial answers `200` and stays on — so the answer the widget
+     * draws is the second read, and `attempted` says a press was made even when the state did not move.
+     * @param {AbortSignal} [signal] the caller's cancellation
+     * @returns {Promise<object>} the after state
+     */
+    async privacySet(signal) {
+      const fresh = await transport.dataPolicy({ fresh: true, signal })
+      if (fresh.share_enabled) await transport.updateDataPolicy({ signal })
+      const after = await transport.dataPolicy({ fresh: true, signal })
+      return { kind: 'read', ...after, attempted: true }
     },
   }
 }

@@ -48,7 +48,6 @@ window.__ModuleLoader__.load({
     const STYLE_ID = 'coreness-ui-credits-style';
     /** The module id the sheet is marked with, as the host marks its own (`data-plugin-css`). */
     const STYLE_TAG = '@coreness/ui/client.credits.js';
-    /** The vendor's own usage page, as the donor pointed at it. */
     const USAGE_URL = 'https://qoder.com/account/usage';
     /** What this chunk's own elements answer to when a press lands outside them. */
     const MINE = '.coreness-credits-seat, .coreness-credits-card';
@@ -58,10 +57,8 @@ window.__ModuleLoader__.load({
         found on the next beat instead of waiting out the sweep's ten minutes. */
     const UNREAD_EVERY_MS = 60 * 1000;
 
-    /**
-     * The part beside this entry, pulled at materialisation and in hand before the widget is seated: the
-     * rewards panel the popover draws. A pull that failed is named on the console and seats nothing.
-     */
+    /* The rewards panel, pulled at materialisation and in hand before the widget is seated. A pull
+       that failed is named and seats nothing. */
     const REWARDS = require.async('./client.credits.rewards.js');
 
     /* The widget's words. They are the donor's own English, kept verbatim: the user asked for that
@@ -71,7 +68,7 @@ window.__ModuleLoader__.load({
     const EN = {
       seat: 'Qoder',
       usage: 'My usage',
-      usageLink: 'Usage on qoder.com',
+      usageLink: 'Account usage',
       refresh: 'Refresh',
       left: 'left',
       used: 'used',
@@ -246,6 +243,7 @@ window.__ModuleLoader__.load({
         shown: last.campaigns.shown,
         rewards: Array.isArray(last.campaigns.list) ? last.campaigns.list : [],
         collection: last.collection,
+        usageUrl: typeof quota.usageUrl === 'string' ? quota.usageUrl : undefined,
       };
     }
 
@@ -295,9 +293,7 @@ window.__ModuleLoader__.load({
       const wide = view.wide === true;
       const picture = view.picture;
       const failed = view.failed;
-      /* The vendor's own body of a failed reading: content, drawn in the popover's failed row beside the reason.
-         It was read as a bare name here, so the row raised `vendor is not defined` the moment a user opened the
-         popover on a failure — a route through which no check had ever walked. */
+      /* The vendor's own body of a failed reading: content, drawn beside the reason in the failed row. */
       const vendor = view.vendor;
       const running = view.busy === true;
       const summary = summaryOf(picture);
@@ -380,7 +376,7 @@ window.__ModuleLoader__.load({
           h('a', {
             key: 'usage',
             className: 'coreness-credits-icon coreness-credits-ring',
-            href: USAGE_URL,
+            href: picture?.usageUrl ?? shared.USAGE_URL,
             target: '_blank',
             rel: 'noreferrer',
             title: t('usageLink'),
@@ -584,7 +580,7 @@ window.__ModuleLoader__.load({
               }, CreditsSeat));
             },
             (error) => {
-              console.error(`${PACKAGE}: the rewards chunk of the credits widget did not arrive: ${error?.message ?? error}`);
+              console.error(`${PACKAGE}: a part of the credits widget did not arrive: ${error?.message ?? error}`);
             },
           );
           return () => {

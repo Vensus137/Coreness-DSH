@@ -26,7 +26,7 @@ export const MIN_SWEEP_MS = 60 * 1000
 export const MAX_SWEEP_MS = 24 * 60 * 60 * 1000
 
 /**
- * The models the route advertises: the five a fresh profile gets, with the windows the **vendor's own
+ * The models the route advertises: the four a fresh profile gets, with the windows the **vendor's own
  * catalogue** declares for them and each row asking for the **highest level its own menu names**.
  *
  * Naming the effort here rather than leaving it empty is the point of the row: an empty effort means
@@ -41,8 +41,10 @@ export const MAX_SWEEP_MS = 24 * 60 * 60 * 1000
  * and a catalogue call would show an empty picker instead of a route that declares what it serves. The
  * vendor's live catalogue stays a read of its own, and its live menus never enter this declaration.
  *
- * The windows, though, are the vendor's numbers: the three tiered models publish `200000 / 400000 /
- * 1000000` with `200000` marked *recommended*, and the two others publish none. **Nothing on this route
+ * The windows, though, are the vendor's numbers: `auto` publishes `200000` on the Chinese node and
+ * `400000` on the international one, the tiered models publish `200000 / 400000 / 1000000` with
+ * `200000` marked *recommended*, and the two others publish none. The fresh row takes the smaller
+ * `auto` window because that is the only tier both contours publish. **Nothing on this route
  * names a tier** — the body carries the model key, the reasoning flag and the output budget, and no context
  * field at all — so the declared window is a budget for the platform's own condensing, and it stands above
  * the tier the vendor recommends because this node is measured to serve deeper prompts than that: the
@@ -50,8 +52,7 @@ export const MAX_SWEEP_MS = 24 * 60 * 60 * 1000
  * and the reading behind the measurement stands in the shipped journal.
  */
 export const DEFAULT_MODELS = Object.freeze([
-  Object.freeze({ id: 'auto', name: 'Auto', contextWindow: 400_000, vision: true, effort: 'max' }),
-  Object.freeze({ id: 'efficient', name: 'Efficient', contextWindow: 200_000, vision: true, effort: 'max' }),
+  Object.freeze({ id: 'auto', name: 'Auto', contextWindow: 200_000, vision: true, effort: '' }),
   Object.freeze({ id: 'dfmodel', name: 'DeepSeek-Flash', contextWindow: 400_000, vision: true, effort: 'max' }),
   Object.freeze({ id: 'qmodel_38max', name: 'Qwen3.8-Max', contextWindow: 400_000, vision: true, effort: 'xhigh' }),
   Object.freeze({ id: 'qfmodel', name: 'Qwen3.8-Flash', contextWindow: 400_000, vision: true, effort: 'xhigh' }),
@@ -136,6 +137,12 @@ export const Config = z.object({
   centerOrigin: z.string().default(DEFAULT_CENTER_ORIGIN),
   /** The OpenAPI host, overridable for a test. */
   openapiOrigin: z.string().default(DEFAULT_OPENAPI_ORIGIN),
+  /**
+   * The contour the route speaks. `auto` lets the token decide: the two exchanges run together and the
+   * one that answers is kept. `global` and `cn` pin a contour and skip the detection. A row that names
+   * a custom `centerOrigin`/`openapiOrigin` is a custom contour and never detects.
+   */
+  region: z.union([z.const('auto'), z.const('global'), z.const('cn')]).default('auto'),
   /** A pinned inference node; empty means the node map is asked. Read per call: the page pins it live. */
   inferBase: z.string().default('').volatile(),
   /** Where the machine id is kept; empty means the harness home. */

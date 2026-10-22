@@ -120,7 +120,7 @@ window.__ModuleLoader__.load({
         h('button', {
           key: 'trigger',
           type: 'button',
-          className: 'coreness-pickerTrigger coreness-field',
+          className: 'coreness-pickerTrigger coreness-field coreness-field-box',
           'data-picker': name,
           'data-value': value,
           disabled,
@@ -167,17 +167,15 @@ window.__ModuleLoader__.load({
       ]);
     }
 
-    /* The control's own sheet, the host's own field geometry carried by its tokens alone: the trigger
-       takes the place the platform's `select` would have taken in the field it stands in. */
+    /* The control's own sheet: the trigger wears the host's field box and adds only its row, so the picker
+       takes the place the platform's `select` would have taken in the field it stands in, at that box's
+       height. The row is the trigger's own axis: a field column stacks a label over its control, while the
+       trigger parts its value from the fixed mark that names the list — one line, the value at the left and
+       the mark beside it. The eight between the value and the arrow is this control's own: the two are parts
+       of one line, and the arrow keeps its distance while the value is cut. */
     const CSS = `
 .coreness-picker{position:relative;display:block}
-/* The trigger's own axis, against the field column it wears beside this class: a field column stacks a label
-   over its control, while the trigger parts its value from the fixed mark that names the list — one line, the
-   value at the left and the mark beside it. The row values below are written for that line; on the column's
-   axis they centre the value and drop the mark under it as a second level. The eight between the value and the
-   arrow is this control's own: the two are parts of one line, and the arrow keeps its distance while the value
-   is cut. */
-.coreness-pickerTrigger{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l4);border-radius:var(--dsw-radius-md);width:100%;font:inherit;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);padding:6px 8px 6px 10px;font-size:14px;line-height:22px;cursor:pointer;flex-direction:row;justify-content:space-between;align-items:center;gap:8px;text-align:left}
+.coreness-pickerTrigger{display:flex;flex-direction:row;justify-content:space-between;align-items:center;gap:8px;text-align:left;cursor:pointer}
 .coreness-pickerTrigger:focus-visible{border-color:var(--dsw-alias-state-business-primary);outline:none}
 .coreness-pickerTrigger[aria-invalid='true']{border-color:var(--dsw-alias-state-error-primary)}
 .coreness-pickerArrow{color:var(--dsw-alias-label-secondary);flex:none;display:inline-flex}

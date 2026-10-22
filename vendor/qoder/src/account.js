@@ -66,6 +66,8 @@ export function createAccount({ credits, everyMs, autoClaim, now = defaults.now,
   let collection
   /** One reading at a time: a sweep and a press must not exchange the account's token twice over. */
   let running = null
+  /** One data-sharing press at a time: a second press reads the held picture, it sends no second change. */
+  let pressing = false
   /** The account's own account of itself: the last few lines, for whoever reads the route's answer. */
   const notes = []
 
@@ -138,14 +140,14 @@ export function createAccount({ credits, everyMs, autoClaim, now = defaults.now,
   async function read(why) {
     try {
       const answer = await credits.read()
-      held = { kind: 'done', at: answer.at, quota: answer.quota, campaigns: answer.campaigns }
+      held = { kind: 'done', at: answer.at, quota: answer.quota, campaigns: answer.campaigns, privacy: answer.privacy }
       note(`the account was read (${why}): ${held.campaigns.list.length} campaign(s), the plan ${held.quota.plan.remaining} of ${held.quota.plan.total} left`)
       const targets = autoClaim ? claimable() : []
       if (targets.length > 0) {
         const summary = await collect(undefined)
         collection = summary
         const after = await credits.read()
-        held = { kind: 'done', at: after.at, quota: after.quota, campaigns: after.campaigns }
+        held = { kind: 'done', at: after.at, quota: after.quota, campaigns: after.campaigns, privacy: after.privacy }
         note(`the sweep collected ${summary.claimed} reward(s) and read the account again`)
       }
     } catch (error) {
@@ -179,8 +181,24 @@ export function createAccount({ credits, everyMs, autoClaim, now = defaults.now,
       const summary = await collect(campaignId)
       collection = summary
       const after = await credits.read()
-      held = { kind: 'done', at: after.at, quota: after.quota, campaigns: after.campaigns }
+      held = { kind: 'done', at: after.at, quota: after.quota, campaigns: after.campaigns, privacy: after.privacy }
       return held
+    },
+    /**
+     * The one data-sharing press: read fresh, ask, read again, and keep the after state in the picture.
+     * A failure leaves the held picture alone and travels to the caller, which draws its reason.
+     * @returns {Promise<object>} the held picture
+     */
+    async privacySet() {
+      if (pressing) return held
+      pressing = true
+      try {
+        const privacy = await credits.privacySet()
+        if (held.kind === 'done') held = { ...held, privacy }
+        return held
+      } finally {
+        pressing = false
+      }
     },
     /** Whether a reading is in flight — the route says so instead of answering a second one. */
     busy: () => running !== null,

@@ -1,6 +1,11 @@
 /**
- * The transport of one route, whole: the token cache, the node map, the signature, the chat turn and
- * its frames, as one closure — the seam the donor wrote and the split keeps.
+ * The transport of one route, whole: the contour, the token cache, the node map, the signature, the chat
+ * turn and its frames, as one closure — the seam the donor wrote and the split keeps.
+ *
+ * The token decides the contour, once per token fingerprint: a Chinese token is exchanged on the Chinese
+ * contour and an international one on the international contour, and every later call — the node map,
+ * the catalogue, the chat, the search, the credits, the data policy — reads through the same contour.
+ * The token calls live beside the transport, where the line budget has room for them.
  *
  * @module @coreness/qoder/src/transport
  */
@@ -8,9 +13,11 @@
 import crypto from 'node:crypto'
 import { MAX_TIMER_DELAY_MS, clampTimeout, deadline } from '@deepseek-ai/dsh-timeout'
 import { buildChatBody, encodeBody, toWireMessages, toWireTools, DEFAULT_MAX_TOKENS } from './body.js'
-import { CHAT_PATH, DEFAULT_CENTER_ORIGIN, DEFAULT_CONTROL_CEILING_MS, DEFAULT_FIRST_BYTE_CEILING_MS, DEFAULT_IDLE_CEILING_MS, DEFAULT_OPENAPI_ORIGIN, EXCHANGE_PATH, FIRST_BYTE_CODE, MODEL_LIST_PATH, QoderError, REFRESH_PATH, USERINFO_PATH, WEB_SEARCH_PATH, bounded, expiryOf, jsonOf, modelsOf, refusalInText, refusalOf, sessionExpired } from './in.js'
+import { CHAT_PATH, DEFAULT_CONTROL_CEILING_MS, DEFAULT_FIRST_BYTE_CEILING_MS, DEFAULT_IDLE_CEILING_MS, FIRST_BYTE_CODE, MODEL_LIST_PATH, QoderError, WEB_SEARCH_PATH, bounded, jsonOf, modelsOf, refusalInText, refusalOf, sessionExpired } from './in.js'
+import { CONTOURS, chosenContour, createTokenCalls, detectContour } from './contour.js'
+import { readDataPolicy, writeDataPolicy } from './privacy.js'
 import { abortOf, bodyFrom, firstByteRefusal, normalizeNode, readEndpointMap, readFrames } from './read.js'
-import { CLIENT_TYPE, WEB_COSY_VERSION, WEB_MACHINE_OS, cosyHeaders, machineIdOf, tokenHeaders } from './sign.js'
+import { CLIENT_TYPE, WEB_COSY_VERSION, WEB_MACHINE_OS, cosyHeaders, machineIdOf } from './sign.js'
 
 /**
  * The transport of one route: the facts it needs, the caches it keeps, and the calls.
@@ -21,49 +28,53 @@ import { CLIENT_TYPE, WEB_COSY_VERSION, WEB_MACHINE_OS, cosyHeaders, machineIdOf
  * @param {object} options the transport's facts
  * @param {() => Promise<string> | string} options.apiKey the personal token, resolved per call
  * @param {typeof fetch} [options.fetchImpl] the transport
- * @param {string} [options.centerOrigin] the centre host
- * @param {string} [options.openapiOrigin] the OpenAPI host
+ * @param {string} [options.region] `auto` (the token decides), `global` or `cn`
+ * @param {string} [options.centerOrigin] the centre host; a value other than the international default makes a custom contour
+ * @param {string} [options.openapiOrigin] the OpenAPI host; the same custom rule
  * @param {string | (() => string)} [options.inferBase] a configured inference node, instead of the map's
  *   first; a function is read per call, because the row's field is live (`resolvedEndpoints`)
- * @param {string} [options.machineIdStoreDir] where the machine id is kept
+ * @param {string} [options.machineIdStoreDir] where the plugin keeps its own machine id
  * @param {number} [options.controlCeilingMs] how long a control call may take
  * @param {number} [options.firstByteCeilingMs] how long the answer may take to start speaking
  * @param {number} [options.idleCeilingMs] how long a started answer may stay silent
  * @param {(strike: object) => void} [options.onStrike] where a ceiling's firing is reported
  * @param {() => number} [options.now] the clock, for tests
- * @param {(message: string) => void} [options.warn] where a re-exchange and a refusal's own body are
- *   reported
+ * @param {(message: string) => void} [options.warn] where a re-exchange and a refusal's own body are reported
  * @returns {object} the transport
  */
 export function createTransport(options) {
   const fetchImpl = options.fetchImpl ?? globalThis.fetch
   const now = options.now ?? (() => Date.now())
   const warn = options.warn ?? (() => {})
-  // Every number goes through the harness's own clamp: a hint of ours is filled from the default,
-  // capped at the largest delay a timer can carry, and refused outright when it could not be a
-  // duration at all — before any work starts.
   const controlCeilingMs = clampTimeout(options.controlCeilingMs, DEFAULT_CONTROL_CEILING_MS, MAX_TIMER_DELAY_MS, 'controlCeilingMs')
   const firstByteCeilingMs = clampTimeout(options.firstByteCeilingMs, DEFAULT_FIRST_BYTE_CEILING_MS, MAX_TIMER_DELAY_MS, 'firstByteCeilingMs')
   const idleCeilingMs = clampTimeout(options.idleCeilingMs, DEFAULT_IDLE_CEILING_MS, MAX_TIMER_DELAY_MS, 'idleCeilingMs')
-  /** What the ceilings have done so far: a ceiling nobody can count is a ceiling nobody can calibrate. */
   const strikes = []
   const strike = (fired) => {
     const record = { ...fired, at: new Date(now()).toISOString() }
     strikes.push(record)
     options.onStrike?.(record)
   }
-  const centerOrigin = normalizeNode(options.centerOrigin ?? DEFAULT_CENTER_ORIGIN, 'the Qoder centre')
-  const openapiOrigin = normalizeNode(options.openapiOrigin ?? DEFAULT_OPENAPI_ORIGIN, 'the Qoder OpenAPI host')
-  /** The ceiling of one control call, as the calls themselves name it. */
   const ceiling = (what, signal, run) => bounded({ what, ms: controlCeilingMs, signal, run, strike })
+  const tokenCalls = createTokenCalls({ fetchImpl, ceiling, warn, now, userAgent: options.userAgent })
+  /** A row that names a contour, or custom origins, never detects; `undefined` leaves it to the token. */
+  const chosen = chosenContour({ region: options.region, centerOrigin: options.centerOrigin, openapiOrigin: options.openapiOrigin })
+  /** The contour of one token fingerprint, and the last one resolved. */
+  const contours = new Map()
+  let active = chosen ?? CONTOURS.global
   /** Per-token state: the job token, what refreshes it, and when it dies. */
   const sessions = new Map()
   /** The identity of a token, read once: the profile is a cache keyed by the personal token. */
   const identities = new Map()
+  /** The data policy of a token, and its last write; read fresh by a press. */
+  const policies = new Map()
+  /** The node map of one contour, and the plugin's own machine id, read or generated once. */
+  const endpointsByContour = new Map()
+  let machineId
   /** In-flight exchanges and map reads, so two callers cannot race the same token. */
   const flights = new Map()
-  let machineId
-  let endpoints
+  let catalogueModels
+  let catalogueRefusal
 
   const fingerprint = (pat) => crypto.createHash('sha256').update(pat).digest('hex').slice(0, 16)
 
@@ -76,36 +87,48 @@ export function createTransport(options) {
     return started
   }
 
+  /** The machine id: the plugin's own file under the harness home, generated once when absent. */
   const machineIdValue = () => {
     machineId ??= machineIdOf({ storeDir: options.machineIdStoreDir ?? process.cwd() })
     return machineId
   }
 
-  /**
-   * The node the row asks for, read at every call.
-   *
-   * The row's `inferBase` is a volatile field: the platform hands it over as a live reference so that a
-   * change applies without re-mounting the route, and an address captured once at
-   * construction would keep sending every request to the node the user has just replaced. A plain
-   * string is read as it stands — the shape this option takes outside the Loader, as this module's own
-   * checks pass it.
-   * @returns {string | undefined} the node the row names, if it names one
-   */
+  /** The node the row asks for, read at every call. */
   const askedNode = () => (typeof options.inferBase === 'function' ? options.inferBase() : options.inferBase)
 
+  /** The contour a token belongs to, detected once and cached by the token's fingerprint. */
+  async function contourOf(pat, signal) {
+    const key = fingerprint(pat)
+    const known = contours.get(key)
+    if (known !== undefined) {
+      active = known
+      return { key, contour: known }
+    }
+    if (chosen !== undefined) {
+      contours.set(key, chosen)
+      active = chosen
+      return { key, contour: chosen }
+    }
+    const winner = await detectContour({ pat, calls: tokenCalls, signal })
+    contours.set(key, winner.contour)
+    sessions.set(key, winner.session)
+    active = winner.contour
+    return { key, contour: winner.contour, session: winner.session }
+  }
+
   /**
-   * The node map: the addresses the centre lists, read once per transport and shared with every caller
+   * The node map: the addresses the centre lists, read once per contour and shared with every caller
    * that resolves an address through it.
-   *
-   * One read, one cache, because this is the list the route itself resolves against: a sweep that read
-   * its own fresh copy would be checking a list the running route is not using. `endpointMap` below is
-   * the reader for a caller that wants the map as it stands now and is not resolving through it.
-   * @param {AbortSignal} [signal] the caller's cancellation
-   * @returns {Promise<object>} the map as the centre sent it, `inferNodes` being the nodes it names
    */
   async function nodeMap(signal) {
-    endpoints ??= await singleFlight(flights, 'endpoints', () => readEndpointMap({ fetchImpl, centerOrigin, signal, ceilingMs: controlCeilingMs, strike, warn }))
-    return endpoints
+    const pat = await resolvedPat()
+    const { contour } = await contourOf(pat, signal)
+    let held = endpointsByContour.get(contour.id)
+    if (held === undefined) {
+      held = await singleFlight(flights, `endpoints:${contour.id}`, () => readEndpointMap({ fetchImpl, centerOrigin: contour.centerOrigin, signal, ceilingMs: controlCeilingMs, strike, warn }))
+      endpointsByContour.set(contour.id, held)
+    }
+    return held
   }
 
   /** The node the row asks for, if it asks for one: the address the route is sending to now. */
@@ -118,103 +141,33 @@ export function createTransport(options) {
     return { inferBase: normalizeNode(map.inferNodes[0], 'the node map inference node'), source: 'map' }
   }
 
-  /** The token exchange: the personal token goes in, a short-lived job token comes out. */
-  async function exchange(pat, signal) {
-    return ceiling('the Qoder token exchange', signal, async (inner) => {
-      const response = await fetchImpl(`${openapiOrigin}${EXCHANGE_PATH}`, {
-        method: 'POST',
-        headers: { ...tokenHeaders(), ...attribution() },
-        body: JSON.stringify({ personal_token: pat }),
-        signal: inner,
-      })
-      if (!response.ok) throw await refusalOf(response, 'the Qoder token exchange', warn)
-      const answer = await jsonOf(response, 'the Qoder token exchange')
-      if (typeof answer.token !== 'string' || answer.token === '') {
-        throw new QoderError('the Qoder token exchange returned no job token', 'AUTH')
-      }
-      return {
-        jobToken: answer.token,
-        jobRefreshToken: typeof answer.refresh_token === 'string' ? answer.refresh_token : '',
-        expiresAt: expiryOf(answer, now()),
-      }
-    })
-  }
-
-  /** The refresh: the refresh token goes in, a new job token comes out. */
-  async function refresh(session, signal) {
-    if (session.jobRefreshToken === '') throw new QoderError('the job token expired and no refresh token was issued', 'AUTH')
-    return ceiling('the Qoder job token refresh', signal, async (inner) => {
-      const response = await fetchImpl(`${openapiOrigin}${REFRESH_PATH}`, {
-        method: 'POST',
-        headers: { ...tokenHeaders(), ...attribution() },
-        body: JSON.stringify({ refresh_token: session.jobRefreshToken }),
-        signal: inner,
-      })
-      if (!response.ok) throw await refusalOf(response, 'the Qoder job token refresh', warn)
-      const answer = await jsonOf(response, 'the Qoder job token refresh')
-      if (typeof answer.token !== 'string' || answer.token === '') {
-        throw new QoderError('the Qoder job token refresh returned no job token', 'AUTH')
-      }
-      return {
-        jobToken: answer.token,
-        jobRefreshToken: typeof answer.refresh_token === 'string' && answer.refresh_token !== '' ? answer.refresh_token : session.jobRefreshToken,
-        expiresAt: expiryOf(answer, now()),
-      }
-    })
-  }
-
-  /** The profile: the user id the signature cannot be built without. */
-  async function profile(jobToken, signal) {
-    return ceiling('the Qoder profile call', signal, async (inner) => {
-      const response = await fetchImpl(`${openapiOrigin}${USERINFO_PATH}`, {
-        headers: { ...tokenHeaders({ json: false }), Authorization: `Bearer ${jobToken}`, ...attribution() },
-        signal: inner,
-      })
-      if (!response.ok) throw await refusalOf(response, 'the Qoder profile call', warn)
-      const answer = await jsonOf(response, 'the Qoder profile call')
-      if (typeof answer.id !== 'string' || answer.id === '') {
-        throw new QoderError('the Qoder profile call returned no user id', 'AUTH')
-      }
-      return {
-        userID: answer.id,
-        email: typeof answer.email === 'string' ? answer.email : '',
-        name: typeof answer.name === 'string' && answer.name !== ''
-          ? answer.name
-          : typeof answer.username === 'string' ? answer.username : '',
-      }
-    })
-  }
-
   /**
-   * The identity of one personal token: the profile, read once, plus the live session.
-   *
-   * The profile is cached because it is the same for the life of a token; the session is
-   * read fresh every time, because the exchange replaces it and the signature must carry
-   * the token that is alive at the moment of the call.
+   * The identity of one personal token: the profile, read once, plus the live session and its contour.
    */
   async function identityOf(signal) {
     const pat = await resolvedPat()
-    const key = fingerprint(pat)
+    const { key, contour } = await contourOf(pat, signal)
+    const session = await tokenFor(key, contour, signal)
     let identity = identities.get(key)
     if (identity === undefined) {
       identity = await singleFlight(flights, `identity:${key}`, async () => {
-        const value = await profile((await tokenFor(key, signal)).jobToken, signal)
+        const value = await tokenCalls.profile(contour, session.jobToken, signal)
         identities.set(key, value)
         return value
       })
     }
-    return { session: await tokenFor(key, signal), identity, pat, key }
+    return { session, identity, pat, key, contour }
   }
 
   /** The job token for one fingerprint, cached until it dies. */
-  async function tokenFor(key, signal) {
+  async function tokenFor(key, contour, signal) {
     const held = sessions.get(key)
     if (held !== undefined && held.expiresAt - now() > 30_000) return held
     return singleFlight(flights, `token:${key}`, async () => {
       const pat = await resolvedPat()
       const fresh = held !== undefined && held.jobRefreshToken !== ''
-        ? await refresh(held, signal).catch(() => exchange(pat, signal))
-        : await exchange(pat, signal)
+        ? await tokenCalls.refresh(contour, held, signal).catch(() => tokenCalls.exchange(contour, pat, signal))
+        : await tokenCalls.exchange(contour, pat, signal)
       sessions.set(key, fresh)
       return fresh
     })
@@ -234,13 +187,7 @@ export function createTransport(options) {
     return { 'user-agent': options.userAgent ?? 'coreness-dsh' }
   }
 
-  /**
-   * The headers of one signed call, with the machine id and the identity already resolved.
-   *
-   * `cosy` is the call's own COSY shape when it is not the chat's: the web search names a newer
-   * COSY version, its client and its business, and leaves out the body-hash headers the chat
-   * carries. The defaults stay the chat's, so the chat call is unchanged.
-   */
+  /** The headers of one signed call, with the machine id and the identity already resolved. */
   async function signedHeaders({ url, body, signal, cosy }) {
     const { session, identity } = await identityOf(signal)
     return cosyHeaders({ body, url, credentials: { ...identity, jobToken: session.jobToken }, machineId: machineIdValue(), ...cosy })
@@ -248,11 +195,6 @@ export function createTransport(options) {
 
   /**
    * The catalogue: what the account's node offers.
-   *
-   * `node` asks one named node instead of the row's own — the node sweep needs the same signing and the
-   * same ceiling against an address the row has not chosen, and a second writer of a signed call would
-   * be a second owner of how this vendor is spoken to. The named node is not cached either: an answer
-   * about another node kept under the transport's key would be read later as an answer about this one.
    * @param {{signal?: AbortSignal, node?: string}} [call] the caller's cancellation, and the node to ask
    * @returns {Promise<object[]>} the enabled models, in the node's order
    */
@@ -271,7 +213,7 @@ export function createTransport(options) {
   }
 
   /**
-   * One web search through the Qoder centre.
+   * One web search through the token contour's centre.
    *
    * The body is the vendor client's own envelope, encoded and signed the way its web-search client
    * does: the endpoint demands `Encode=1` and answers `400` without it; the COSY payload names
@@ -294,7 +236,8 @@ export function createTransport(options) {
     }
     const plain = JSON.stringify({ payload: JSON.stringify(payload), encodeVersion: '1' })
     const body = encodeBody(plain)
-    const url = `${centerOrigin}${WEB_SEARCH_PATH}?Encode=1`
+    const { contour } = await identityOf(signal)
+    const url = `${contour.centerOrigin}${WEB_SEARCH_PATH}?Encode=1`
     return ceiling('the Qoder web search', signal, async (inner) => {
       const headers = {
         'Content-Type': 'application/json',
@@ -333,10 +276,6 @@ export function createTransport(options) {
       return { pageItems: answer.pageItems, status: response.status }
     })
   }
-
-  /** The catalogue's models, read at most once for the transport's life, and the failure that stopped it. */
-  let catalogueModels
-  let catalogueRefusal
 
   /**
    * What the catalogue reads for one model, or `undefined` when the catalogue has not answered.
@@ -401,9 +340,9 @@ export function createTransport(options) {
    */
   async function chatOnce(call) {
     const { signal } = call
+    const { session, identity } = await identityOf(signal)
     const { inferBase } = await resolvedEndpoints(signal)
     const url = `${inferBase}${CHAT_PATH}`
-    const { session, identity } = await identityOf(signal)
     const wire = toWireMessages(call.messages ?? [], { system: call.system ?? '' })
     const modelRecord = await modelRecordOf(call.model, signal)
     const fresh = { requestId: crypto.randomUUID(), startedAt: now() }
@@ -556,22 +495,60 @@ export function createTransport(options) {
     warn('the Qoder job token was renewed')
   }
 
+  /**
+   * The account's data policy, over the active contour and the job token, cached per token.
+   * `fresh` bypasses the cache: a press reads what the account says now, not what a turn saw.
+   * @param {{fresh?: boolean, signal?: AbortSignal}} [read] the read
+   * @returns {Promise<object>} the policy
+   */
+  async function dataPolicy({ fresh = false, signal } = {}) {
+    const { session, key, contour } = await identityOf(signal)
+    if (!fresh) {
+      const held = policies.get(key)
+      if (held !== undefined) return held
+    }
+    const policy = await readDataPolicy({ jobToken: session.jobToken, openapiOrigin: contour.openapiOrigin, fetchImpl, ceiling, signal })
+    policies.set(key, policy)
+    return policy
+  }
+
+  /**
+   * Ask the contour to turn sharing off. The response is the vendor's; the caller reads the policy
+   * again, because a 200 is not proof that the account changed.
+   * @param {{signal?: AbortSignal}} [write] the write
+   * @returns {Promise<object>} the vendor's answer
+   */
+  async function updateDataPolicy({ signal } = {}) {
+    const { session, key, contour } = await identityOf(signal)
+    const answer = await writeDataPolicy({ jobToken: session.jobToken, openapiOrigin: contour.openapiOrigin, fetchImpl, ceiling, signal })
+    policies.delete(key)
+    return answer
+  }
+
   return {
-    endpointMap: (options) => readEndpointMap({ fetchImpl, centerOrigin, warn, ...options }),
+    endpointMap: (options) => readEndpointMap({ fetchImpl, centerOrigin: active.centerOrigin, warn, ...options }),
     nodeMap,
     resolvedEndpoints,
-    exchange: (pat, signal) => exchange(pat, signal),
-    profile,
+    exchange: async (pat, signal) => {
+      const key = fingerprint(pat)
+      const known = contours.get(key)
+      if (known !== undefined) return tokenCalls.exchange(known, pat, signal)
+      const winner = await detectContour({ pat, calls: tokenCalls, signal })
+      contours.set(key, winner.contour)
+      sessions.set(key, winner.session)
+      active = winner.contour
+      return winner.session
+    },
+    profile: (jobToken, signal) => tokenCalls.profile(active, jobToken, signal),
     identity: identityOf,
     catalogue,
     search: (request, signal) => search(request, signal),
     chat,
     frames,
     renew,
-    origins: () => ({ centerOrigin, openapiOrigin }),
-    // The machine id belongs to the transport — it reads it from the harness home and generates it
-    // once — so the account calls of the credits reader ask for it here instead of reading the same file
-    // a second time under a second name of their own.
+    dataPolicy,
+    updateDataPolicy,
+    origins: () => ({ centerOrigin: active.centerOrigin, openapiOrigin: active.openapiOrigin, siteOrigin: active.siteOrigin }),
     machineId: () => machineIdValue(),
     ceilings: () => ({ controlCeilingMs, firstByteCeilingMs, idleCeilingMs }),
     strikes: () => strikes.slice(),

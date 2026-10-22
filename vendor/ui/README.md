@@ -21,9 +21,9 @@ The files sit at the package root, not under `src/`, because the platform's clie
 | `client.provider.draw.js` | `draw`, `statusOf`, `firstPaint`, the answer strip. |
 | `client.provider.models.js` | The models card, the live catalogue, the model-list editor. |
 | `client.provider.credential.js` | The credential card: the reference's state and the missing-token words. |
-| `client.provider.node.js` | The node card: the probe/verify actions and their outcomes. |
+| `client.provider.node.js` | The node card: the probe/verify actions, their outcomes, and the data-sharing press beside `Check node` (drawn only while the account shares; its title carries the state). |
 | `client.provider.web.js` | The web switch: the live `web` row, the Qoder flag, the checkbox and the footnote. |
-| `client.credits.js` | The sidebar foot action `qoder-credits`: the balance line, the popover, the credits route. Nothing is drawn before the first answer or while no credential is stored; an unread balance is retried every minute where a reading is free, and when the popover opens. |
+| `client.credits.js` | The sidebar foot action `qoder-credits`: the balance line, the popover, the credits route, and the usage link the account's own `detailUrl` names. Nothing is drawn before the first answer or while no credential is stored; an unread balance is retried every minute where a reading is free, and when the popover opens. |
 | `client.credits.rewards.js` | The rewards panel the popover draws. |
 | `client.gate.js` | The rate-gate section's entry: constants, words, sheet, the route read, the settings write, the seat. |
 | `client.gate.section.js` | `GateSection`: the mount read, the 2 s beat, the loading state, the quietly empty picture, the refused rows in words, the draw. |

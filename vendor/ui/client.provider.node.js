@@ -12,6 +12,12 @@ window.__ModuleLoader__.load({
     const React = require('react');
     const h = React.createElement;
 
+    /** The credits door the account's policy is read and changed through: the product's own route. */
+    const CREDITS_ROUTE = '/api/coreness.credits';
+
+    /** How often the row asks the route again while the held picture carries no policy yet. */
+    const PRIVACY_RECHECK_MS = 2000;
+
     /** The node's own functions, made once over the section's words and the parts beside them. */
     function create({ t, kit, picker, hold, ctx, shared }) {
       /**
@@ -120,6 +126,104 @@ window.__ModuleLoader__.load({
         return t('detail.node', { node: sweep.pin, count: String(answered.models ?? 0) });
       };
 
+      /**
+       * The account's data-sharing policy, read through the credits door's held picture: the state the last
+       * sweep left, asked here because the one press stands beside the node rather than in the wallet.
+       *
+       * The route's GET answers the picture its last read holds; this row starts no sweep of its own, so the
+       * button and the wallet's own state read the same answer and a press does not race a fresh read.
+       */
+      async function readPrivacy() {
+        const answer = await fetch(CREDITS_ROUTE, { headers: { accept: 'application/json' } });
+        if (!answer.ok) throw new Error(t('route.answered', { status: answer.status }));
+        const payload = await answer.json();
+        if (payload?.ok !== true) throw new Error(payload?.error?.message ?? t('route.refusedSweep'));
+        return payload.value?.last?.privacy ?? null;
+      }
+
+      /** The one press: ask the vendor to stop sharing, then read the picture back through the same door. */
+      async function pressPrivacy() {
+        const answer = await fetch(CREDITS_ROUTE, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ action: 'privacySet' }),
+        });
+        if (!answer.ok) throw new Error(t('route.answered', { status: answer.status }));
+        const payload = await answer.json();
+        if (payload?.ok !== true) throw new Error(payload?.error?.message ?? t('route.refusedCheck'));
+        return payload.value?.last?.privacy ?? null;
+      }
+
+      /** What the policy is, in the words the button's title uses; the enums stay identifiers in it. */
+      function privacyTitle(privacy) {
+        const state = privacy.can_update === false
+          ? 'Data sharing: on — the plan locks it'
+          : privacy.attempted === true ? 'Data sharing: on — the vendor did not change it' : 'Data sharing: on';
+        const plan = privacy.plan_tier === undefined ? '' : ` · plan: ${privacy.plan_tier}`;
+        return `${state} · source: ${privacy.source}${plan}`;
+      }
+
+      /**
+       * The one press, drawn beside the node's own: a button while the account shares and nothing at all
+       * while it does not, so the row keeps its height either way. The button's title carries the state,
+       * the plan's lock included; the credits popover draws no data-sharing at all. The row asks the
+       * route again while the held picture carries no policy — a token saved in this visit fills it
+       * later — and a failed read goes to the section's status with its reason, never dropped.
+       * @param {{enabled: boolean}} props whether a value stands in the store
+       * @returns {object | null} the button, or nothing while there is nothing to turn off
+       */
+      function PrivacyButton({ enabled }) {
+        const [privacy, setPrivacy] = React.useState(null);
+        const [busy, setBusy] = React.useState(false);
+        const [error, setError] = React.useState(null);
+        React.useEffect(() => {
+          if (!enabled) {
+            setPrivacy(null);
+            return undefined;
+          }
+          let live = true;
+          let beat = null;
+          const read = () => {
+            void readPrivacy()
+              .then((next) => {
+                if (!live) return;
+                setPrivacy(next);
+                if (next === null) beat = setTimeout(read, PRIVACY_RECHECK_MS);
+              })
+              .catch((reason) => {
+                if (!live) return;
+                const said = shared.reasonOf(reason);
+                kit.statusDetail(t('status.subject.token'), t('detail.unsettled', { reason: said }));
+                setPrivacy({ kind: 'failed', reason: said });
+              });
+          };
+          read();
+          return () => {
+            live = false;
+            if (beat !== null) clearTimeout(beat);
+          };
+        }, [enabled]);
+        if (privacy === null || privacy.kind === 'failed' || privacy.share_enabled !== true) return null;
+        return h('button', {
+          type: 'button',
+          className: 'coreness-qoder-button coreness-button',
+          disabled: busy,
+          title: error === null ? privacyTitle(privacy) : `the change failed: ${error}`,
+          onClick: async () => {
+            setBusy(true);
+            setError(null);
+            try {
+              const next = await pressPrivacy();
+              if (next !== null) setPrivacy(next);
+            } catch (reason) {
+              setError(shared.reasonOf(reason));
+            } finally {
+              setBusy(false);
+            }
+          },
+        }, busy ? 'Stopping…' : 'Stop sharing');
+      }
+
       /** The node the requests go to, or the map that answers for it. */
       function nodeLine(view) {
         return h('span', { key: 'where', className: 'coreness-qoder-line', 'data-node': view.node ?? '' }, view.node ?? t('node.map'));
@@ -146,6 +250,7 @@ window.__ModuleLoader__.load({
             disabled: view.busy !== null,
             onClick: () => act.check(),
           }, view.busy === 'check' ? t('node.checking') : t('node.check')),
+          h(PrivacyButton, { key: 'privacy', enabled: state?.credential?.configured === true }),
         ]);
       }
 

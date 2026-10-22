@@ -14,7 +14,7 @@ github:Vensus137/Coreness-DSH
 
 The same page switches the package off without removing it, and takes it off again.
 
-That address follows the newest release, and what stands published is a release — so the address and the newest release are one thing here. A fixed release is named by its own tag — `…Coreness-DSH#v0.6.8` — and a released tag is never moved: that line gives the same code whenever it is run.
+That address follows the newest release, and what stands published is a release — so the address and the newest release are one thing here. A fixed release is named by its own tag — `…Coreness-DSH#v0.6.9` — and a released tag is never moved: that line gives the same code whenever it is run.
 
 <details>
 <summary><b>By command line</b> — for a terminal; nothing above needs it</summary>
@@ -62,13 +62,13 @@ replace that mount with the published copy, so a development profile updates by 
 - 🔌 **The MCP servers, seen and edited** — one card per server: its kind, its address, the environment it needs, and switches whose effect lands in the profile rather than in a copy.
 - 📓 **The journal** — the environment's memory: what changed in the profile and what a participant did, kept as records that carry a kind, an area, a name and an author.
 - 🚦 **A limiter that waits instead of refusing** — a call over the limit takes its turn in a queue; nothing is limited as the package ships.
-- 🧠 **A route to the Qoder models** — the account's own models, each with the reasoning levels it accepts and the output budget it allows. The account's token is entered once, in the Qoder section, and kept by the platform's own store; no value of it stands in the package. The credits foot reads the balance while the account is reachable.
+- 🧠 **A route to the Qoder models** — the account's own models, each with the reasoning levels it accepts and the output budget it allows. The account's token is entered once, in the Qoder section, and kept by the platform's own store; no value of it stands in the package. A token from either Qoder contour — the international one or the Chinese one — is accepted there the same way, and the route reads the account on its own contour. The credits foot reads the balance while the account is reachable; the Qoder section's node row carries one press that asks the vendor to turn sharing off, reports a plan that locks it, and keeps the state in its title.
 - 📜 **The rules of its own tree, in force** — one prompt section, registered through the platform's own prompt registry, so a session of the profile carries them in every request and no compaction can take them out of the model's sight.
 
 ## 🧩 What it needs
 
 - **DeepSeek Harness.** The version this package was built against is declared in the manifest, and the application compares that declaration with its own before a profile imports a plugin: a mismatch leaves the plugin out and says so, instead of failing quietly later.
-- **A Qoder account,** for the Qoder route and the credits foot; the token is entered in the Qoder section and kept by the platform's own store.
+- **A Qoder account,** for the Qoder route and the credits foot; the token is entered in the Qoder section and kept by the platform's own store, from the international or the Chinese contour.
 
 ## 📦 What lands
 

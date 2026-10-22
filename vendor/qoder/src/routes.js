@@ -5,9 +5,11 @@
  * @module @coreness/qoder/src/routes
  */
 
-import { QoderError, requestIdOf, vendorWordsOf } from './in.js'
+import { QoderError, VALUE_REFUSED_CODES, requestIdOf, vendorWordsOf } from './in.js'
 import { readQuota } from './credits.js'
 import { PROBE_ACTION, sweepNodes } from './probe.js'
+
+export { VALUE_REFUSED_CODES } from './in.js'
 
 /**
  * The action whose answer is the vendor's own catalogue, verbatim: the ids and the per-model reasoning
@@ -42,18 +44,6 @@ export const VERIFY_ACTION = 'verify'
 export const WEB_SEARCH_ACTION = 'webSearch'
 
 /**
- * The vendor's own codes that are a statement **about the value**, and the whole list of them.
- *
- * Measured, each one: `105` and `TOKEN_EXPIRE` are the contour's two spellings of a value that is not
- * active (`sessionExpired` — the chat door writes the first, the REST door the second), and `BadRequest`
- * is what this call answers for a value it cannot accept at all — a wrong paste, measured live. A code
- * outside this list is not a judgement of the value however the
- * envelope is shaped: the contour answers `403` for an exhausted allowance as well (`{"code":"110"}`),
- * and our own `AUTH` says only that a status was 401 or 403.
- */
-export const VALUE_REFUSED_CODES = Object.freeze(['105', 'TOKEN_EXPIRE', 'BadRequest'])
-
-/**
  * The answer of one request on the widget's route.
  *
  * The status is 200 in both cases — `{ok:true, value}` or `{ok:false, error}`. A reading that failed is
@@ -80,7 +70,11 @@ export async function answerOf(account, request, warn) {
       await account.claim(typeof body.campaignId === 'string' && body.campaignId !== '' ? body.campaignId : undefined)
       return json({ ok: true, value: account.picture() })
     }
-    throw new QoderError(`the credits route knows no action "${String(body.action)}": it answers "read" and "claim"`, 'BAD_REQUEST')
+    if (body.action === 'privacySet') {
+      await account.privacySet()
+      return json({ ok: true, value: account.picture() })
+    }
+    throw new QoderError(`the credits route knows no action "${String(body.action)}": it answers "read", "claim" and "privacySet"`, 'BAD_REQUEST')
   } catch (error) {
     warn(`the credits route refused a ${request.method}: ${codeOf(error)} — ${messageOf(error)}`)
     return json({ ok: false, error: { code: codeOf(error), message: messageOf(error) } })
@@ -151,10 +145,11 @@ export async function answerOfRoute(transport, request, warn, credential) {
  */
 async function quotaOf(transport) {
   const { session } = await transport.identity()
-  const { openapiOrigin } = transport.origins()
+  const { openapiOrigin, siteOrigin } = transport.origins()
   const quota = await readQuota({
     jobToken: session.jobToken,
     openapiOrigin,
+    siteOrigin,
     machineId: transport.machineId(),
     ceilingMs: transport.ceilings().controlCeilingMs,
   })
