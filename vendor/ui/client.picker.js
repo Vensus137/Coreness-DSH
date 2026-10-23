@@ -172,10 +172,17 @@ window.__ModuleLoader__.load({
        height. The row is the trigger's own axis: a field column stacks a label over its control, while the
        trigger parts its value from the fixed mark that names the list — one line, the value at the left and
        the mark beside it. The eight between the value and the arrow is this control's own: the two are parts
-       of one line, and the arrow keeps its distance while the value is cut. */
+       of one line, and the arrow keeps its distance while the value is cut.
+       An empty value is the same box: its height is the box's line and padding, and a value with no words
+       draws no line — the mark alone stands 14 high, and the trigger measured 28 where the box with a value
+       stands 36. The mark belongs to the list and not to the value, so the value keeps one line of its own
+       whether or not the row names one, and the box's size does not change between choosing and chosen. The
+       line comes from the non-breaking space the page's own skeleton takes its line from — the same act, a
+       box that must stand at its type's height while it has no words of its own. */
     const CSS = `
 .coreness-picker{position:relative;display:block}
 .coreness-pickerTrigger{display:flex;flex-direction:row;justify-content:space-between;align-items:center;gap:8px;text-align:left;cursor:pointer}
+.coreness-pickerTrigger .coreness-cutLine:empty::before{content:'\\00a0'}
 .coreness-pickerTrigger:focus-visible{border-color:var(--dsw-alias-state-business-primary);outline:none}
 .coreness-pickerTrigger[aria-invalid='true']{border-color:var(--dsw-alias-state-error-primary)}
 .coreness-pickerArrow{color:var(--dsw-alias-label-secondary);flex:none;display:inline-flex}

@@ -53,6 +53,8 @@ not add a look.
   `coreness-button` (a button), `coreness-dim` (a hint line). The kit (`client.kit.js`) owns the status
   surface (`STATUS_WORDS`, `statusNode`, `statusMark`, `useStatusStyles`), not a control. The picker and
   hold are the other shared chunks.
+- **Size.** A control's box is the same in every state: an empty field stands at its type pair's line like
+  a filled one, so a value arriving or leaving moves nothing under it.
 - **Cards.** One card has one head and one status, and the status is about that card's subject. A second
   subject is a second card.
 - **First paint.** A card that arrives after the read stands in `firstPaint` in the same shape, so the
