@@ -232,7 +232,7 @@ window.__ModuleLoader__.load({
       const { value, draft, note, busy, prompt, promptBusy, promptFault, beatFault } = state;
       const loading = state.status === 'loading';
       const editable = !loading && value?.editable === true;
-      const writing = busy || promptBusy;
+      const writing = busy || promptBusy || state.refreshing === true;
       /* A fault is the strip's word, never a line of its own: the strip stands in the card head with its room
          kept, so a read that failed says "Not read" without moving the page; the reason is said in the console,
          where a reader who has to act on it looks. */
@@ -312,14 +312,31 @@ window.__ModuleLoader__.load({
       ]);
     }
 
+    /**
+     * What the last settled read answered: the browser half is materialised once per application session, so a
+     * section left and entered again has this beside it, and the mount paints it at once while the read
+     * corrects it behind. It holds the route's picture and the switch — never the visit's own state, the draft,
+     * a note, a press in flight or a read that failed — and the session's first mount has nothing, which is the
+     * honest skeleton.
+     */
+    let lastRead = null;
+
+    /** The state a mount starts from: the last picture when one stands, and the skeleton when none does. */
+    const startState = () => (lastRead === null
+      ? {
+          status: 'loading', refreshing: true, value: null, draft: '', note: null, busy: false,
+          prompt: null, promptBusy: false, promptFault: false, beatFault: false,
+        }
+      : {
+          status: 'ready', refreshing: true, value: lastRead.value, draft: draftOf(lastRead.value), note: null, busy: false,
+          prompt: lastRead.prompt, promptBusy: false, promptFault: false, beatFault: false,
+        });
+
     /** The page as it stands: both reads settle before the card is drawn once, and a press is read back. */
     function GeneralSection({ kit, ctx, hold }) {
       useStyles();
       kit.useStatusStyles();
-      const [state, setState] = React.useState({
-        status: 'loading', value: null, draft: '', fault: null, note: null, busy: false,
-        prompt: null, promptBusy: false, promptFault: false, beatFault: false,
-      });
+      const [state, setState] = React.useState(startState);
 
       /** The console's door is the kit's: one subject, one place, said where the answer arrived. */
       const say = React.useCallback((reason) => kit.statusDetail(t('team.title'), reason), [kit]);
@@ -335,6 +352,13 @@ window.__ModuleLoader__.load({
       React.useEffect(() => () => {
         if (noteTimer.current !== null) clearTimeout(noteTimer.current);
       }, []);
+
+      /** The picture a later mount paints: a settled read, a save and a flip alike leave it standing, and a
+       * failure leaves the last picture alone rather than replacing knowledge with a sentence about a moment. */
+      React.useEffect(() => {
+        if (state.status !== 'ready') return;
+        lastRead = { value: state.value, prompt: state.prompt };
+      }, [state.status, state.value, state.prompt]);
 
       /** Both reads of one moment: the route's picture, and the switch's row in the namespace it names. The
        * settings row failing is said on the console and costs only the switch: the ceiling was read, and a card
@@ -357,17 +381,21 @@ window.__ModuleLoader__.load({
         readAll().then(
           ({ value, prompt, promptFault }) => {
             if (!live) return;
-            setState((now) => ({ ...now, status: 'ready', value, draft: draftOf(value), prompt, promptFault }));
+            setState((now) => ({ ...now, status: 'ready', refreshing: false, value, draft: draftOf(value), prompt, promptFault }));
           },
           (error) => {
             if (!live) return;
-            setState((now) => ({ ...now, status: 'failed', fault: reasonOf(error) }));
+            const reason = reasonOf(error);
+            setState((now) => (now.status === 'ready'
+              ? { ...now, refreshing: false }
+              : { ...now, status: 'failed', refreshing: false }));
+            say(reason);
           },
         );
         return () => {
           live = false;
         };
-      }, [readAll]);
+      }, [readAll, say]);
 
       /* The platform's announcement that the settings document moved — a hand's edit of the profile's
          patch, or another page's write — is the same event for the switch: both reads are taken again, so
@@ -383,7 +411,6 @@ window.__ModuleLoader__.load({
                 /* A first read that failed is not the card's sentence forever: a later answer takes the card
                    back to standing. */
                 status: 'ready',
-                fault: null,
                 promptFault,
                 value,
                 /* A settings half that could not be read keeps the view the card already holds. */

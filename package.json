@@ -1,6 +1,6 @@
 {
   "name": "@coreness/dsh",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": true,
   "type": "module",
   "description": "The Coreness product for a DeepSeek Harness profile (new tree).",
