@@ -43,7 +43,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/Vensus137/Coreness-DSH",
-            "commit": "7dd72bc5e98c0fce2ec0929274eb440a99d9351d"
+            "commit": "effcbbd3525f7d3a9e00ad0732f086caa4adf991"
           },
           "engines": {
             "dsh": ">=0.2.1-rc.2"
@@ -55,7 +55,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/Vensus137/Coreness-DSH",
-            "commit": "2ed59f2bf4e7764eb1e019c0a109f2986c010488"
+            "commit": "be106ac593e231b3c77dc640a33838c443687e87"
           },
           "engines": {
             "dsh": ">=0.2.1-rc.2"
@@ -67,7 +67,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/Vensus137/Coreness-DSH",
-            "commit": "3999f191f9ed064687abcf8ab0182430a7a6b9ec"
+            "commit": "ffc65ef0bb05d9de4aaefc1a38ec17785429dcc8"
           },
           "engines": {
             "dsh": ">=0.2.1-rc.2"
@@ -79,7 +79,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/Vensus137/Coreness-DSH",
-            "commit": "e37bfddd0c3410f923591dcb09961fd8d653d431"
+            "commit": "abfb295eb5f2d56d5cd8ca5eb05f4767a22af805"
           },
           "engines": {
             "dsh": ">=0.2.1-rc.2"
@@ -91,7 +91,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/Vensus137/Coreness-DSH",
-            "commit": "bdb5be4d19e7f44714bb9d958af90a9e50e76cc6"
+            "commit": "e19899e55bffa535e628ca0acd5d7144a248b3a7"
           },
           "engines": {
             "dsh": ">=0.2.1-rc.2"
@@ -103,7 +103,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/Vensus137/Coreness-DSH",
-            "commit": "da48079fea2de390727d40e48f8d6ba83520d1ff"
+            "commit": "abeb60844a2260f274d8b21d9a9429b9f912eccc"
           },
           "engines": {
             "dsh": ">=0.2.1-rc.2"
@@ -115,7 +115,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/Vensus137/Coreness-DSH",
-            "commit": "3e12a9c208a5b32c562a40aaa84ae8af136a7148"
+            "commit": "5d6d492bf16fd72c1de3e7f7aa4084c2e9ef9899"
           },
           "engines": {
             "dsh": ">=0.2.1-rc.2"
@@ -127,7 +127,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/Vensus137/Coreness-DSH",
-            "commit": "5bbee5f5bbb30b8c36a7a85d3223a1d4133477bd"
+            "commit": "0b24904c2e123faae30c95064b4cabd3c8182a1c"
           },
           "engines": {
             "dsh": ">=0.2.1-rc.2"
@@ -139,7 +139,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/Vensus137/Coreness-DSH",
-            "commit": "70f944a29414d4729d1e72a10ac498839042fc38"
+            "commit": "bf498f74934e725482e0737a79a09fe41b0f64da"
           },
           "engines": {
             "dsh": ">=0.2.1-rc.2"
@@ -151,7 +151,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/Vensus137/Coreness-DSH",
-            "commit": "94506ce967a92eb25e4daff0040c0292a9838d3a"
+            "commit": "3e119b411afedae13f0e937044c53c8e7339f1d6"
           },
           "engines": {
             "dsh": ">=0.2.1-rc.2"
@@ -163,7 +163,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/Vensus137/Coreness-DSH",
-            "commit": "d210f26f1008e38566f7465033e3a85d80aecbb5"
+            "commit": "36ff16bcd9aaea30e3793b1972c9b972a67da190"
           },
           "engines": {
             "dsh": ">=0.2.1-rc.2"
