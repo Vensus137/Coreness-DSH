@@ -225,6 +225,8 @@ window.__ModuleLoader__.load({
     function GeneralSection({ kit, ctx, hold, card }) {
       useStyles();
       kit.useStatusStyles();
+      /** The card is a module with a factory: the drawing it hands back closes over the section's words. */
+      const draw = React.useMemo(() => card.create({ t }).draw, [card]);
       const [state, setState] = React.useState(startState);
 
       /** The console's door is the kit's: one subject, one place, said where the answer arrived. */
@@ -490,7 +492,7 @@ window.__ModuleLoader__.load({
         prompt: (on) => flip('prompt', on),
         review: (on) => flip('review', on),
       };
-      return card.draw(state, act, kit);
+      return draw(state, act, kit);
     }
 
     /** The kit's status dot and its sheet, pulled before the section stands: the switch's state stands with it. */
