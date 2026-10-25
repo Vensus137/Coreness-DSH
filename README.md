@@ -14,7 +14,7 @@ github:Vensus137/Coreness-DSH
 
 The same page switches the package off without removing it, and takes it off again.
 
-That address follows the newest release, and what stands published is a release — so the address and the newest release are one thing here. A fixed release is named by its own tag — `…Coreness-DSH#v0.6.10` — and a released tag is never moved: that line gives the same code whenever it is run.
+That address follows the newest release, and what stands published is a release — so the address and the newest release are one thing here. A fixed release is named by its own tag — `…Coreness-DSH#v0.7.0` — and a released tag is never moved: that line gives the same code whenever it is run.
 
 <details>
 <summary><b>By command line</b> — for a terminal; nothing above needs it</summary>
@@ -62,6 +62,7 @@ replace that mount with the published copy, so a development profile updates by 
 - 🔌 **The MCP servers, seen and edited** — one card per server: its kind, its address, the environment it needs, and switches whose effect lands in the profile rather than in a copy.
 - 📓 **The journal** — the environment's memory: what changed in the profile and what a participant did, kept as records that carry a kind, an area, a name and an author.
 - 🚦 **A limiter that waits instead of refusing** — a call over the limit takes its turn in a queue; nothing is limited as the package ships.
+- 🤝 **The Agent Team, on the page and on its own terms** — the platform's teammates, board and mailbox, and a card on the General page: how many teammates a session may hold, written through the platform's own editor, and a switch that puts the product's paragraph in place of the platform's last sentence of the team policy — the one that tells the Lead to wait — so the Lead leads, sets the plan, breaks the work into shared tasks and hands them out, answers when the required results are in hand, never holds a turn open — when time must pass it sets a reminder and ends the turn — while every other line of the policy stays as the platform wrote it, and the platform's own text stands when the switch is off. A second switch appends the review paragraph to that text: a review as the normal step of every circle of work with a small task as the exception, what the reviewer looks at, and the authorship bar. No value ships with the package.
 - 🧠 **A route to the Qoder models** — the account's own models, each with the reasoning levels it accepts and the output budget it allows. The account's token is entered once, in the Qoder section, and kept by the platform's own store; no value of it stands in the package. A token from either Qoder contour — the international one or the Chinese one — is accepted there the same way, and the route reads the account on its own contour. The credits foot reads the balance while the account is reachable; the Qoder section's node row carries one press that asks the vendor to turn sharing off, reports a plan that locks it, and keeps the state in its title.
 - 📜 **The rules of its own tree, in force** — one prompt section, registered through the platform's own prompt registry, so a session of the profile carries them in every request and no compaction can take them out of the model's sight.
 
@@ -72,7 +73,7 @@ replace that mount with the published copy, so a development profile updates by 
 
 ## 📦 What lands
 
-Exactly the list the package's manifest names — the bundle and the seven packages, each with its own README beside its code. No part of the workshop they are built in: the contracts, the checks and the notes of this project stay where the work is done.
+Exactly the list the package's manifest names — the bundle and the eight packages, each with its own README beside its code. No part of the workshop they are built in: the contracts, the checks and the notes of this project stay where the work is done.
 
 ## 🧭 What it deliberately does not do
 

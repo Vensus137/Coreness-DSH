@@ -48,3 +48,10 @@
         maxWaitMs: 60000
         thresholdRatio: 0.9
         dryRun: false
+# The Agent Team's own rows belong to the platform's bundle: one row id has one owner, and a profile that
+# carries both bundles would declare `agent-team` twice — the Loader keeps the last, and the profile's
+# editor refuses to write a row two layers answer for. The product adds its ceiling door and its paragraph,
+# and both read the row the platform mounted.
+- insert:
+    - id: coreness-team
+      name: '@coreness/team'

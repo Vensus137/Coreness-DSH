@@ -30,7 +30,7 @@ window.__ModuleLoader__.load({
     /** The bundle whose version the rail's title carries; the composition names it. */
     const BUNDLE = '@coreness/dsh';
     /** The package-local chunks beside the entry, applied once each. */
-    const CHUNKS = ['./client.mcp.js', './client.provider.js', './client.credits.js', './client.gate.js'];
+    const CHUNKS = ['./client.general.js', './client.mcp.js', './client.provider.js', './client.credits.js', './client.gate.js'];
     /** The locale namespace the visible text is taken from. */
     const NS = 'coreness';
     /* The sheet's own id, in this package's namespace: the old `coreness-page` package kept the donor's ids,
@@ -115,7 +115,9 @@ window.__ModuleLoader__.load({
 .coreness-field-box{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l4);border-radius:var(--dsw-radius-md);width:100%;font:inherit;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);padding:6px 10px;font-size:14px;line-height:22px}
 .coreness-field-box:focus{border-color:var(--dsw-alias-state-business-primary);outline:none}
 .coreness-field-box::placeholder{color:var(--dsw-alias-label-dimmed)}
-/* What the page's own check controls are built as: a box and its word on one line. */
+/* What the page's own check controls are built as: a box and its word on one line. The box keeps the margin
+   the browser gives it — a reset here would be a rule of ours about a control that is the platform's, and
+   every box on the page would need it kept in step. */
 .coreness-check{display:inline-flex;align-items:center}
 /* The two tones the kit's status map wears beside its own classes. */
 .coreness-tone-done[data-tone]{color:var(--dsw-alias-state-success-primary)}

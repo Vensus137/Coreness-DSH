@@ -1,6 +1,6 @@
 {
   "name": "@coreness/dsh",
-  "version": "0.6.10",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "description": "The Coreness product for a DeepSeek Harness profile (new tree).",
@@ -14,7 +14,8 @@
     "@coreness/mcp": "file:./vendor/mcp",
     "@coreness/oauth": "file:./vendor/oauth",
     "@coreness/qoder": "file:./vendor/qoder",
-    "@coreness/rate-gate": "file:./vendor/rate-gate"
+    "@coreness/rate-gate": "file:./vendor/rate-gate",
+    "@coreness/team": "file:./vendor/team"
   },
   "exports": {
     "./locale/*.json": "./locale/*.json",

@@ -285,7 +285,6 @@ window.__ModuleLoader__.load({
    eight a row's parts keep — and not the six a label keeps above the control it names: a check is a part of
    the row it stands in, beside another part, and not a field's own column. */
 .coreness-qoder-check{gap:8px;font-size:14px;line-height:22px;color:var(--dsw-alias-label-primary)}
-.coreness-qoder-check input{margin:0}
 /* The add control, a variant of the page's own add box: its hairline is .5px dashed where that box's is 1px, and that
    is the one property where the two differ. The radius, the stretch, the distance and the floor come from that box's
    class, which this control wears beside this one. Its hover, its disabled look, its ring and every other property come
