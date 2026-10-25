@@ -4,10 +4,6 @@
       name: '@coreness/ui'
     - id: coreness-journal
       name: '@coreness/journal'
-      config:
-        rotationDays: 30
-        rotationBytes: 2097152
-        recordsLimit: 20
     - id: coreness-rules
       name: '@coreness/rules'
     - id: coreness-mcp
@@ -22,7 +18,7 @@
     - id: coreness-qoder
       name: '@coreness/qoder'
       config:
-        apiKeyEnv: QODER_PERSONAL_ACCESS_TOKEN
+        # The package's default first byte is 15 s; this row pins 60 s — a profile value, not a copy of a default.
         firstByteCeilingMs: 60000
         retryPolicy:
           mode: normal
@@ -38,16 +34,8 @@
             initialDelayMs: 500
             maxDelayMs: 10000
             jitterRatio: 0.1
-        credits:
-          sweepMs: 600000
-          autoClaim: true
     - id: coreness-rate-gate
       name: '@coreness/rate-gate'
-      config:
-        windowMs: 60000
-        maxWaitMs: 60000
-        thresholdRatio: 0.9
-        dryRun: false
 # The Agent Team's own rows belong to the platform's bundle: one row id has one owner, and a profile that
 # carries both bundles would declare `agent-team` twice — the Loader keeps the last, and the profile's
 # editor refuses to write a row two layers answer for. The product adds its ceiling door and its paragraph,

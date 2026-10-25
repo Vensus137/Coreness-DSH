@@ -1,5 +1,5 @@
 /**
- * The four stores the SDK asks of a provider, kept as the platform's own credential records.
+ * The four stores of one server, kept as the platform's own credential records.
  *
  * One record per server per store — the tokens, the client registration, the code verifier and the
  * state — under the credential scope this plugin owns. Nothing of the value lives here: no file of
@@ -9,13 +9,13 @@
  * next operation without a restart.
  *
  * The removal of one server's records stands here too, and it is the same function that names them: a
- * server's four keys are derived from the folded name and never discovered, because a scan of the scope
- * takes every server of this plugin and a read by prefix takes a neighbour whose folded name begins the
- * same way.
+ * server's four keys are derived from the exact name and never discovered, because a scan of the scope
+ * takes every server of this plugin and a read by prefix takes a neighbour whose id begins the same way.
  *
  * @module @coreness/oauth/src/stores
  */
 
+import { createHash } from 'node:crypto'
 import { isVerifier } from './pkce.js'
 import { refuse } from './refusals.js'
 
@@ -37,14 +37,16 @@ export const ID_PATTERN = /^[a-z][a-z0-9-]*$/
 /** The shortest letter in front of a folded name that would lead with a digit, so every id stays addressable. */
 const LEAD = 's-'
 
+/** How much of the name's digest an id keeps: enough that two names cannot share an id by any reach. */
+const HASH_LENGTH = 16
+
 /**
  * The folded name of a server, without a store's own part.
  *
  * A server name is a person's own word and may carry characters a credential id does not take, so it
  * is folded to the alphabet an id takes — lower-cased, everything outside it a hyphen, the hyphens at
- * both ends dropped — and the id below is what brings the result inside the grammar itself. Two names
- * that fold together would share a record, which is why the picture beside this plugin reports the
- * folded name rather than hiding the fold.
+ * both ends dropped. The fold is not unique (two names can fold together), so it is never the id on
+ * its own: the digest below finishes what the fold loses.
  * @param {string} server the server's name
  * @returns {string} the folded name
  */
@@ -53,25 +55,55 @@ export function slugOf(server) {
   return folded === '' ? 'server' : folded
 }
 
+/** The digest an id keeps of the exact name, so two names that fold together never share one. */
+function digestOf(server) {
+  return createHash('sha256').update(server, 'utf8').digest('hex').slice(0, HASH_LENGTH)
+}
+
+/**
+ * The half of every credential key that names one server.
+ *
+ * A name kept exactly in the alphabet an id takes — lower case, no leading digit, no character the
+ * fold would change — keeps the id it always had, so no grant of anybody's moves. Every other name
+ * carries a digest of its exact spelling: that is what separates `my_server` from `my-server`, `Foo`
+ * from `foo`, and a name leading with a digit from the same name with `s-` in front, all of which
+ * fold to one string. The digest is taken over the name as written, so the fold's loss cannot make
+ * two names meet again.
+ * @param {string} server the server's name
+ * @returns {string} the id half of the credential key, without a store's own part
+ */
+export function idHalfOf(server) {
+  const name = String(server ?? '')
+  const folded = slugOf(name)
+  const plain = ID_PATTERN.test(folded) ? folded : `${LEAD}${folded}`
+  return name === folded && /^[a-z]/u.test(folded) ? folded : `${plain}-${digestOf(name)}`
+}
+
 /**
  * The credential id of one store of one server.
- *
- * The fold can leave a name leading with a digit, which no id may do, so such a name takes a letter in
- * front. That letter is the shortest one and not a word, because it is also a name a person could have
- * given a server by hand: the pair the prefix can put together is a name and the same name with `s-`
- * before it, and those two would share a record. A name whose fold is already addressable keeps exactly
- * the id it had, so no record of anybody's moves.
  * @param {string} server the server's name
  * @param {string} part the store, one of `PARTS`
  * @returns {string} the id half of the credential key
  */
 export function idOf(server, part) {
-  const folded = slugOf(server)
-  return `${ID_PATTERN.test(folded) ? folded : `${LEAD}${folded}`}-${part}`
+  return `${idHalfOf(server)}-${part}`
 }
 
 /** The credential key of one store of one server, in the seam's own joined form. */
 export const keyOf = (server, part) => `${SCOPE}/${idOf(server, part)}`
+
+/**
+ * The platform record shape this plugin writes: a grant with one store under its own name.
+ *
+ * The shape stands here because the stores own it — the step commits a record the flow produced and
+ * never spells the payload itself.
+ * @param {string} part the store, one of `PARTS`
+ * @param {unknown} value what the record holds under that store
+ * @returns {{kind: string, payload: object}} the record
+ */
+export function recordOf(part, value) {
+  return { kind: 'grant', payload: { [part]: value } }
+}
 
 /**
  * The stores over one credential service.
@@ -125,10 +157,23 @@ export class RecordStores {
       await this.#credentials.deleteRecord(key)
       return
     }
-    await this.#credentials.modifyRecord(key, async () => ({ kind: 'grant', payload }))
+    await this.#credentials.modifyRecord(key, async () => recordOf(part, payload[part]))
   }
 
-  /** The tokens of this server, as the SDK's provider asks for them. */
+  /**
+   * The platform record one store would be committed as, without writing it.
+   *
+   * The step hands this to the platform's commit door: the record's kind and payload grammar have one
+   * owner — here — and a caller that commits a grant never spells either.
+   * @param {string} part the store, one of `PARTS`
+   * @param {unknown} value what the record holds under that store
+   * @returns {{kind: string, payload: object}} the record
+   */
+  record(part, value) {
+    return recordOf(part, value)
+  }
+
+  /** The tokens of this server, as the flow asks for them. */
   async tokens() {
     const held = await this.read('tokens')
     return held?.tokens ?? undefined
@@ -139,7 +184,7 @@ export class RecordStores {
     await this.write('tokens', { tokens })
   }
 
-  /** The client registration of this server, as the SDK's provider asks for it. */
+  /** The client registration of this server, as the flow asks for it. */
   async clientInformation() {
     const held = await this.read('client')
     return held?.client ?? undefined
@@ -178,9 +223,9 @@ export class RecordStores {
   /**
    * Drop every store of this server — the four records, and nothing else.
    *
-   * The keys are derived from the folded name and never discovered: a scan of the scope or a read by
-   * prefix would take a neighbour whose folded name begins the same way, or every server of this plugin,
-   * and a key is what tells one server's record from another's. What stood is asked with the seam's own
+   * The keys are derived from the exact name and never discovered: a scan of the scope or a read by
+   * prefix would take a neighbour whose id begins the same way, or every server of this plugin, and a
+   * key is what tells one server's record from another's. What stood is asked with the seam's own
    * description, which answers whether a record is set and never its value, so no token crosses this
    * call, and the removal itself is the seam's own delete.
    * @returns {Promise<{server: string, dropped: string[]}>} the server, and the keys that stood and went
@@ -194,15 +239,5 @@ export class RecordStores {
       if (stood) dropped.push(key)
     }
     return { server: this.#server, dropped }
-  }
-
-  /**
-   * Drop the stores the SDK asks to invalidate, by the scopes it names.
-   * @param {string} scope `client`, `tokens`, `verifier`, `state` or `all`
-   * @returns {Promise<void>} when the writes have committed
-   */
-  async invalidateCredentials(scope) {
-    const wanted = scope === 'all' ? PARTS : [scope === 'discovery' ? 'state' : scope]
-    for (const part of wanted) if (PARTS.includes(part)) await this.write(part, undefined)
   }
 }

@@ -78,9 +78,9 @@ window.__ModuleLoader__.load({
       function rowsOps(draft, read) {
         /* The rows are compared field by field and not as two JSON strings: the same row built twice can
            carry its keys in another order, and a press that changed nothing must not write the list again. */
-        /* A row is compared by what a row may now name: the pair, the ceiling, the dry-run flag. The caution is the
-           section's own value and no longer a row's, so it takes no part in deciding whether a write is needed. */
-        const flat = (rows) => rows.map((one) => [one.provider, one.model, one.tokensPerMinute, one.dryRun ?? null]);
+        /* A row is compared by every value the write carries: the pair, the ceiling, the row's own ratio and the
+           dry-run flag. A value the comparison cannot see is a value a press would silently delete. */
+        const flat = (rows) => rows.map((one) => [one.provider, one.model, one.tokensPerMinute, one.thresholdRatio ?? null, one.dryRun ?? null]);
         return JSON.stringify(flat(draft.rows)) === JSON.stringify(flat(read.rows))
           ? []
           : [rowsOp(draft.rows.map((one) => {
@@ -89,6 +89,9 @@ window.__ModuleLoader__.load({
                numbers are left out when they are not chosen, so a change of the section's own number still
                reaches the row — the schema declares them optional for exactly that reason. */
             const row = { provider: one.provider, model: one.model, tokensPerMinute: one.tokensPerMinute };
+            /* The host's schema still declares a per-row ratio and the runtime honours it: the page writes back what
+               it read, unchanged, until the field leaves the schema. */
+            if (one.thresholdRatio !== null && one.thresholdRatio !== undefined) row.thresholdRatio = one.thresholdRatio;
             if (one.dryRun !== null && one.dryRun !== undefined) row.dryRun = one.dryRun === true;
             return row;
           }))];
@@ -115,8 +118,8 @@ window.__ModuleLoader__.load({
 
       /**
        * The label row of a number field, and **only** the field's own name: no mark of where the number comes
-       * from, and no press that returns it to the schema's default (the user's own word took both off the page). The
-       * schema's default is untouched by that: a field the page does not show is written as the user's file has it.
+       * from, and no press that returns it to the schema's default. The schema's default is untouched by that: a
+       * field the page does not show is written as the file has it.
        */
       function labelRow(word, id) {
         return h('div', { key: 'label', className: 'coreness-fieldLabel coreness-gate-fieldLabel' }, [
@@ -134,11 +137,9 @@ window.__ModuleLoader__.load({
       function numberField({ id, key, word, name, value, disabled, onPatch, unit, hint, problem = null }) {
         return h('div', { key, className: 'coreness-field coreness-gate-field' }, [
           labelRow(word, id),
-          /* The unit stands **inside the box with the value**, which is the user's own reading of it ("в моём
-             понимании MS должно быть как раз так и в этом квадратике. Пояснение: это измеряемая величина"): the
-             box is the wrapper's border, the input inside carries no border of its own, and the unit is a suffix
-             at the box's right edge. The border moved from the input to the wrapper for this, and the focus ring
-             moved with it (`:focus-within`), so the field still says where the keyboard stands. */
+          /* The unit stands **inside the box with the value**: the box is the wrapper's border, the input inside
+             carries no border of its own, and the unit is a suffix at the box's right edge. The border and the focus
+             ring (`:focus-within`) stand on the wrapper, so the field still says where the keyboard stands. */
           h('span', { key: 'box', className: 'coreness-gate-unitBox' }, [
             h('input', {
               key: 'input',
@@ -149,9 +150,8 @@ window.__ModuleLoader__.load({
               disabled,
               'aria-label': name ?? word,
               /* A field with a problem says so to a reader who cannot see the card's strip: the mark travels with the
-                 value and the word itself stands in the row's own status, top-right as every other card's — a sentence
-                 under the box left the page by the user's own reading of it ("если ввести цифру все скачет, разметка"),
-                 and it moved everything below it by its own box every time a digit was typed. The three section
+                 value and the word stands in the row's own status, top-right as every other card's. A sentence under
+                 the box would move everything below it by its own box every time a digit was typed. The three section
                  numbers pass no problem and draw exactly as they did. */
               ...(problem === null ? {} : { 'aria-invalid': true }),
               onChange: (event) => onPatch(event.target.value === '' ? null : Number(event.target.value)),
@@ -175,11 +175,6 @@ window.__ModuleLoader__.load({
            numbers (`opsOf`), so its bar answers for them exactly as each row's own press does. Computed here and not
            in `draw`, because this card is a function of its own and reads the view it is handed. */
         const ceilingMissing = (view.draft?.rows ?? []).some((one) => ceilingProblem(one.tokensPerMinute) !== null);
-        /* What the gate runs with, which is not always what the row says: a row that is silent about a
-           number takes the gate's own default, and the live run showed the gate going on reading the values
-           it mounted with while the written ceiling charged later requests. Both stand here, so a field left
-           empty is not read as zero. */
-        const effective = view.picture?.settings ?? null;
         const fields = [
           numberField({ id: 'coreness-gate-windowMs', key: 'windowMs', word: t('field.window'), value: draft.windowMs, disabled: busy, unit: t('field.window.unit'), hint: `${t('field.window.hint')} ${t('field.empty')}`, onPatch: (value) => act.patch({ windowMs: value }),  }),
           numberField({ id: 'coreness-gate-maxWaitMs', key: 'maxWaitMs', word: t('field.maxWait'), value: draft.maxWaitMs, disabled: busy, unit: t('field.maxWait.unit'), hint: `${t('field.maxWait.hint')} ${t('field.empty')}`, onPatch: (value) => act.patch({ maxWaitMs: value }),  }),
@@ -201,16 +196,14 @@ window.__ModuleLoader__.load({
                 h('span', { key: 'name', className: 'coreness-gate-name' }, t('card.limit')),
               ]),
               /* The answer stands in the card's own strip, reserved and drawn always, at the card's right edge on
-                 the name's line — the one place an answer stands in every card of this page. It used to stand in
-                 the section's room, where a state also stands: one place, two genres, and on a save the reader did
-                 not see it at all. The room keeps the section's own sentences, the strip keeps the press's. */
+                 the name's line — the one place an answer stands in every card of this page. The room keeps the
+                 section's own sentences, the strip keeps the press's. */
               h('span', {
                 key: 'answer',
                 /* The page's own answer class and nothing else: the colour of each tone stands once for every
-                   strip on the page, beside the reservation rule the strips share, and this section
-                   writes no colour of its own. The three classes that stood here — done, error, warn — were a
-                   vocabulary of this section's making (`error` where the page says `fault`), and the user read the
-                   result off the screen: the same word in another colour in the section beside this one. */
+                   strip on the page, beside the reservation rule the strips share, and this section writes no colour
+                   of its own. A second tone vocabulary here painted the same word another colour than the section
+                   beside this one. */
                 className: 'coreness-answer coreness-gate-answer',
                 'data-note': 'head',
                 'data-tone': answerNote.tone ?? 'plain',
@@ -223,12 +216,11 @@ window.__ModuleLoader__.load({
             ]),
             h('div', { key: 'foot', className: 'coreness-gate-foot' }, [
               h('span', { key: 'actions', className: 'coreness-fieldLabel' }, [
-                /* The section card carries `Apply` alone, by the user's own word ("Cancel убираем"): the price of a
-                   removal is not high enough to need a cancelling press beside it, and he said the same about the row.
-                   What it costs is a real loss: this card carries no
-                   `Reset to defaults`, so a draft of this section can only be applied — the way back is a fresh read
-                   of the file (reloading the section), not a press. A user who typed a wrong number and has not
-                   pressed `Apply` yet still has the field to fix it in; once pressed, the file holds it. */
+                /* The section card carries `Apply` alone: the price of a removal is not high enough to need a
+                   cancelling press beside it, and the row's card does the same. What it costs is a real loss: this
+                   card carries no `Reset to defaults`, so a draft of this section can only be applied — the way back is
+                   a fresh read of the file (reloading the section), not a press. A reader who typed a wrong number and
+                   has not pressed `Apply` yet still has the field to fix it in; once pressed, the file holds it. */
                 h('button', {
                   key: 'apply',
                   type: 'button',

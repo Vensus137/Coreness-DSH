@@ -4,7 +4,7 @@
  * One sweep answers one question — *which node is serving this account right now* — and it answers by
  * asking each node for the model listing rather than for a bare reachability: one call proves both that the
  * node is up and that it takes this account's token, and it is the call the route makes anyway. The shape is
- * the donor's, kept whole: the node the row pins goes first (it is where the route is sending at this
+ * The order is kept whole: the node the row pins goes first (it is where the route is sending at this
  * moment), the map's list follows, each address once; one node's failure does not stop the sweep; and a
  * sweep that cannot start at all — no token, a map that does not answer — is an error of the answer, never
  * an empty list that would read as "no node answered".

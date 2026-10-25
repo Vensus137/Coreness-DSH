@@ -25,7 +25,8 @@ import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { Config } from './config.js'
-import { ANCHOR, noteOutcome, patchFor, shouldWarn } from './policy.js'
+import { live } from './live.js'
+import { ANCHOR, IDENTITY, noteOutcome, patchFor, shouldWarn } from './policy.js'
 import { answerOf } from './route.js'
 
 export { Config }
@@ -35,9 +36,6 @@ export const name = 'coreness-team'
 
 /** The one route a surface reads the team's ceiling through and writes it back. */
 export const ROUTE = '/api/coreness.team'
-
-/** A volatile field's live value: the box a write reaches, or the plain value. */
-const live = (field) => (typeof field?.get === 'function' ? field.get() : field)
 
 /**
  * The platform package that registers the section the patch addresses, read for the one line a missing
@@ -90,7 +88,9 @@ export function apply(ctx, config) {
       const patched = patchFor(result, live(config.prompt) === true, live(config.review) === true)
       const previous = noteOutcome(patched.outcome)
       if (shouldWarn(previous, patched.outcome)) {
-        warn(`the team policy was not replaced: the anchor is not the section's last sentence: "${ANCHOR}" (platform tool-agent-team ${version})`)
+        warn(patched.outcome === 'unknown'
+          ? `the team policy was not replaced: the assembly's identity is neither the Lead's nor a teammate's, so the role is undecidable: "${IDENTITY}" (platform tool-agent-team ${version})`
+          : `the team policy was not replaced: the anchor is not the section's last sentence: "${ANCHOR}" (platform tool-agent-team ${version})`)
       }
       return patched.assembly
     } catch (error) {

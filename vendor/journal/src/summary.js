@@ -33,6 +33,20 @@ export function selectRecords(records, filter = {}) {
 }
 
 /**
+ * The last `limit` records of a selection, with the limit held at one.
+ *
+ * A zero or negative limit from a hand-edited row would otherwise read as "no limit" — `slice(-0)` is
+ * `slice(0)`, which is the whole journal — so the journal's own bound is applied here as well as at the mount.
+ * @param {object[]} records the records, in ascending time
+ * @param {number} limit how many to keep
+ * @returns {object[]} the last records, never the whole selection for a non-positive limit
+ */
+export function takeLast(records, limit) {
+  const size = Number.isFinite(limit) ? Math.max(1, Math.floor(limit)) : 1
+  return records.slice(-size)
+}
+
+/**
  * The short line of one record: what it is remembered by.
  * @param {object} record a record
  * @returns {string} the line
@@ -76,7 +90,7 @@ export function buildSummary(records, options = {}) {
   const window = { since: options.since ?? null, until: options.until ?? null }
   const inside = selectRecords(records, { since: options.since, until: options.until })
   const byKind = kindsOf(inside)
-  const last = inside.slice(-limit).reverse().map(record => ({
+  const last = takeLast(inside, limit).reverse().map(record => ({
     time: record.time,
     kind: record.kind,
     area: record.area,

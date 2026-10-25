@@ -122,9 +122,9 @@ window.__ModuleLoader__.load({
       }
 
       /**
-       * The rewards block of the popover: its title, the hidden list's own sentence, the empty one and the
-       * offers themselves. It stood inside the popover's own `draw` in the donor; it is the panel this file
-       * is, and the rows it returns are appended where they stood.
+       * The rewards block of the popover: its title, the hidden list's own sentence, the empty one and the offers
+       * themselves. It is the panel this file is, and the rows it returns are appended where it stands in the
+       * popover.
        */
       function rewardRows(picture) {
         /* An open campaign is offered and a taken one is marked, never hidden: the list shows what the

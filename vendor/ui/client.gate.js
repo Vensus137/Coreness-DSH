@@ -43,15 +43,6 @@ window.__ModuleLoader__.load({
     const STYLE_TAG = '@coreness/ui/client.gate.js';
     const PACKAGE = '@coreness/ui';
 
-    /**
-     * How often the picture is read again while the section stands.
-     *
-     * The window moves while no session event is written, so the gate's own line about a reading being
-     * true only when it is read applies to this section too. The beat is skipped while the document is
-     * hidden: a glance at another tab is not a reason to ask the host for a picture nobody sees.
-     */
-    const BEAT_MS = 2000;
-
     /** The live fields of the row that stand as one number each, in the order the card shows them. */
     const SCALARS = ['windowMs', 'maxWaitMs', 'thresholdRatio', 'dryRun'];
 
@@ -59,25 +50,21 @@ window.__ModuleLoader__.load({
        follows the language without a re-registration, and every failure the two doors can answer with
        has words here rather than a bare code. */
     const EN = {
-      /* One word for the rail's row and for the page's own heading, by the user's own reading: "вкладка и
-         заголовок — Rate limiter". The rail's label and the heading were two keys, and the picture of the
-         section showed them reading differently ("Rate" against "Rate limiter") while every check stayed green:
-         a word drawn from two places drifts, and only a look at the picture finds it. */
+      /* One word for the rail's row and for the page's heading: the label and the heading are one key, because a
+         word drawn from two places drifts and no check reads the picture. */
       section: 'Rate limiter',
       title: 'Rate limiter',
       caption: 'A ceiling in tokens per minute, attached to a model: the gate holds a request the window cannot take and lets it go marked forced when the wait bound is spent.',
-      /* The whole sentence, in the user's own choice: the two facts that cost money and the one that saves a surprise,
-         and no mechanics. "Of this run alone" says whose count it is without the word "process", which read as the
-          page's. The window's being per provider and model, and its living in memory, are mechanics: they stand outside this room. */
+      /* The whole sentence: the two facts that cost money and the one that saves a surprise, and no mechanics.
+         "Of this run alone" says whose count it is without the word "process"; the window's being per provider and
+         model, and its living in memory, are mechanics and stand outside this room. */
       'state.standing': 'Of this run alone: a reload keeps it, a restart wipes it, spend elsewhere is not counted.',
       'state.error': 'The gate could not be read',
       'state.unwritable': 'The row is not configurable from here: {fault}',
       /* The answer to a press is one of three words, the same on every page of this product: `Saved` for a change
-         that landed, `Nothing changed` for a press that changed nothing, and the refusal in the error tone. The
-         sentence that used to stand here said the same thing at length ("Written: the values below…"), and the
-         user's own rule took it off the page: "не писать подробное описание… краткое и универсальное, а не вот
-         это всё подряд: каждый раз уникальный случай". What the long sentence carried is not lost — it is the
-         reason a reader meets in the console (the `statusDetail` door), and not as a second sentence on the face. */
+         that landed, `Nothing changed` for a press that changed nothing, and the refusal in the error tone. What a
+         longer sentence would carry stands in the console (the `statusDetail` door), never as a second sentence on
+         the face. */
       'state.written': 'Saved',
       'state.refused': 'Not saved',
       'state.nothing': 'Nothing changed',
@@ -115,19 +102,20 @@ window.__ModuleLoader__.load({
       'control.add': 'Add a model',
       'control.remove': 'Remove',
       'add.reading': 'Reading the catalogue…',
+      'add.unread': 'Catalogue not read',
+      'catalog.failed': 'The model catalogue could not be read',
       'add.none': 'This profile’s catalogue carries no model to name.',
     };
 
     /* The host's own sheets, copied rule for rule and renamed, carried by its tokens alone: the settings
        card, its head, the tag, the field and its input, the buttons and the foot are the host's own rules,
-       taken by way of the two sections beside this one.
-       Nothing in this room reserves a height: the user's own rule — nothing is reserved anywhere on this
-       page — took the reservation off both lines of this head, and what the other way costs is measured:
-       the section's room went from two lines to one and the cards under it moved eighteen pixels. A line
-       here takes the height of what it says. */
+       and the sections beside this one draw them the same way.
+       Nothing in this room reserves a height: a line here takes the height of what it says, and a reservation
+       would move the cards under it. */
     const CSS = `
-.coreness-gate-head{flex-direction:column;gap:6px;min-width:0;display:flex}
-.coreness-gate-title{margin:0;font-size:16px;font-weight:500;line-height:24px;color:var(--dsw-alias-label-primary)}
+/* The set's head, and the section's own room under it; the head's flex direction is irrelevant with one child
+   and stays for the live walk's marker. */
+.coreness-gate-head{gap:6px;min-width:0}
 .coreness-gate-caption{margin:0;font-size:14px;line-height:22px;color:var(--dsw-alias-label-tertiary)}
 .coreness-gate-state{margin:0;font-size:12px;line-height:18px;overflow-wrap:anywhere;color:var(--dsw-alias-label-tertiary)}
 /* The two tones this section shares with the page stand once in the entry's sheet — coreness-tone-done and
@@ -156,12 +144,10 @@ window.__ModuleLoader__.load({
 .coreness-gate-fields{flex-direction:column;gap:8px;display:flex}
 .coreness-gate-pair{flex-direction:column;gap:6px;display:flex}
 /* The **row cards** — and only they — stand their three fields on one line; the section's own card (The limit) keeps
-   its fields one to a line and is untouched. Both kinds carry coreness-gate-row, which is how the drawing names a card
-   of this section's list, so the row cards carry a second class of their own and this rule names that one: a selector on
-   the shared class alone reached the section's card as well and narrowed its fields from 627 px to 560 — measured by the
-   driver's roundtrip step, which prints each field's width.
-   By the user's own reading of how it stood before ("раньше выбор провайдера, модели и окна стоял в одной строке"): the
-   line takes the card's whole inner width and the fields share it equally, so there is no empty space at either edge.
+   its fields one to a line and is untouched. Both kinds carry coreness-gate-row, so the row cards carry a second class
+   of their own and this rule names that one: a selector on the shared class alone would reach the section's card and
+   narrow its fields.
+   The line takes the card's whole inner width and the fields share it equally, so there is no empty space at either edge.
    The pairs dissolve with display:contents and their fields become the line's own items; the equal share is written as
    flex:1 1 0 on the field itself, which is what makes the three of them equal rather than sized by their content.
    A backtick must not stand in these comments: this stylesheet is a template literal and one closes it. */
@@ -182,23 +168,17 @@ window.__ModuleLoader__.load({
 .coreness-gate-unitBox:focus-within{border-color:var(--dsw-alias-state-business-primary)}
 .coreness-gate-unitBox>.coreness-gate-input:focus{outline:none}
 .coreness-gate-unit{flex:none;padding-right:10px;color:var(--dsw-alias-label-tertiary);font-size:14px;line-height:22px}
-/* A hint line: the host's own rule for one is label-tertiary at 12px/18px, its advanced hint rule and the
-   plugin manager's guide, registry and template hints. This one carried
-   --dsw-alias-label-dimmed, which is the host's own *placeholder* token and no hint's colour:
-   measured in one walk, the unit ms stood at rgb(225, 229, 238)
-   where the same kind of line in the sections beside it stood at rgb(129, 133, 140) — the reader's own
-   complaint, read off the DOM. */
+/* A hint line: the host's own rule for one is label-tertiary at 12px/18px, as its advanced hint rule and the
+   plugin manager's guides are. This one carried --dsw-alias-label-dimmed, the host's own *placeholder* token and no
+   hint's colour, so it read dimmer than the same kind of line in the sections beside it. */
 .coreness-gate-hint{margin:0;font-size:12px;line-height:18px;color:var(--dsw-alias-label-tertiary)}
-/* The row's actions: a line of their own under the four fields, hard against the right edge — the place the
-   user named for them ("справа внизу… в отдельной строке"). flex-basis:100% is what makes the line its own:
-   the body is a wrapping row of fields, and this child asks for the whole width and wraps onto the next line. */
+/* The row's actions: a line of their own under the four fields, hard against the right edge. flex-basis:100% is what
+   makes the line its own: the body is a wrapping row of fields, and this child asks for the whole width and wraps onto
+   the next line. */
 .coreness-gate-rowFoot{flex-basis:100%;justify-content:flex-end;gap:8px;display:flex}
-/* An experiment of the user's, and one line to revert: the three buttons of a row stand as tall as the boxes a
-   value is typed into (the box of a field is 32), where a button of this page is otherwise 36 — the number
-   the page chose for the part it stands for. His own words: "можем ли мы сделать высоту кнопок… такой же, как у
-   полей, в которых вводятся значения… почему экспериментально? потому что непонятно, как будет это выглядеть".
-   Scoped to the row's own line so that nothing else on the page moves with it; the platform's own button is 36 and
-   is not touched, which is why this is an experiment rather than a uniform rule. */
+/* The three buttons of a row stand as tall as the boxes a value is typed into (a field's box is 32), where a button
+   of this page is otherwise 36. Scoped to the row's own line so nothing else on the page moves with it; the
+   platform's own button is 36 and is not touched. */
 .coreness-gate-foot{justify-content:flex-end;align-items:center;flex-wrap:wrap;display:flex}
 /* The rate limiter's own tone, and the one button rule this sheet keeps: the base, the hover, the two primary
    rules, the disabled look and the ring stand once in the page's own sheet, in the shared
@@ -227,8 +207,8 @@ window.__ModuleLoader__.load({
      * the module cache, so a factory does not run twice — and
      * it takes the package's own style tags away in the same act (`removeOwnedStyles`). The one thing
      * it re-runs is the mount, which covers a section that is left and entered again; it does not cover a
-     * component that stays mounted while the tags go, and that is the case the user read as a broken page —
-     * the frame's rules gone with the markup still drawn. So the head is watched while this component stands.
+     * component that stays mounted while the tags go, so the frame's rules can vanish while the markup stays
+     * drawn. The head is watched while this component stands.
      *
      * The hold ends with the effect: when the component goes, nothing puts the sheet back, and the platform's
      * own removal of a package that goes — a deliberate act — is left as it is. A sheet that outlived its
@@ -316,7 +296,7 @@ window.__ModuleLoader__.load({
 
     /** The one object the parts reach this half through; the entry fills it before any part is made. */
     const shared = {
-      SEAT, ID, NS, LEDGER_ROUTE, BEAT_MS, SCALARS,
+      SEAT, ID, NS, LEDGER_ROUTE, SCALARS,
       useStyles, readPicture, readSettings, writeSettings,
     };
 
@@ -335,6 +315,8 @@ window.__ModuleLoader__.load({
           Promise.all([KIT, PICKER, HOLD, LIMITS, WINDOWS, SECTION]).then(
             ([kitModule, pickerModule, holdModule, limitsModule, windowsModule, sectionModule]) => {
               if (!live) return;
+              /* The page has one beat, in the hold: the picture is read again on it while the section stands. */
+              shared.BEAT_MS = holdModule.BEAT_MS;
               const parts = { t, kit: kitModule, picker: pickerModule, hold: holdModule, ctx: pluginCtx, shared };
               Object.assign(shared, limitsModule.create(parts));
               Object.assign(shared, windowsModule.create(parts));

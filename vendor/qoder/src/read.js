@@ -25,7 +25,6 @@ import { CEILING_SETTINGS, DEFAULT_CONTROL_CEILING_MS, DEFAULT_FIRST_BYTE_CEILIN
  * @param {number} [options.firstByteCeilingMs] how long the answer may take to start speaking
  * @param {number} [options.idleCeilingMs] how long it may stay silent once it has
  * @param {AbortSignal} [options.signal] the caller's cancellation
- * @param {object} [options.watch] the request's own watch, when `chat` opened it
  * @param {string} [options.what] the reader's name for its own messages
  * @param {(strike: object) => void} [options.strike] where a firing is counted
  * @yields {string} one line of the stream-encoded answer
@@ -48,9 +47,9 @@ export async function* readFrames(response, options = {}) {
   let buffer = ''
   let spoke = false
   const startedAt = Date.now()
-  // The ceiling on the first byte was armed when the request went out if `chat` opened this read;
-  // a reader over a bare response arms its own, so the ceiling holds on both doors.
-  const firstByte = options.watch?.firstByte ?? deadline(caller, firstByteCeilingMs, FIRST_BYTE_CODE)
+  // The ceiling on the first byte is armed when the read starts: one ceiling, and no caller hands in a
+  // watch that would arm a second one after the first chunk is already buffered.
+  const firstByte = deadline(caller, firstByteCeilingMs, FIRST_BYTE_CODE)
   // One promise per phase, not one per read: a signal is stable for the whole call, and a listener
   // per chunk would grow with the length of the answer.
   const firstByteEnded = abortOf(firstByte.signal)
@@ -62,7 +61,7 @@ export async function* readFrames(response, options = {}) {
       try {
         // Both phases are a race against the signal that names the ceiling: the harness's watchdog
         // only *notifies*, and a stream reader does not watch a signal the way its own iterator
-        // does, so the read has to be cancelled by us when the reason arrives.
+        // does, so the read has to be cancelled here when the reason arrives.
         read = spoke
           ? await Promise.race([watchdog.next(source), idleEnded])
           : await Promise.race([reader.read(), firstByteEnded])
@@ -111,7 +110,6 @@ export async function* readFrames(response, options = {}) {
       }
     }
   } finally {
-    options.watch?.consumer.abort()
     watchdog?.[Symbol.dispose]()
     if (!spoke) firstByte[Symbol.dispose]()
     await reader.cancel().catch(() => {})
@@ -215,6 +213,9 @@ export function normalizeNode(value, what) {
   const raw = value.trim()
   const withScheme = /^https?:\/\//iu.test(raw) ? raw : `https://${raw}`
   const parsed = new URL(withScheme)
+  if (parsed.protocol !== 'https:') {
+    throw new QoderError(`${what}: a node address must use https, not ${parsed.protocol.replace(/:$/u, '')}`, 'NO_NODE')
+  }
   if (parsed.search !== '' || parsed.hash !== '') {
     throw new QoderError(`${what}: a node address carries no query and no fragment`, 'NO_NODE')
   }

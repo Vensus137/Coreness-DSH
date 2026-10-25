@@ -1,7 +1,7 @@
 /**
  * The COSY signature of a Qoder contour.
  *
- * The ten steps of the signature, in our own code. The gateway
+ * The ten steps of the signature, in this package's code. The gateway
  * checks the constants against its own client, so they are wire facts and not settings:
  * the RSA key, the client type, the versions, the machine strings.
  *
@@ -26,8 +26,6 @@ XcW+ML9FoCI6AOvOzwIDAQAB
 
 /** Client type the contour is used to; sent as `Cosy-Clienttype` and in the token calls. */
 export const CLIENT_TYPE = '5'
-/** IDE version inside the signed payload and in `Cosy-Version` on the signed calls. */
-export const IDE_VERSION = '1.0.0'
 /** Schema version of the payload envelope. */
 export const COSY_VERSION = '1.0.0'
 /**

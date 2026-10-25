@@ -61,7 +61,7 @@ export async function answerOf(account, request, warn) {
   })
   try {
     if (request.method === 'GET') return json({ ok: true, value: account.picture() })
-    const body = await bodyOf(request)
+    const body = await bodyOf(request, 'credits')
     if (body.action === 'read') {
       await account.sweep('a press')
       return json({ ok: true, value: account.picture() })
@@ -116,8 +116,8 @@ export async function answerOfRoute(transport, request, warn, credential) {
     headers: { 'content-type': 'application/json; charset=utf-8' },
   })
   try {
-    const body = await bodyOf(request)
-    if (body.action === PROBE_ACTION) return json({ ok: true, value: await sweepNodes(transport) })
+    const body = await bodyOf(request, 'page')
+    if (body.action === PROBE_ACTION) return json({ ok: true, value: await sweepNodes(transport, { signal: request.signal }) })
     if (body.action === CATALOGUE_ACTION) return json({ ok: true, value: { models: await transport.catalogue({ signal: request.signal }) } })
     if (body.action === VERIFY_ACTION) return json({ ok: true, value: await verifyToken(transport, credential, request.signal) })
     if (body.action === WEB_SEARCH_ACTION) {
@@ -187,7 +187,7 @@ function vendorDetailOf(error) {
  * has no reader of its own, and a second live job token of one personal token harms nobody.
  *
  * The answer is three-valued and closed, and the line between `refused` and `unsettled` is a **code the
- * vendor itself sent**, never a status of the envelope and never our own reading of it. The contour answers
+ * vendor itself sent**, never a status of the envelope and never this package's reading of it. The contour answers
  * `403` both for a value that is not active and for an account whose counted allowance is spent, and a status
  * cannot tell those apart: a reader told "the vendor refused this token" for the second would go and replace
  * a token that was never at fault — the very defect this action exists to prevent, read from the other side.
@@ -219,16 +219,17 @@ export async function verifyToken(transport, credential, signal) {
 /**
  * The body of a request. A body that is not a JSON object is a refusal in words, not a crash.
  * @param {Request} request the request
+ * @param {string} route the door's own name, so the refusal does not name the other route
  * @returns {Promise<object>} the body
  * @throws {QoderError} `BAD_REQUEST` when the body is not a JSON object
  */
-async function bodyOf(request) {
+async function bodyOf(request, route) {
   const text = await request.text().catch(() => '')
   try {
     const parsed = JSON.parse(text)
     if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('the body is not an object')
     return parsed
   } catch (error) {
-    throw new QoderError(`the credits route's body is not a JSON object: ${messageOf(error)}`, 'BAD_REQUEST')
+    throw new QoderError(`the ${route} route's body is not a JSON object: ${messageOf(error)}`, 'BAD_REQUEST')
   }
 }

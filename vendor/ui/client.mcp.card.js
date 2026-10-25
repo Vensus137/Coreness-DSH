@@ -17,15 +17,13 @@ window.__ModuleLoader__.load({
 
     function create({ t, kit, picker, hold, ctx, shared }) {
       /**
-       * A row's actions in a menu, the donor's own place for them.
+       * A row's actions in a menu.
        *
-       * The donor's control is a portal into `document.body`,
-       * and a page here writes inside its own component and appends nothing to the document
-       * — so the list stands beside its trigger, under the row's own root. Which menu
-       * is open is the section's own state, and so is which row is open, because this half draws its rows
-       * with one set of hooks: a row is a function here, not a component. The behaviour is the picker's:
-       * a press outside closes the list, Escape closes it and puts the focus back on the trigger, and the
-       * arrows walk the items by moving the focus itself.
+       * A page writes inside its own component and appends nothing to the document, so the list stands beside
+       * its trigger, under the row's own root. Which menu is open is the section's own state, and so is which row
+       * is open, because this half draws its rows with one set of hooks: a row is a function here, not a component.
+       * The behaviour is the picker's: a press outside closes the list, Escape closes it and puts the focus back on
+       * the trigger, and the arrows walk the items by moving the focus itself.
        */
       function rowMenu(items, open, act, entryId) {
         const walk = (event, step) => {
@@ -40,6 +38,7 @@ window.__ModuleLoader__.load({
             key: 'trigger',
             type: 'button',
             className: 'coreness-mcp-button coreness-mcp-menuTrigger coreness-button',
+            'data-entry': entryId,
             'aria-haspopup': 'menu',
             'aria-expanded': open,
             'aria-label': t('actions'),
@@ -50,8 +49,14 @@ window.__ModuleLoader__.load({
                 back(event);
               }
               if (event.key === 'ArrowDown') {
+                /* The list is drawn after this press: the first item takes the focus once it stands, so the
+                   key the trigger advertises enters the list instead of opening it only. */
                 event.preventDefault();
+                const menu = event.currentTarget.closest(shared.MENU);
                 act.menu(entryId);
+                setTimeout(() => {
+                  menu?.querySelector('[role="menuitem"]:not([disabled])')?.focus();
+                }, 0);
               }
             },
           }, '…'),
@@ -85,13 +90,13 @@ window.__ModuleLoader__.load({
       }
 
       /**
-       * One card of the roster: the donor's own card.
+       * One card of the roster.
        *
-       * Its head is the disclosure — the name and a subtitle in a button, the actions and the toggle
-       * beside it, the marker at the side — and the body stands only while it is open, so a server with
-       * twenty-three tools costs one line until the user asks for them. The subtitle carries the row's
-       * target and its state, which is the room the header reserves; everything else waits in the body,
-       * including the reasons that used to live in a `title=` nobody could see without hovering.
+       * Its head is the disclosure — the name and a subtitle in a button, the actions and the toggle beside it,
+       * the marker at the side — and the body stands only while it is open, so a server with many tools
+       * costs one line until the user asks for them. The subtitle carries the row's target and its state, which is
+       * the room the header reserves; everything else waits in the body, reasons included rather than behind a
+       * `title=` nobody can see without hovering.
        */
       function cardOf({ row, view, act, open, menu }) {
         const busy = view.busy === row.entryId;
@@ -105,12 +110,11 @@ window.__ModuleLoader__.load({
            parts and not as a joined string: `targetOf` answers a node (a command in its own `code`), and a join
            would draw `[object Object]` where the address belongs.
 
-           The state is said here and nowhere else: it used to stand a second time as a chip beside the protocol,
-           and a chip that comes and goes takes the protocol with it when a row is switched. The authorization is
-           **not** a word here any more: the header stands in the card's own list with its name and its value, and
-           a word in this line said the same thing twice. The platform's fiber phase is not drawn: `active` was
-           withdrawn as a word the reader cannot act on, and `unloading` is withdrawn for the same reason — the row
-           itself shows what it is doing, and a phase that flickers in a line of text is noise, not news. */
+           The state is said here and nowhere else: a chip beside the protocol would come and go with it when a row
+           is switched. The authorization is **not** a word here: the header stands in the card's own list with its
+           name and its value, and a word in this line would say the same thing twice. The platform's fiber phase is
+           not drawn: `active` and `unloading` are words the reader cannot act on, and the row itself shows what it
+           is doing — a phase that flickers in a line of text is noise, not news. */
         /* The protocol first: it is the one stable part of the line — a fixed word where the address and the
            command change with every row — so a reader learns what a row is before the parameters it is opened
            with. The target follows, cut at a limit: a roster line is not the place for a URL with a query of
@@ -137,30 +141,26 @@ window.__ModuleLoader__.load({
             ? t('tools.none')
             : [
               /* The label is bold and the names beside it keep the plain weight, so the eye separates what the list is
-                 from the list itself: the user's own ask ("Тулс давай хотя бы жирным выделим… чтобы отделяло хотя бы от
-                 перечисленных тулов"). */
+                 from the list itself. */
               h('span', { key: 'label', className: 'coreness-mcp-toolsLabel' }, t('row.tools', { count: String(row.tools.length) })),
               ' ',
               row.tools.map((tool) => tool.label).join(', '),
             ]),
-          /* The fields the host's own reader keeps as they stand used to be listed
-             here by their identifiers — `kept as it stands: failOnStartupError` — and the reader could do
-             nothing with the name: the field lives in his own servers file, this form does not write it, and
-             its meaning is the host's. The fact is worth one sentence where the reader is looking at the row's
-             fields, which is the editor; the roster line is gone. */
+          /* The fields the host's own reader keeps as they stand are named in the editor, not here: the field lives
+             in the reader's own servers file, this form does not write it, and its meaning is the host's — an
+             identifier on the roster line says nothing a reader can act on. */
           row.refs.length > 0 ? h('p', { key: 'refs', className: 'coreness-mcp-warn' }, t('refs', { names: row.refs.join(', ') })) : null,
         ].filter((node) => node !== null);
 
         /* The head carries two different things and says which is which by where it stands: the row's own state
-           — its target, `enabled`, its authorization — in the room under the name, where it always stood, and
-           the answer to a press in the strip on the right, which is the free place there. They used to share
-           one room: the answer took the state's place, so a reader who had just pressed something could no
-           longer see what the row was. The strip is reserved (`.coreness-answer`,
-           `flex:0 0 var(--coreness-news-strip)`, drawn empty when there is no answer) so a word that comes and
-           goes moves nothing: the title, the tags, the actions and the marker keep their places, and the answer is
-           cut with an ellipsis rather than pushing them. The reservation has to stand in the markup as well as in
-           the rule: while the span existed only with a word in it, the width the head gave away changed with the
-           answer, and a long word took a line of its own — the head 60 px → 98 px, the room 404 px → 437 px. */
+           — its target, `enabled`, its authorization — in the room under the name, and the answer to a press in the
+           strip on the right, which is the free place there. They must not share one room: an answer that took the
+           state's place would leave a reader who had just pressed something unable to see what the row was. The
+           strip is reserved (`.coreness-answer`, `flex:0 0 var(--coreness-news-strip)`, drawn empty when there is
+           no answer) so a word that comes and goes moves nothing: the title, the tags, the actions and the marker keep
+           their places, and the answer is cut with an ellipsis rather than pushing them. The reservation stands in
+           the markup as well as in the rule: a span that exists only with a word in it gives back the width with the
+           word, and a long word takes a line of its own. */
         const editing = view.editor !== null && view.editor.draft.entryId === row.entryId;
         /* The answer of a press made in this row's editor belongs to this row's head too: the editor stands
            inside the card, and the reader's eye is on the card he pressed in. */
@@ -176,14 +176,11 @@ window.__ModuleLoader__.load({
         const answerTone = mine !== null ? shared.noteToneOf(mine) : (state === null ? undefined : state.tone);
         const subtitleNode = h('span', { key: 'subtitle', className: 'coreness-mcp-subtitle' }, subtitle);
         /* The strip is drawn **always**, empty when there is no answer: the reservation the rule makes
-           (`flex:0 0 160px`) is a promise about the layout, and a span that appears and disappears keeps that
-           promise only while its box does not depend on its words. It used to be drawn only with a word in it,
-           and the head wraps (`flex-wrap:wrap`), so a word wider than the free place took a line of its own: the
-           head went 60 px → 98 px and the room under the name went 404 px → 437 px — the answer moved the card it
-           stands in. The reserved width is measured, not chosen: the answer itself read 108 px wide and the free
-           place was 167 px, so 160 reserves more than the word needed and less than the place it stood in. An
-           empty live region is also what a live region should be — it stands before the word arrives, not
-           after it. */
+           (`flex:0 0 160px`) is a promise about the layout, and a span that appears and disappears keeps that promise
+           only while its box does not depend on its words. Drawn only with a word in it, in a head that wraps
+           (`flex-wrap:wrap`), a word wider than the free place takes a line of its own and moves the card it stands
+           in; 160 reserves more than the longest word needs and less than the place the strip stands in. An empty
+           live region is also what a live region should be — it stands before the word arrives, not after it. */
         const answerNode = h('span', {
           key: 'answer',
           className: 'coreness-answer',
@@ -264,9 +261,9 @@ window.__ModuleLoader__.load({
         ]);
       }
 
-      /** One row of a pair editor: the name, the value, and what happens to each. There is no secret logic here, by
-          the user's own word — "Пускай будут видны" — the value is the text from the file, written as it is written,
-          and the page invents none: a pair the file leaves empty is drawn empty. */
+      /** One row of a pair editor: the name, the value, and what happens to each. There is no secret logic here: the
+          value is the text from the file, written as it is written, and the page invents none — a pair the file leaves
+          empty is drawn empty. */
       function pairRow(kind, pair, index, view, act) {
         const busy = view.busy !== null;
         const name = h('input', {

@@ -76,6 +76,8 @@ window.__ModuleLoader__.load({
        */
       const toldSignin = new Map();
       const toldReason = new Map();
+      /** The last sentence the wait’s failed read sent to the console: the wait stops on a failure, and a reason repeated is not news. */
+      let toldWait = null;
 
       function McpSection() {
         const [state, setState] = React.useState(lastRead === null ? { status: 'loading', picture: null, fault: null } : lastRead.state);
@@ -155,8 +157,13 @@ window.__ModuleLoader__.load({
             },
             (error) => {
               /* A read that failed names the reason and keeps the picture that stands — the one this session
-                 already read, or the one the mount painted from its memory. It never empties the section. */
-              if (live) setState((now) => ({ status: 'failed', picture: now.picture, fault: { code: error instanceof Refused ? error.code : 'unreadable', message: shared.reasonOf(error) } }));
+                 already read, or the one the mount painted from its memory. It never empties the section. The
+                 face carries the page's word for the family; a thrown transport failure's own sentence — the
+                 browser's — is nobody's news but the console's. */
+              if (!live) return;
+              const refused = error instanceof Refused;
+              if (!refused) kit.statusDetail(t('section'), `${t('fault.unreadable')}: ${shared.reasonOf(error)}`);
+              setState((now) => ({ status: 'failed', picture: now.picture, fault: { code: refused ? error.code : 'unreadable', message: refused ? (error.message ?? null) : null } }));
             },
           );
           return () => {
@@ -180,8 +187,18 @@ window.__ModuleLoader__.load({
             let next;
             try {
               next = await ask('GET');
-            } catch {
-              /* A read that failed is not a state to keep watching: the wait stops, the picture stands. */
+            } catch (error) {
+              /* A read that failed is not a state to keep watching: the wait stops, and the picture that stands
+                 is marked with the failure rather than left claiming the row is still moving. The reason is said
+                 once per new sentence — a wait reads the same picture every second, and a line repeated is not
+                 news. The face carries the page's word; the browser's sentence goes to the console. */
+              const refused = error instanceof Refused;
+              const sentence = `${t('fault.unreadable')}: ${shared.reasonOf(error)}`;
+              if (toldWait !== sentence) {
+                toldWait = sentence;
+                kit.statusDetail(t('section'), sentence);
+              }
+              setState((now) => ({ ...now, status: 'failed', fault: { code: refused ? error.code : 'unreadable', message: refused ? (error.message ?? null) : null } }));
               setSpent(null);
               return;
             }
@@ -436,12 +453,19 @@ window.__ModuleLoader__.load({
            */
           remove: async (row) => {
             const server = row.server ?? row.id;
+            /* The busy state is taken before the grant is dropped: the dialog's buttons read it, and a second
+               press in the window between the two writes would ask for the same removal twice. */
+            setBusy(row.entryId);
             try {
-              await askPage({ action: 'forget', server });
-            } catch (error) {
-              kit.statusDetail(server, `the grant was not dropped: ${shared.reasonOf(error)}`);
+              try {
+                await askPage({ action: 'forget', server });
+              } catch (error) {
+                kit.statusDetail(server, `the grant was not dropped: ${shared.reasonOf(error)}`);
+              }
+              await save({ action: 'remove', entryId: row.entryId }, server);
+            } finally {
+              setBusy(null);
             }
-            await save({ action: 'remove', entryId: row.entryId }, server);
           },
           toggle: (row, enabled) => save({ action: 'toggle', entryId: row.entryId, enabled }, row.server ?? row.id),
           /* The sign-in: the press starts the attempt through the page's own door, and the card that carries

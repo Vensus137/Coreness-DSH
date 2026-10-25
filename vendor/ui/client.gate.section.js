@@ -35,12 +35,10 @@ window.__ModuleLoader__.load({
       /**
        * The one sentence of the section's room, and its tone.
        *
-       * The empty case says **nothing**: "No model is limited: every request passes untouched" left by the user's
-       * own word ("непонятно, зачем это. То есть он там же будет видно: если установлено, если не установлено, то
-       * тоже видно. То есть как будто бы это бесполезно") — the same fact he had already removed from the card.
-       * The room is drawn in every state and reserves no height: nothing on this page is reserved, so an empty
-       * room is a quiet room of no lines, the cards under it keep the list's own line of air, and a sentence that
-       * arrives takes its line and moves them by it.
+       * The empty case says **nothing**: a sentence about there being no limit repeated what the cards already show.
+       * The room is drawn in every state and reserves no height: nothing on this page is reserved, so an empty room
+       * is a quiet room of no lines, the cards under it keep the list's own line of air, and a sentence that arrives
+       * takes its line and moves them by it.
        */
       /* The two words this section's notes use for a state's tone, and the page's own tone class each one wears:
          the word stays the section's — the walk and the batch read it in `data-tone` —
@@ -53,6 +51,9 @@ window.__ModuleLoader__.load({
         if (view.status === 'loading') return { tone: null, text: '' };
         if (view.status === 'failed') return { tone: 'error', text: `${t('state.error')} — ${view.fault}` };
         if (view.settings !== null && view.settings.ok === false) return { tone: 'warn', text: t('state.unwritable', { fault: view.settings.fault }) };
+        /* A catalogue that could not be read is a failure, not an empty list: the pickers offer nothing because
+           nothing was read, and the section says so instead of letting the profile read as empty. */
+        if (view.catalogFault !== null && view.catalogFault !== undefined) return { tone: 'error', text: `${t('catalog.failed')} — ${view.catalogFault}` };
         /* The sentence about the window is no longer this room's: it left for the caption, which is drawn in every
            state. The room keeps the read's own words — a read in flight, a failed read, a row nobody may write. */
         return { tone: null, text: '' };
@@ -94,12 +95,12 @@ window.__ModuleLoader__.load({
         };
         const refused = view.picture?.refused ?? [];
         return h('div', { className: 'coreness-still coreness-gate coreness-sectionBody' }, [
-          h('div', { key: 'head', className: 'coreness-gate-head' }, [
-            h('h1', { key: 'title', className: 'coreness-gate-title' }, t('title')),
-            /* The caption carries the surface's own sentence as well: a property of the section stands in every state, so
-           it is drawn always — and a line that is always drawn moves nothing when a press answers. */
-        h('p', { key: 'caption', className: 'coreness-gate-caption' }, [t('caption'), ' ', t('state.standing')]),
+          h('div', { key: 'head', className: 'coreness-sectionHead coreness-gate-head' }, [
+            h('h4', { key: 'title', className: 'coreness-sectionTitle' }, t('title')),
           ]),
+          /* The caption carries the surface's own sentence as well: a property of the section stands in every state, so
+             it is drawn always — and a line that is always drawn moves nothing when a press answers. */
+          h('p', { key: 'caption', className: 'coreness-gate-caption' }, [t('caption'), ' ', t('state.standing')]),
           /* The one room the section's own sentence stands in, in every state: the room keeps no height of
              its own, so the cards move by the line an arriving sentence takes. */
           h('p', { key: 'state', className: 'coreness-gate-state' + (TONE_CLASS[note.tone] ?? ''), 'data-tone': note.tone ?? 'plain' }, note.text),
@@ -114,9 +115,9 @@ window.__ModuleLoader__.load({
             })),
           ]),
           /* A row the host refused is named, not dropped: the file keeps it, the gate does not run it, and a page
-             that hid it would let the user believe a ceiling stands that does not. The host's own sentence is the
+             that hid it would let the reader believe a ceiling stands that does not. The host's own sentence is the
              line — the route already wrote it in words, with the index and the pair in it. Nothing is added to the
-             tree when the picture refuses none, so the frames without refused rows stay the donor's own. */
+             tree when the picture refuses none, so a frame without refused rows keeps the set's own frame. */
           ...(refused.length === 0 ? [] : [h('div', { key: 'refused', className: 'coreness-gate-refused' }, [
             h('p', { key: 'title', className: 'coreness-gate-refusedTitle' }, t('refused.title')),
             h('ul', { key: 'list', className: 'coreness-gate-refusedList' }, refused.map((one, index) => h('li', {
@@ -126,9 +127,7 @@ window.__ModuleLoader__.load({
           ])]),
           /* The control stands in **every** state, the loading one included: it waits for the catalogue by being
              disabled and saying so, not by being absent. The first frame therefore holds the same tile the ready frame
-             holds, which is what keeps the card and the section from moving when the read lands — measured on the
-             section: the frame without the tile read 514 tall with the first card's top at 154, the frame with it 540
-             and 136, on the first visit and on a return alike. */
+             holds, and the card and the section do not move when the read lands. */
           h('div', { key: 'add', className: 'coreness-addRow' }, [
             h('button', {
               key: 'add',
@@ -136,7 +135,7 @@ window.__ModuleLoader__.load({
               className: 'coreness-add coreness-button',
               disabled: busy || view.catalog === null,
               onClick: () => acting.addRow(),
-            }, view.catalog === null ? t('add.reading') : t('control.add')),
+            }, view.catalogFault !== null && view.catalogFault !== undefined ? t('add.unread') : view.catalog === null ? t('add.reading') : t('control.add')),
             view.catalog !== null && shared.pairsOf(view.catalog).length === 0 ? h('span', { key: 'none', className: 'coreness-gate-dim' }, t('add.none')) : null,
           ]),
         ]);
@@ -159,19 +158,19 @@ window.__ModuleLoader__.load({
             draft: null,
             note: null,
             catalog: null,
+            catalogFault: null,
             busy: false,
             fault: null,
             /* The picture and nothing else: what the file said, not what this visit did with it. It belongs **inside**
-               the view, which is the only thing the section reads — the first version of this memory spread it beside
-               `view`, on the top level of the state object, where no line ever read it: `view.read` stayed
-               `valuesOf(null)`, so a return visit painted an empty first frame exactly like a first one. One owner: what
-               the section reads lives where it reads it. */
+               the view, which is the only thing the section reads: a copy beside `view` is a second owner, and a frame
+               built from it paints an empty first frame on a return exactly like a first one. */
             ...(held === null ? {} : {
               status: held.picture.status,
               picture: held.picture.picture,
               settings: held.picture.settings,
               read: held.picture.read,
               catalog: held.picture.catalog,
+              catalogFault: held.picture.catalogFault ?? null,
               fault: held.picture.fault,
             }),
           },
@@ -186,11 +185,10 @@ window.__ModuleLoader__.load({
           if (state.view.status === 'ready') lastRead.set({ picture: state.view, at: Date.now() });
         }, [state]);
 
-        /* A note stands for its own hold and then goes, and the drawing that carried it keeps the room: one
-           number for the whole page, in hand before this section stands, armed the way the MCP
-           section and the Qoder card arm it. A press made after it drops it at once, and leaving the section
-           unmounts it — but neither of those is the page's number, and a word that waits for the next press is
-           the word the user sat and watched until he wrote that it "как будто не пропадает, я долго ждал". */
+        /* A note stands for its own hold and then goes, and the drawing that carried it keeps the room: one number
+           for the whole page, in hand before this section stands, armed the way the MCP section and the Qoder card arm
+           it. A press made after it drops it at once, and leaving the section unmounts it; a word that waits for the
+           next press would stand for as long as the page does. */
         React.useEffect(() => {
           const note = state.view.note;
           if (note === null || note === undefined) return undefined;
@@ -246,10 +244,18 @@ window.__ModuleLoader__.load({
           ctx.remote.session.modelCatalog().then(
             (answer) => {
               if (!live) return;
-              setState((now) => ({ view: { ...now.view, catalog: answer?.ok === true ? answer.value : { groups: [], failures: [] } } }));
+              /* A refusal and a rejection are the same fact here: the catalogue was not read. An empty
+                 catalogue in its place would claim the profile advertises no model. */
+              if (answer?.ok === true) {
+                setState((now) => ({ view: { ...now.view, catalog: answer.value, catalogFault: null } }));
+                return;
+              }
+              const fault = answer?.error?.message ?? t('catalog.failed');
+              setState((now) => ({ view: { ...now.view, catalog: null, catalogFault: fault } }));
             },
-            () => {
-              if (live) setState((now) => ({ view: { ...now.view, catalog: { groups: [], failures: [] } } }));
+            (error) => {
+              if (!live) return;
+              setState((now) => ({ view: { ...now.view, catalog: null, catalogFault: shared.reasonOf(error) } }));
             },
           );
           return () => {
@@ -392,6 +398,10 @@ window.__ModuleLoader__.load({
                  that draws the pair the press was about, or in the section's strip where no card draws it. */
               setState((now) => ({ view: { ...now.view, busy: false, note: { tone: 'fault', text: t('state.refused'), at: shared.cardOfPair(now.view, about) } } }));
               kit.statusDetail(about ?? t('card.limit'), written.reason ?? written.fault);
+              /* The set's rule: a failed write is said in words and followed by the live read — the word stands
+                 while the read corrects the values. */
+              await read();
+              setState((now) => ({ view: { ...now.view, note: { tone: 'fault', text: t('state.refused'), at: shared.cardOfPair(now.view, about) } } }));
               return;
             }
             await read();

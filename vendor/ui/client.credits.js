@@ -1,25 +1,21 @@
 /**
- * The account's credits in the sidebar's foot: the line the donor's widget showed, and its popover.
+ * The account's credits in the sidebar's foot: the line and its popover.
  *
  * The seat is the sidebar shell's own — `sidebar.footer.action`, declared in the foot — and the same seat the
  * platform's Cordis panel takes. The shell hands the seat's registrants one prop, `wide`, which says whether
- * the sidebar is open: the shape of the line follows it, and nothing is measured to find out.
+ * the sidebar is open: the shape of the line follows it.
  *
- * A package-local chunk beside the page's entry: this file carries the widget's words, its sheet, its line,
- * its popover, its route and its seat, while the rewards panel it draws inside the popover stands in the one
- * part beside it (`client.credits.rewards.js`), created over the same `shared` before the widget is seated.
- * The chunk pulls `react` and that one part and no library chunk: the donor had no kit here, and this keeps
- * that.
+ * The rewards panel it draws inside the popover is the one part beside it (`client.credits.rewards.js`),
+ * created over the same `shared` before the widget is seated.
  *
- * **What is not done here, and why.** The donor forced the seat's container into a column with a rule aimed
- * at the sidebar's own generated class names, so that a full-width card would not stand in a row beside the
- * Cordis badge. The platform's instruction to a plugin author forbids exactly that — do not read another
- * plugin's DOM, stylesheet or component source to estimate placement; choose a slot that already allocates
- * space — so this chunk registers into the seat as it is, draws its own element at the width the donor's own
- * sheet asked for, and lets the live run say who else stands in that row.
+ * **What is not done here, and why.** A rule aimed at the sidebar's own generated class names would keep a
+ * full-width card from standing in a row beside the Cordis badge, and the platform's instruction to a plugin author
+ * forbids exactly that — do not read another plugin's DOM, stylesheet or component source to estimate placement;
+ * choose a slot that already allocates space. This chunk registers into the seat as it is, draws its own element at
+ * the width its sheet asks for, and lets the runtime say who else stands in that row.
  *
- * The figures are the product's own route (`/api/coreness.credits`), not the row's settings section: that
- * section is the profile's Cordis patch, and the donor rewrote it on every sweep. This half asks and draws:
+ * The figures are the product's own route (`/api/coreness.credits`), not the row's settings section: that section is
+ * the profile's Cordis patch. This half asks and draws:
  * on the mount when no reading stands, on the refresh button, on the cadence the host names in its own
  * answer, and — while no balance has been read and a reading costs no vendor call — on a one-minute beat, so
  * a token written a moment ago is found without a press.
@@ -49,8 +45,8 @@ window.__ModuleLoader__.load({
     /** The module id the sheet is marked with, as the host marks its own (`data-plugin-css`). */
     const STYLE_TAG = '@coreness/ui/client.credits.js';
     const USAGE_URL = 'https://qoder.com/account/usage';
-    /** What this chunk's own elements answer to when a press lands outside them. */
-    const MINE = '.coreness-credits-seat, .coreness-credits-card';
+    /** What this chunk's own elements answer to when a press lands outside them: the trigger in both shapes stands inside its own surface. */
+    const MINE = '.coreness-credits-seat, .coreness-credits-rail, .coreness-credits-card';
     /** How often the widget asks again when the host's answer names no cadence of its own. */
     const FALLBACK_EVERY_MS = 10 * 60 * 1000;
     /** How often the widget asks while no balance has been read at all: a token written a moment ago is
@@ -61,10 +57,9 @@ window.__ModuleLoader__.load({
        that failed is named and seats nothing. */
     const REWARDS = require.async('./client.credits.rewards.js');
 
-    /* The widget's words. They are the donor's own English, kept verbatim: the user asked for that
-       surface back, and its sentences are part of it — including the one that tells a hidden campaign
-       list apart from an empty one. The one word that moved is the vendor's own name for its backend
-       ("the contour"), which this repository uses in the same sense everywhere. */
+    /* The widget's words. They are English, kept whole — including the sentence that tells a hidden campaign list
+       apart from an empty one. The vendor's backend is called "the contour", in the same sense as everywhere else
+       in this repository. */
     const EN = {
       seat: 'Qoder',
       usage: 'My usage',
@@ -88,13 +83,12 @@ window.__ModuleLoader__.load({
       nothingToTake: 'Nothing to take right now',
       claimed: 'claimed',
       notCollected: 'nothing was collected',
+      already: 'already collected',
       refused: 'refused',
     };
 
-    /* The donor's own sheet, rule for rule, under this widget's prefix — one rule is deliberately not
-       carried over: the container rule aimed at the sidebar's generated class names.
-       The class names are ours; every colour is either a `--dsw-alias-*` token or the donor's own
-       literal, kept where the host's token has no counterpart. */
+    /* The sheet, under this widget's prefix. The class names are this widget's; every colour is either a
+       `--dsw-alias-*` token or a literal kept where the host's token has no counterpart. */
     const CSS = `
 .coreness-credits-seat{box-sizing:border-box;flex:0 0 auto;width:100%;min-width:0;font:inherit;color:var(--dsw-alias-label-secondary);text-align:left;cursor:pointer;background:0 0;border:1px solid transparent;border-radius:var(--dsw-radius-md);align-items:center;gap:8px;margin:0 0 4px;padding:8px;display:flex}
 .coreness-credits-seat:hover{border-color:var(--dsw-alias-border-l2,#0000001f)}
@@ -111,7 +105,7 @@ window.__ModuleLoader__.load({
 .coreness-credits-barFill{display:block;background:var(--dsw-alias-brand-primary,#0f1115);border-radius:var(--coreness-pill-radius);height:100%}
 .coreness-credits-glyph{flex:none;justify-content:center;align-items:center;display:inline-flex;color:var(--dsw-alias-brand-primary,#0f1115)}
 .coreness-credits-rail{box-sizing:border-box;width:28px;height:28px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:1px solid transparent;border-radius:var(--dsw-radius-sm);flex:none;justify-content:center;align-items:center;margin:0 0 4px;padding:0;display:inline-flex}
-.coreness-credits-card{background:var(--dsw-alias-bg-layer-3,#fff);border:.5px solid var(--dsw-alias-border-l2,#0000001f);border-radius:var(--dsw-radius-md);box-shadow:var(--coreness-elevation);color:var(--dsw-alias-label-primary);display:flex;flex-direction:column;font-size:12px;gap:10px;line-height:1.5;max-width:320px;min-width:260px;padding:12px;position:fixed;z-index:1000}
+.coreness-credits-card{background:var(--dsw-alias-bg-layer-3,#fff);border:.5px solid var(--dsw-alias-border-l2,#0000001f);border-radius:var(--dsw-radius-md);box-shadow:var(--coreness-elevation);color:var(--dsw-alias-label-primary);display:flex;flex-direction:column;font-size:12px;gap:10px;line-height:18px;max-width:320px;min-width:260px;padding:12px;position:fixed;z-index:1000}
 .coreness-credits-card .coreness-credits-bar{height:8px}
 .coreness-credits-cardHead{align-items:center;gap:8px;display:flex}
 .coreness-credits-cardTitle{flex:1;font-size:14px;font-weight:600;line-height:22px}
@@ -147,8 +141,8 @@ window.__ModuleLoader__.load({
      * the module cache, so a factory does not run twice — and
      * it takes the package's own style tags away in the same act (`removeOwnedStyles`). The one thing
      * it re-runs is the mount, which covers a section that is left and entered again; it does not cover a
-     * component that stays mounted while the tags go, and that is the case the user read as a broken page —
-     * the frame's rules gone with the markup still drawn. So the head is watched while this component stands.
+     * component that stays mounted while the tags go, so the frame's rules can vanish while the markup stays
+     * drawn. The head is watched while this component stands.
      *
      * The hold ends with the effect: when the component goes, nothing puts the sheet back, and the platform's
      * own removal of a package that goes — a deliberate act — is left as it is. A sheet that outlived its
@@ -220,10 +214,9 @@ window.__ModuleLoader__.load({
     /**
      * The picture the widget draws, built from the host's answer alone.
      *
-     * The remainders and the share are sums over the accounts that answered, in the donor's own
-     * arithmetic: the line shows what is left of everything, and how much of everything was spent.
-     * A picture is built only from a finished reading — a failure carries no numbers, and drawing the
-     * previous ones beside a fresh failure would read as a figure.
+     * The remainders and the share are sums over the accounts that answered: the line shows what is left of
+     * everything, and how much of everything was spent. A picture is built only from a finished reading — a
+     * failure carries no numbers, and drawing the previous ones beside a fresh failure would read as a figure.
      */
     function pictureOf(answer) {
       const last = answer?.last;
@@ -284,10 +277,8 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * The widget as it draws, from a view and the acts it may take.
-     *
-     * Kept apart from the component so a check can read every state without a browser — the line in its
-     * three forms, the narrow cell, and the popover with its parts.
+     * The widget as it draws, from a view and the acts it may take: the line in its three forms, the narrow
+     * cell, and the popover with its parts.
      */
     function draw(view, act) {
       const wide = view.wide === true;
@@ -348,10 +339,9 @@ window.__ModuleLoader__.load({
         rows.push(...shared.rewardRows(picture));
       }
 
-      /* The automatic collection says nothing when it went through: the marks above already carry which
-         rewards were taken, and the user's own reading of this popover is that announcing it is one line
-         too many. A failure and a replay keep their lines — silence about a reward that was not taken
-         reads as a reward that did not exist. */
+      /* The automatic collection says nothing when it went through: the marks above already carry which rewards
+         were taken, and announcing it is one line too many. A failure and a replay keep their lines — silence about
+         a reward that was not taken reads as a reward that did not exist. */
       const collection = picture?.collection;
       if (collection !== undefined) {
         if (typeof collection.failure === 'string' && collection.failure !== '') {
@@ -365,7 +355,7 @@ window.__ModuleLoader__.load({
         className: 'coreness-credits-card',
         role: 'dialog',
         'aria-label': t('usage'),
-        // Until the cell has been measured the card is not shown: otherwise it would flash in the
+        // Until the cell's own rectangle is known the card is not shown: otherwise it would flash in the
         // window's corner for a frame.
         style: view.anchor === undefined
           ? { left: 0, bottom: 0, visibility: 'hidden' }
@@ -505,15 +495,17 @@ window.__ModuleLoader__.load({
         try {
           take(await ask('POST', { action: 'read' }));
         } catch (error) {
+          /* A failed reading replaces the standing picture the way `listen` does: a figure beside a fresh
+             failure reads as a figure, and the reason is one press away in the popover. */
+          setHeld({ kind: 'waiting' });
           setFault(`${error?.code ?? 'unreadable'}: ${reasonOf(error)}`);
         } finally {
           setBusy(false);
         }
       };
 
-      /* The popover closes on a press outside it and on Escape. The cell's own rectangle comes from
-         the press itself, so nothing has to be measured after the fact — and until it is known the
-         card stays hidden. */
+      /* The popover closes on a press outside it and on Escape. The cell's own rectangle comes from the press
+         itself — nothing is measured after the fact — and until it is known the card stays hidden. */
       React.useEffect(() => {
         if (!open) return () => {};
         const onPress = (event) => {

@@ -9,7 +9,7 @@
  * sharing — a `200` to the PUT changes nothing there, which is why the press reads the policy again
  * instead of trusting the status.
  *
- * The write carries the client version the route emulates (`0.4.9`, the version the live probe used) and
+ * The write carries the client version the vendor's client sends and
  * the app's own headers: the job token, `Cosy-ClientType: 5`, `User-Agent: Qoder`. The per-request
  * `Cosy-Data-Policy` header the chat route sends is a different thing and is not this setting.
  *

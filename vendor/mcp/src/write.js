@@ -1,18 +1,22 @@
 /**
- * The write path of the servers file: the four saves the form asks for, each one confirmed by
- * reading the tree back.
+ * The write path of the servers file: the saves the form asks for, each one confirmed by reading the
+ * tree back.
  *
  * The file has one writer — the Loader's `cordis:include` — so a save is a call to the Loader and
  * never a YAML edit: `create` for a new row, `update` for a change or a switch, and a removal asked
  * of the row's own parent group by the id that group knows.
  *
- * The confirmation is the point of this module. `EntryTree.remove` resolves a root-qualified id and
- * then hands that same qualified id to the group that holds the row, whose lookup is keyed by the
- * row's short id: the lookup misses, the group returns in silence, the file is written with the row
- * still in it, and the caller is told nothing. A save that trusted that silence would answer
- * "removed" and the row would be back at the next read. So every write here ends by reading the tree
- * and comparing it with what was written, and a disagreement is a refusal in words — never a
- * success.
+ * The confirmation is the point of this module, and it is the tree's answer. `EntryTree.remove` resolves
+ * a root-qualified id and then hands that same qualified id to the group that holds the row, whose lookup
+ * is keyed by the row's short id: the lookup misses, the group returns in silence, the file is written
+ * with the row still in it, and the caller is told nothing. A save that trusted that silence would answer
+ * "removed" and the row would be back at the next read. So every write here ends by reading the tree back
+ * and comparing it with what was written, and a disagreement is a refusal in words — never a success.
+ *
+ * The file's own write is the include's, debounced on a timer of its own, and a write that fails reaches
+ * only the log: a save on a read-only file therefore answers through the tree and says so beside the
+ * result. That is the seam the platform offers; the door does not pretend to a file it cannot read
+ * back.
  *
  * @module @coreness/mcp/src/write
  */
@@ -22,10 +26,10 @@ import { createRow, entryOf, removeRow, rowsOf, updateRow } from './tree.js'
 
 /**
  * The words a refusal answers with. The page carries its own dictionary by code — the same
- * vocabulary, held together by a check — and this one is the host's account of the same code: a
- * client that does not know a code still reads something true.
+ * vocabulary, held together by a check in `check-codes` — and this one is the host's account of the
+ * same code: a client that does not know a code still reads something true.
  */
-const WORDS = {
+export const WORDS = {
   'bad-action': 'the page asked for a save this route does not take',
   'bad-name': 'a server name is 1 to 32 characters of letters, digits, underscore or hyphen',
   'name-taken': 'another row of this file already takes that name',
@@ -73,6 +77,24 @@ export class Refusal extends Error {
 function rowsWithEntry(include) {
   return rowsOf(include).map((row) => ({ ...row, live: entryOf(include, row.id) }))
 }
+
+/**
+ * The OAuth flow this composition carries, when it carries one.
+ *
+ * The flow is the owner of a row's reference — the credential key and the expression that reads it — and
+ * it is optional: a composition without it keeps the file's own freedom over literal values, and offers no
+ * sign-in. The service is resolved per call and never held, for the same reason the door resolves the
+ * others: a reload of the tree may replace it underneath this plugin.
+ * @param {object} ctx the plugin's context
+ * @returns {object | null} the flow, or null when none stands
+ */
+function flowFor(ctx) {
+  const flow = typeof ctx?.get === 'function' ? ctx.get('oauthFlow') : undefined
+  return flow !== null && flow !== undefined && typeof flow.reference === 'function' ? flow : null
+}
+
+/** The reason of a thrown value, in words. */
+const reasonOf = (error) => (error instanceof Error ? error.message : String(error))
 
 /**
  * The names the rows of this file already take.
@@ -130,6 +152,11 @@ function shapeable(row) {
  *
  * A row that cannot be resolved is not a row with an empty config — it is a row whose state is
  * unknown, and the Loader's own words travel instead of a substituted empty object.
+ *
+ * What this reads is the tree the Loader holds, not the servers file: the include writes that file on a
+ * timer of its own and reports a failed write only to the log, so a file that is read-only or busy still
+ * answers through the tree. The door's answer is therefore the tree's answer, and it says so; a save that
+ * claims the file is a save this door cannot stand behind.
  * @param {object} ctx the plugin's context
  * @param {string} entryId the address
  * @returns {object} the row's config and enablement as the tree now holds them
@@ -147,6 +174,7 @@ function readAgain(ctx, entryId) {
     disabled: entry.disabled === true,
     disabledRef: isRef(entry.options?.disabled),
     inject: Array.isArray(entry.options?.inject) ? entry.options.inject : [],
+    injectRef: isRef(entry.options?.inject),
   }
 }
 
@@ -170,7 +198,7 @@ function disagreement(what, written, found) {
  * @throws {Refusal} a refusal of the form, or of the confirmation
  */
 async function addServer(ctx, include, form) {
-  const built = buildConfig(form, {})
+  const built = buildConfig(form, {}, { offerSignIn: flowFor(ctx) !== null })
   if (built.error !== undefined) throw new Refusal(built.error, built.detail)
   const server = built.config.serverName
   if (namesIn(include).has(server)) throw new Refusal('name-taken', `the file already declares a server named "${server}"`)
@@ -179,7 +207,7 @@ async function addServer(ctx, include, form) {
   const address = String(await createRow(ctx, String(include.id), { id, config: built.config }))
   const back = readAgain(ctx, address)
   if (!sameConfig(back.config, built.config)) throw new Refusal('not-saved', disagreement(`the server "${server}"`, built.config, back.config))
-  return { result: 'created', entryId: address, server }
+  return { result: 'created', entryId: address, server, confirmed: 'tree' }
 }
 
 /**
@@ -196,7 +224,7 @@ async function addServer(ctx, include, form) {
  */
 async function editServer(ctx, include, row, form) {
   shapeable(row)
-  const built = buildConfig(form, row.config)
+  const built = buildConfig(form, row.config, { offerSignIn: flowFor(ctx) !== null })
   if (built.error !== undefined) throw new Refusal(built.error, built.detail)
 
   const server = built.config.serverName
@@ -207,12 +235,12 @@ async function editServer(ctx, include, row, form) {
     throw new Refusal('bad-name', `the row "${row.id}" carries the name "${current}" and a save cannot rename it: a rename is a new row plus a removal`)
   }
 
-  if (sameConfig(built.config, row.config)) return { result: 'nothing', entryId: row.entryId, server }
+  if (sameConfig(built.config, row.config)) return { result: 'nothing', entryId: row.entryId, server, confirmed: 'tree' }
 
   await updateRow(ctx, row.entryId, { config: built.config })
   const back = readAgain(ctx, row.entryId)
   if (!sameConfig(back.config, built.config)) throw new Refusal('not-saved', disagreement(`the server "${server}"`, built.config, back.config))
-  return { result: 'updated', entryId: row.entryId, server }
+  return { result: 'updated', entryId: row.entryId, server, confirmed: 'tree' }
 }
 
 /**
@@ -232,14 +260,14 @@ async function setEnabled(ctx, include, row, enabled) {
   if (row.disabledRef === true) {
     throw new Refusal('disabled-ref', `the row "${row.id}" carries its enablement as an expression, and the toggle does not write over it`)
   }
-  if ((row.disabled !== true) === enabled) return { result: 'nothing', entryId: row.entryId, server: serverNameOf(row.id) }
+  if ((row.disabled !== true) === enabled) return { result: 'nothing', entryId: row.entryId, server: serverNameOf(row.id), confirmed: 'tree' }
 
   await updateRow(ctx, row.entryId, { disabled: enabled ? undefined : true })
   const back = readAgain(ctx, row.entryId)
   if (back.disabledRef === true || back.disabled !== !enabled) {
     throw new Refusal('not-saved', disagreement(`the row "${row.id}"`, { disabled: !enabled }, { disabled: back.disabled }))
   }
-  return { result: enabled ? 'enabled' : 'disabled', entryId: row.entryId, server: serverNameOf(row.id) }
+  return { result: enabled ? 'enabled' : 'disabled', entryId: row.entryId, server: serverNameOf(row.id), confirmed: 'tree' }
 }
 
 /**
@@ -254,65 +282,96 @@ async function setEnabled(ctx, include, row, enabled) {
  * @throws {Refusal} `not-an-mcp-row`, `no-row` or `not-saved`
  */
 function removeServer(include, row) {
-  shapeable(row)
+  /* A removal shapes no config, so a row holding an expression in a drawn field is still a row this
+     door can take away: the shape rule belongs to the saves that write the config, and applying it here
+     would leave a row the page offers to remove with no press that could ever take it. */
+  if (row.module !== MCP_MODULE) {
+    throw new Refusal('not-an-mcp-row', `the row "${row.id}" is a "${row.module}" row, and this form shapes MCP client rows only`)
+  }
   if (row.live === null) throw new Refusal('no-row', `the servers file holds no tree row for "${row.entryId}"`)
   removeRow(row.live)
   const still = entryOf(include, row.id)
   if (still !== null) {
     throw new Refusal('not-saved', `the removal of "${row.id}" did not stand: the Loader reported no error and the servers file still holds the row. A removal is asked of the row's own group by the id that group knows — a row addressed by its path from the root is resolved, missed and left in the file in silence.`)
   }
-  return { result: 'removed', entryId: row.entryId, server: serverNameOf(row.id) }
+  return { result: 'removed', entryId: row.entryId, server: serverNameOf(row.id), confirmed: 'tree' }
 }
 
 /**
  * Write the reference a row's token is read through: the header carrying the expression, and the row
  * option the expression needs beside it.
  *
- * The option is passed here because a save is the only hand the platform's own merge can be asked
- * through: creation sets a row's options whole, while an update sets the keys it is given and leaves
- * every other key exactly as it stands. So a row added by the form can be given the option afterwards,
- * by a save that names it — which is why nothing has to be guessed when the row is created.
+ * The flow owns the reference, and this save asks it: the credential key and the expression are the
+ * flow's answer for the row's server, and the body's own text is only a claim to hold against it. A body
+ * that names another key or another expression writes nothing — a reference is not a parameter a page
+ * may compose, and a row whose expression differs from the one the flow reads writes a value the flow
+ * never reads. A row that already carries a hand-written expression under the reference header is
+ * refused as well: the file owns that text, and this form does not write over it.
  *
- * The expression itself is not built here. The record's shape belongs to the flow that writes it, and
- * this save owns only where it lands: the row's own authorization header, and the option that must stand
- * beside it for the row's context to hold the credential service at all.
+ * The option is written before the header, in a write of its own: the Loader evaluates a row's
+ * configuration as the write lands, so a header expression that reads the credential service is refused
+ * while the option that puts that service in the row's own context is not there yet — measured at this
+ * door, where one write carrying both answered `cannot get property "credentials" without inject`. An
+ * option the file holds as an expression is refused rather than replaced.
+ *
+ * What is confirmed is what the tree holds: the expression under the header, and the option beside it.
  * @param {object} ctx the plugin's context
  * @param {object} include the include entry
  * @param {object} row the row as the file holds it
- * @param {object} body the request's body: the credential key and the expression
+ * @param {object} body the request's body: the credential key and the expression the page drew
  * @returns {Promise<object>} what was done
- * @throws {Refusal} `not-an-mcp-row`, `bad-value`, or a refusal of the confirmation
+ * @throws {Refusal} `not-an-mcp-row`, `bad-value`, `config-ref`, or a refusal of the confirmation
  */
 async function setReference(ctx, include, row, body) {
   if (row.module !== MCP_MODULE) {
     throw new Refusal('not-an-mcp-row', `the row "${row.id}" is a "${row.module}" row, and this form shapes MCP client rows only`)
   }
-  const reference = typeof body?.reference === 'string' ? body.reference.trim() : ''
-  const expression = typeof body?.expression === 'string' ? body.expression.trim() : ''
-  if (reference === '' || expression === '') {
-    throw new Refusal('bad-value', `a reference save needs the credential key and the expression the row reads it through, and this request carries ${reference === '' ? 'no reference' : 'no expression'}`)
+  const flow = flowFor(ctx)
+  if (flow === null) {
+    throw new Refusal('bad-value', 'this composition carries no OAuth flow, so no reference can be saved: a reference is the flow\'s answer for one server, and this save does not compose one')
+  }
+  const server = typeof row.config.serverName === 'string' && row.config.serverName !== '' ? row.config.serverName : serverNameOf(row.id)
+  const expected = flow.reference(server)
+  if (expected === null || typeof expected?.key !== 'string' || typeof expected?.expression !== 'string') {
+    throw new Refusal('bad-value', `the OAuth flow answers no reference for "${server}", so a save has nothing to write`)
   }
 
-  const headers = { ...(typeof row.config.headers === 'object' && row.config.headers !== null ? row.config.headers : {}), [REFERENCE_HEADER]: { __jsExpr: expression } }
-  const next = { ...row.config, headers }
+  const reference = typeof body?.reference === 'string' ? body.reference.trim() : ''
+  const claimed = typeof body?.expression === 'string' ? body.expression.trim() : ''
+  if (reference === '') {
+    throw new Refusal('bad-value', `a reference save names the credential key it stands for "${server}" under, and this request carries none`)
+  }
+  if (reference !== expected.key) {
+    throw new Refusal('bad-value', `the request names the credential key "${reference}", and the flow's record for "${server}" stands under "${expected.key}": a reference names the flow's own record, not one a page composed`)
+  }
+  if (claimed !== '' && claimed !== expected.expression) {
+    throw new Refusal('bad-value', `the request's expression is not the one the flow reads the record for "${server}" through: a reference carries the flow's expression, and this save writes nothing over the flow's own answer`)
+  }
+  const held = referenceOf(row.config)
+  if (held !== null && held !== expected.expression) {
+    throw new Refusal('config-ref', `the row "${row.id}" carries a hand-written authorization expression, and the form does not write over a value the file owns`)
+  }
 
-  /* The option first, in a write of its own. The Loader evaluates a row's configuration as the write
-     lands, so a header expression that reads the credential service is refused in words while the option
-     that puts that service in the row's own context is not there yet — measured at this door, where one
-     write carrying both answered `cannot get property "credentials" without inject`. */
-  if (!readAgain(ctx, row.entryId).inject.includes('credentials')) {
-    await updateRow(ctx, row.entryId, { inject: REFERENCE_OPTION })
+  const headers = { ...(typeof row.config.headers === 'object' && row.config.headers !== null ? row.config.headers : {}), [REFERENCE_HEADER]: { __jsExpr: expected.expression } }
+  const next = { ...row.config, headers }
+  const current = readAgain(ctx, row.entryId)
+  if (current.injectRef === true) {
+    throw new Refusal('config-ref', `the row "${row.id}" carries its inject as an expression, and the save does not write over the option a reference needs beside it`)
+  }
+
+  if (!current.inject.includes('credentials')) {
+    await updateRow(ctx, row.entryId, { inject: [...new Set([...current.inject, ...REFERENCE_OPTION])] })
   }
   await updateRow(ctx, row.entryId, { config: next })
 
   const back = readAgain(ctx, row.entryId)
-  if (referenceOf(back.config) !== expression) {
-    throw new Refusal('not-saved', disagreement(`the reference of "${row.id}"`, { [REFERENCE_HEADER]: expression }, referenceOf(back.config)))
-  }
-  if (!back.inject.includes('credentials')) {
+  if (back.injectRef === true || !back.inject.includes('credentials')) {
     throw new Refusal('not-saved', `the save of the reference for "${row.id}" did not stand: the row now reads the store without the row option that puts the credential service in its own context, so the platform would refuse it at its next activation. A row option is set by a save that names it — creation sets a row's options whole, and an update sets the keys it is given.`)
   }
-  return { result: referenceOf(row.config) === null ? 'reference' : 'reference-updated', entryId: row.entryId, server: serverNameOf(row.id), reference }
+  if (referenceOf(back.config) !== expected.expression) {
+    throw new Refusal('not-saved', disagreement(`the reference of "${row.id}"`, { [REFERENCE_HEADER]: expected.expression }, referenceOf(back.config)))
+  }
+  return { result: held === null ? 'reference' : 'reference-updated', entryId: row.entryId, server, reference: expected.key, confirmed: 'tree' }
 }
 
 /** The phases a row passes through while the Loader is still bringing it up. */
@@ -340,19 +399,19 @@ async function phaseOf(ctx, entryId) {
 }
 
 /**
- * What a reload's confirmation makes of the two facts it can read: the file's switch and the Loader's own
+ * What a reload's confirmation makes of the two facts it can read: the tree's switch and the Loader's own
  * phase for the row.
  *
  * A row that comes back **failed** was activated and threw — the client whose own config could not resolve
  * carries no tools and writes no line of its own, and `reloaded` over it would be a claim the door cannot
  * stand behind. A row the Loader does not name at all is refused the same way: nothing confirms it came up.
  * The phase a row is still coming up in is named as it came rather than guessed: the door says what it saw.
- * @param {object} facts the row's id, the file's switch and the phase the Loader reports
+ * @param {object} facts the row's id, the tree's switch and the phase the Loader reports
  * @returns {{refusal?: string, phase: string | null}} the refusal, or the phase the answer names
  */
 export function reloadVerdict({ id, disabled, phase }) {
   if (disabled) {
-    return { refusal: `the reload of "${id}" left the row switched off: the file now holds it disabled, and the next read of this profile will not connect it` }
+    return { refusal: `the reload of "${id}" left the row switched off: the tree now holds it disabled, and the next read of this profile will not connect it` }
   }
   if (phase === 'failed') {
     return { refusal: `the reload of "${id}" left the row in the failed phase: the Loader activated it and its fiber threw, so it serves nothing — no tools and no line of its own — whatever the file now says` }
@@ -371,31 +430,65 @@ export function reloadVerdict({ id, disabled, phase }) {
  * therefore the mechanism and not a convenience, and the door is measured rather than assumed: the
  * Loader's own update, asked with no key of its own, restarts the entry and leaves the row's header
  * standing as it activated, while a fresh activation reads the store again. So the row is switched off
- * and switched on — the file carries `disabled: true` for the one write in between, and neither write
- * touches anything else the row holds.
+ * and switched on — two updates, and the include's own file write coalesces them, so the file need not
+ * carry the intermediate switch; neither update touches anything else the row holds.
  *
- * The confirmation reads two facts, not one: the file's switch and the Loader's phase for the row. A row
+ * A row the file already holds switched off is refused before any write: switching it on to reload it
+ * would leave a row the person never asked to connect connected. The refusal says which. A row whose
+ * switch stands as an expression is refused the same way — the file owns that text, and a reload that
+ * wrote over it would decide a switch the person wrote.
+ *
+ * The two updates are two acts, and the second one can fail on its own: the row is then switched back on
+ * before the answer, because a refusal that left the row off would be a reload that disconnected it. When
+ * even that write fails, the refusal names what happened and that the row may stand switched off until it
+ * is switched on by hand — the door does not claim a restore it could not make.
+ *
+ * The confirmation reads two facts, not one: the tree's switch and the Loader's phase for the row. A row
  * that came back failed answers a refusal that names the phase, because `reloaded` over a row that serves
  * nothing is a claim the door cannot stand behind.
  * @param {object} ctx the plugin's context
  * @param {object} include the include entry
  * @param {object} row the row as the file holds it
  * @returns {Promise<object>} what was done, with the row's phase
- * @throws {Refusal} `not-an-mcp-row`, or `not-saved` when the row did not come back enabled and unfailed
+ * @throws {Refusal} `not-an-mcp-row`, `not-saved` when the switch pair or the confirmation failed, or
+ *   `disabled-ref` when the row's switch is an expression
  */
 async function reloadRow(ctx, include, row) {
   if (row.module !== MCP_MODULE) {
     throw new Refusal('not-an-mcp-row', `the row "${row.id}" is a "${row.module}" row, and this form shapes MCP client rows only`)
   }
-  await updateRow(ctx, row.entryId, { disabled: true })
-  await updateRow(ctx, row.entryId, { disabled: null })
+  if (row.disabledRef === true) {
+    throw new Refusal('disabled-ref', `the row "${row.id}" carries its enablement as an expression, and a reload does not write over it: switch the row by its own text, then reload it`)
+  }
+  if (row.disabled === true) {
+    throw new Refusal('not-saved', `the reload of "${row.id}" was asked for a row the file holds switched off: a reload switches a row on and off again, and that would leave a row the person never asked to connect connected. Switch it on first if it should serve.`)
+  }
+  try {
+    await updateRow(ctx, row.entryId, { disabled: true })
+  } catch (error) {
+    throw new Refusal('not-saved', `the reload of "${row.id}" did not start its own switch: ${reasonOf(error)}`)
+  }
+  try {
+    await updateRow(ctx, row.entryId, { disabled: null })
+  } catch (error) {
+    let restoreFailure = null
+    try {
+      await updateRow(ctx, row.entryId, { disabled: null })
+    } catch (beside) {
+      restoreFailure = beside
+      ctx.logger?.warn?.(`coreness-mcp: the row "${row.entryId}" may stand switched off — the switch back failed: ${reasonOf(beside)}`)
+    }
+    throw new Refusal('not-saved', restoreFailure === null
+      ? `the reload of "${row.id}" did not finish its own switch: ${reasonOf(error)} — the row was switched back on before this answer`
+      : `the reload of "${row.id}" did not finish its own switch: ${reasonOf(error)}, and switching it back on failed too (${reasonOf(restoreFailure)}) — the row may stand switched off until it is switched on by hand`)
+  }
 
   const back = readAgain(ctx, row.entryId)
   const phase = await phaseOf(ctx, row.entryId)
   const verdict = reloadVerdict({ id: row.id, disabled: back.disabled === true, phase })
   if (verdict.refusal !== undefined) throw new Refusal('not-saved', verdict.refusal)
   ctx.logger?.info?.(`coreness-mcp: the row "${row.entryId}" was activated afresh, so a token that changed in the store reaches its connection again`)
-  return { result: 'reloaded', entryId: row.entryId, server: serverNameOf(row.id), phase: verdict.phase }
+  return { result: 'reloaded', entryId: row.entryId, server: serverNameOf(row.id), phase: verdict.phase, confirmed: 'tree' }
 }
 
 /**

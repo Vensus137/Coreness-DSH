@@ -1,6 +1,6 @@
 /**
  * The transport of one route, whole: the contour, the token cache, the node map, the signature, the chat
- * turn and its frames, as one closure — the seam the donor wrote and the split keeps.
+ * turn and its frames, as one closure — the seam the platform's model service offers and the split keeps.
  *
  * The token decides the contour, once per token fingerprint: a Chinese token is exchanged on the Chinese
  * contour and an international one on the international contour, and every later call — the node map,
@@ -12,7 +12,7 @@
 
 import crypto from 'node:crypto'
 import { MAX_TIMER_DELAY_MS, clampTimeout, deadline } from '@deepseek-ai/dsh-timeout'
-import { buildChatBody, encodeBody, toWireMessages, toWireTools, DEFAULT_MAX_TOKENS } from './body.js'
+import { buildChatBody, encodeBody, toWireMessages, toWireTools } from './body.js'
 import { CHAT_PATH, DEFAULT_CONTROL_CEILING_MS, DEFAULT_FIRST_BYTE_CEILING_MS, DEFAULT_IDLE_CEILING_MS, FIRST_BYTE_CODE, MODEL_LIST_PATH, QoderError, WEB_SEARCH_PATH, bounded, jsonOf, modelsOf, refusalInText, refusalOf, sessionExpired } from './in.js'
 import { CONTOURS, chosenContour, createTokenCalls, detectContour } from './contour.js'
 import { readDataPolicy, writeDataPolicy } from './privacy.js'
@@ -109,7 +109,7 @@ export function createTransport(options) {
       active = chosen
       return { key, contour: chosen }
     }
-    const winner = await detectContour({ pat, calls: tokenCalls, signal })
+    const winner = await singleFlight(flights, `contour:${key}`, () => detectContour({ pat, calls: tokenCalls, signal }))
     contours.set(key, winner.contour)
     sessions.set(key, winner.session)
     active = winner.contour
@@ -353,7 +353,7 @@ export function createTransport(options) {
       messages: wire.messages,
       originalContent: wire.originalContent,
       tools: toWireTools(call.tools),
-      maxTokens: Number.isFinite(call.maxTokens) && call.maxTokens > 0 ? call.maxTokens : DEFAULT_MAX_TOKENS,
+      maxTokens: call.maxTokens,
       reasoningEffort: call.reasoningEffort,
       modelRecord,
       requestId: fresh.requestId,
@@ -374,9 +374,7 @@ export function createTransport(options) {
     // answer is not handed over until it has started speaking. A contour that answers `200` and then
     // never says a word is exactly the case this ceiling exists for, and a caller cannot bypass it by
     // reading the raw stream — by the time there is a raw stream to read, the answer has begun.
-    const consumer = new AbortController()
-    const fused = signal === undefined ? consumer.signal : AbortSignal.any([signal, consumer.signal])
-    const firstByte = deadline(fused, firstByteCeilingMs, FIRST_BYTE_CODE)
+    const firstByte = deadline(signal, firstByteCeilingMs, FIRST_BYTE_CODE)
     const startedAt = now()
     let response
     try {
@@ -384,6 +382,10 @@ export function createTransport(options) {
     } catch (error) {
       throw firstByteRefusal({ error, firstByte, ms: firstByteCeilingMs, elapsedMs: now() - startedAt, what: 'the Qoder chat turn', where: 'the Qoder chat turn (its headers)', signal, strike })
     }
+    // A refusal at HTTP level is the contour's answer, not a stream to decode: reading it as frames turns
+    // a 401/403/429/5xx body into a silent `TRANSPORT` and loses both the status and the code that says
+    // whether a renewal is worth it. The in-stream refusal path below stays for a `200` that declines.
+    if (!response.ok) throw await refusalOf(response, 'the Qoder chat turn', warn)
     const reader = response.body?.getReader()
     if (reader === undefined) throw new QoderError('the Qoder chat turn carried no stream to read', 'TRANSPORT')
     let first
@@ -403,16 +405,15 @@ export function createTransport(options) {
     // business and not a property of the wire.
     const refused = refusalInText(new TextDecoder().decode(first.value), 'the Qoder chat turn')
     if (refused !== undefined) throw refused
-    return { url, body, response: bodyFrom(response, first.value, reader), watch: { consumer } }
+    return { url, body, response: bodyFrom(response, first.value, reader) }
   }
 
   /**
    * One chat turn, with the one renewal a refusal of the job token is worth.
    *
    * A token the contour calls not active (`sessionExpired`) is worth exactly one fresh exchange, and the
-   * exchange harms nobody: two live job tokens of one personal token coexist, measured three repetitions
-   * over, so this is not a race against another session. Measured on the
-   * live route: the contour answered `403 {"code":"105","message":"Login expired"}` while the account's own
+   * exchange harms nobody: two live job tokens of one personal token coexist, so this is not a race against another session. The live route
+   * answered `403 {"code":"105","message":"Login expired"}` while the account's own
    * personal token still exchanged, and the profile stayed dead — every turn of it, subagents included —
    * until the application was restarted, which is what this heal exists for. It is bounded (one renewal,
    * never a loop) and it is not a mask: `renew` reports itself through `warn`, and a second refusal is
@@ -436,7 +437,6 @@ export function createTransport(options) {
    * The lines of one answer, under the first-byte and idle ceilings.
    * @param {Response} response the answer `chat` returned
    * @param {object} [options] the read
-   * @param {object} [options.watch] the request's own watch, passed on from `chat`
    * @param {number} [options.firstByteCeilingMs] overrides the transport's own ceiling
    * @param {number} [options.idleCeilingMs] overrides the transport's own ceiling
    * @param {AbortSignal} [options.signal] the caller's cancellation
@@ -526,20 +526,28 @@ export function createTransport(options) {
   }
 
   return {
-    endpointMap: (options) => readEndpointMap({ fetchImpl, centerOrigin: active.centerOrigin, warn, ...options }),
     nodeMap,
     resolvedEndpoints,
     exchange: async (pat, signal) => {
       const key = fingerprint(pat)
       const known = contours.get(key)
       if (known !== undefined) return tokenCalls.exchange(known, pat, signal)
-      const winner = await detectContour({ pat, calls: tokenCalls, signal })
+      // A row that names its own contour never detects: the same rule `contourOf` applies to the turn.
+      // Detecting here would send the row's token to the two vendor hosts and cache one of them, so every
+      // later call of that row would leave the address the row named.
+      if (chosen !== undefined) {
+        const session = await tokenCalls.exchange(chosen, pat, signal)
+        contours.set(key, chosen)
+        sessions.set(key, session)
+        active = chosen
+        return session
+      }
+      const winner = await singleFlight(flights, `contour:${key}`, () => detectContour({ pat, calls: tokenCalls, signal }))
       contours.set(key, winner.contour)
       sessions.set(key, winner.session)
       active = winner.contour
       return winner.session
     },
-    profile: (jobToken, signal) => tokenCalls.profile(active, jobToken, signal),
     identity: identityOf,
     catalogue,
     search: (request, signal) => search(request, signal),

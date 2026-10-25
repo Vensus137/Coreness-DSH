@@ -8,12 +8,13 @@
  */
 
 import { outcomeOf } from './policy.js'
+import { live } from './live.js'
 
 /** The row the product's bundle inserts; its config carries the ceiling. */
 export const ROW = 'agent-team'
 
-/** A volatile field's live value: the box a write reaches, or the plain value. */
-const live = (field) => (typeof field?.get === 'function' ? field.get() : field)
+/** The fields the platform's own agent-team row carries beside the ceiling: what one press pins. */
+export const PINNED = ['maxTasks', 'maxMessageBytes', 'disposalTimeoutMs']
 
 /** The code a thrown value carries, or the one this door gives a value that carries none. */
 const codeOf = (error) => (typeof error?.code === 'string' && error.code !== '' ? error.code : 'UNKNOWN')
@@ -38,12 +39,19 @@ function failure(message, code) {
  * one supplies, and the page says so rather than refusing the write.
  * @param {object} ctx the cordis context
  * @param {object} config the plugin's resolved config
+ * @param {(message: string) => void} [warn] where a resolved config that could not be read is said
  * @returns {{mounted: boolean, editable: boolean, maxMembers: number|null, prompt: boolean, review: boolean, policy: string, ns: string|null}} the picture
  */
-export function stateOf(ctx, config) {
+export function stateOf(ctx, config, warn = () => {}) {
   const editor = ctx.get('configEditor')
   const entry = editor === undefined ? undefined : rowOf(editor)
-  const value = entry?.fiber?.config?.maxMembers
+  const resolved = entry?.fiber?.config
+  /* The row is addressable but its resolved config was not read: `null` is then the honest answer — a raw
+     patch may name a value the row never validated — but a silent null reads as "no ceiling in force". */
+  if (entry !== undefined && (resolved === null || typeof resolved !== 'object')) {
+    warn(`the "${ROW}" row was found but its resolved config is not readable: the ceiling answers null while the write still validates against the row`)
+  }
+  const value = resolved?.maxMembers
   return {
     mounted: ctx.get('agentTeams') !== undefined,
     editable: entry !== undefined,
@@ -81,9 +89,10 @@ function rowOf(editor) {
  * @param {object} ctx the cordis context
  * @param {unknown} value the ceiling the page asked for
  * @param {object} config the plugin's resolved config
- * @returns {Promise<{mounted: boolean, editable: boolean, maxMembers: number|null, prompt: boolean, review: boolean, policy: string, ns: string|null}>} the picture after the write
+ * @param {(message: string) => void} [warn] where the write's pin is said
+ * @returns {Promise<object>} the picture after the write, with the pin in its own words
  */
-export async function setCeiling(ctx, value, config) {
+export async function setCeiling(ctx, value, config, warn = () => {}) {
   if (!Number.isSafeInteger(value) || value < 1) {
     throw failure('the ceiling is a whole number of at least 1', 'BAD_REQUEST')
   }
@@ -102,7 +111,11 @@ export async function setCeiling(ctx, value, config) {
   } catch (error) {
     throw failure(refusalOf(error), 'EDIT_REFUSED')
   }
-  return stateOf(ctx, config)
+  warn(`the ceiling was written; the platform's editor persists a complete config, so the row's other fields (today: ${PINNED.join(', ')}) are pinned at their current values`)
+  return {
+    ...stateOf(ctx, config, warn),
+    notice: `The write pinned the row's other platform fields (today: ${PINNED.join(', ')}) at their current values: the editor persists a complete config.`,
+  }
 }
 
 /**
@@ -140,9 +153,9 @@ export async function answerOf(ctx, request, warn, config) {
     headers: { 'content-type': 'application/json; charset=utf-8' },
   })
   try {
-    if (request.method === 'GET') return json({ ok: true, value: stateOf(ctx, config) })
+    if (request.method === 'GET') return json({ ok: true, value: stateOf(ctx, config, warn) })
     const body = await bodyOf(request)
-    return json({ ok: true, value: await setCeiling(ctx, body.maxMembers, config) })
+    return json({ ok: true, value: await setCeiling(ctx, body.maxMembers, config, warn) })
   } catch (error) {
     warn(`the team route refused a ${request.method}: ${codeOf(error)} — ${messageOf(error)}`)
     return json({ ok: false, error: { code: codeOf(error), message: messageOf(error) } })

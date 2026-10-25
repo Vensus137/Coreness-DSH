@@ -70,46 +70,44 @@ export function countersOf(row) {
   }
 }
 
-/**
- * The sums over one selection of rows, in the order the rows came.
- *
- * Rounded to six decimals: the ledger's own precision, and a sum of rounded rows would otherwise grow a
- * tail of binary fractions no reader can act on.
- * @param {object[]} rows the ledger's rows
- * @param {object} [filter] the selection and the breakdown: `since`, `until`, `by`
- * @returns {object} the answer without the ledger's own facts: by, requests, usd, billed, unbilled, credits,
- * tokens and groups
- */
-export function sumOf(rows, filter = {}) {
-  const { since, until, by = 'none' } = filter
-  if (SPEND_BY.includes(by) === false) throw new Error(`the breakdown is one of ${SPEND_BY.join(', ')}: ${String(by)}`)
-  const inside = rows.filter((row) => (since === undefined || String(row?.time ?? '') >= since)
-    && (until === undefined || String(row?.time ?? '') <= until))
-  const total = { requests: 0, usd: 0, billed: 0, unbilled: 0, credits: 0, input: 0, output: 0, cacheRead: 0, reasoning: 0, total: 0 }
-  const groups = new Map()
-  for (const row of inside) {
-    const money = moneyOf(row)
-    const counters = countersOf(row)
-    total.requests += 1
-    total.usd += money.usd
-    if (money.billed) total.billed += money.usd
-    else total.unbilled += money.usd
-    total.credits += money.credits ?? 0
-    total.input += counters.input
-    total.output += counters.output
-    total.cacheRead += counters.cacheRead
-    total.reasoning += counters.reasoning
-    total.total += counters.total
-    if (by === 'none') continue
-    const key = by === 'day' ? String(row.time ?? '').slice(0, 10)
-      : by === 'finish' ? String(row.finish?.kind ?? row.finish ?? 'unknown')
-        : String(row.model ?? '')
-    const item = groups.get(key) ?? { key, usd: 0, credits: 0, requests: 0 }
-    item.usd += money.usd
-    item.credits += money.credits ?? 0
-    item.requests += 1
-    groups.set(key, item)
-  }
+/** A fresh set of totals, in the shape the answer carries. */
+function totalsOf() {
+  return { requests: 0, usd: 0, billed: 0, unbilled: 0, credits: 0, input: 0, output: 0, cacheRead: 0, reasoning: 0, total: 0 }
+}
+
+/** The rows inside a window, on the same lexical comparison the answer has always used. */
+function insideOf(row, since, until) {
+  return (since === undefined || String(row?.time ?? '') >= since)
+    && (until === undefined || String(row?.time ?? '') <= until)
+}
+
+/** One row into the totals and its group: the whole fold, with no row kept. */
+function addRow(total, groups, row, by) {
+  const money = moneyOf(row)
+  const counters = countersOf(row)
+  total.requests += 1
+  total.usd += money.usd
+  if (money.billed) total.billed += money.usd
+  else total.unbilled += money.usd
+  total.credits += money.credits ?? 0
+  total.input += counters.input
+  total.output += counters.output
+  total.cacheRead += counters.cacheRead
+  total.reasoning += counters.reasoning
+  total.total += counters.total
+  if (by === 'none') return
+  const key = by === 'day' ? String(row.time ?? '').slice(0, 10)
+    : by === 'finish' ? String(row.finish?.kind ?? row.finish ?? 'unknown')
+      : String(row.model ?? '')
+  const item = groups.get(key) ?? { key, usd: 0, credits: 0, requests: 0 }
+  item.usd += money.usd
+  item.credits += money.credits ?? 0
+  item.requests += 1
+  groups.set(key, item)
+}
+
+/** The answer the accumulators make, with the six-decimal rounding and the breakdown order. */
+function answerOf(total, groups, by) {
   const round = (value) => Math.round(value * 1e6) / 1e6
   const ordered = [...groups.values()].map((item) => ({
     key: item.key,
@@ -139,6 +137,27 @@ export function sumOf(rows, filter = {}) {
 }
 
 /**
+ * The sums over one selection of rows, in the order the rows came.
+ *
+ * Rounded to six decimals: the ledger's own precision, and a sum of rounded rows would otherwise grow a
+ * tail of binary fractions no reader can act on.
+ * @param {object[]} rows the ledger's rows
+ * @param {object} [filter] the selection and the breakdown: `since`, `until`, `by`
+ * @returns {object} the answer without the ledger's own facts: by, requests, usd, billed, unbilled, credits,
+ * tokens and groups
+ */
+export function sumOf(rows, filter = {}) {
+  const { since, until, by = 'none' } = filter
+  if (SPEND_BY.includes(by) === false) throw new Error(`the breakdown is one of ${SPEND_BY.join(', ')}: ${String(by)}`)
+  const total = totalsOf()
+  const groups = new Map()
+  for (const row of rows) {
+    if (insideOf(row, since, until)) addRow(total, groups, row, by)
+  }
+  return answerOf(total, groups, by)
+}
+
+/**
  * The rows of one generation, line by line — a ledger of hundreds of megabytes is read as a stream, not
  * as a string.
  * @param {string} file the generation
@@ -164,7 +183,12 @@ export async function spendOf(path, filter = {}, failures) {
   if (files.length === 0) {
     throw new Error(`the spend ledger stands nowhere under ${path}: no request was counted here, and an empty answer would read as a free one`)
   }
-  const rows = []
+  const { since, until, by = 'none' } = filter
+  if (SPEND_BY.includes(by) === false) throw new Error(`the breakdown is one of ${SPEND_BY.join(', ')}: ${String(by)}`)
+  // One row at a time: the line is parsed, folded into the totals and dropped. The memory a call holds is
+  // the accumulators and the file's read buffer, whatever the ledger's size.
+  const total = totalsOf()
+  const groups = new Map()
   let torn = 0
   for (const file of files) {
     for await (const line of linesOf(file)) {
@@ -173,13 +197,13 @@ export async function spendOf(path, filter = {}, failures) {
       try {
         const row = JSON.parse(text)
         if (typeof row?.time !== 'string') throw new Error('a row without a time')
-        rows.push(row)
+        if (insideOf(row, since, until)) addRow(total, groups, row, by)
       } catch {
         torn += 1
       }
     }
   }
-  const sums = sumOf(rows, filter)
+  const sums = answerOf(total, groups, by)
   return {
     window: { since: filter.since ?? null, until: filter.until ?? null },
     ...sums,

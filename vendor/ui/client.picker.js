@@ -167,18 +167,16 @@ window.__ModuleLoader__.load({
       ]);
     }
 
-    /* The control's own sheet: the trigger wears the host's field box and adds only its row, so the picker
-       takes the place the platform's `select` would have taken in the field it stands in, at that box's
-       height. The row is the trigger's own axis: a field column stacks a label over its control, while the
-       trigger parts its value from the fixed mark that names the list — one line, the value at the left and
-       the mark beside it. The eight between the value and the arrow is this control's own: the two are parts
-       of one line, and the arrow keeps its distance while the value is cut.
-       An empty value is the same box: its height is the box's line and padding, and a value with no words
-       draws no line — the mark alone stands 14 high, and the trigger measured 28 where the box with a value
-       stands 36. The mark belongs to the list and not to the value, so the value keeps one line of its own
-       whether or not the row names one, and the box's size does not change between choosing and chosen. The
-       line comes from the non-breaking space the page's own skeleton takes its line from — the same act, a
-       box that must stand at its type's height while it has no words of its own. */
+    /* The control's own sheet: the trigger wears the host's field box and adds only its row, so the picker takes
+       the place the platform's `select` would have taken in the field it stands in, at that box's height. The row is
+       the trigger's own axis: a field column stacks a label over its control, while the trigger parts its value from
+       the fixed mark that names the list — one line, the value at the left and the mark beside it. The eight between
+       the value and the arrow is this control's own: the two are parts of one line, and the arrow keeps its distance
+       while the value is cut.
+       An empty value is the same box: a value with no words draws no line, so the box must stand at its type's height
+       while it has no words of its own. The mark belongs to the list and not to the value; the value keeps one line of
+       its own whether or not the row names one, and the box's size does not change between choosing and chosen. The
+       line comes from the non-breaking space the page's own skeleton takes its line from — the same act. */
     const CSS = `
 .coreness-picker{position:relative;display:block}
 .coreness-pickerTrigger{display:flex;flex-direction:row;justify-content:space-between;align-items:center;gap:8px;text-align:left;cursor:pointer}
@@ -188,11 +186,10 @@ window.__ModuleLoader__.load({
 .coreness-pickerArrow{color:var(--dsw-alias-label-secondary);flex:none;display:inline-flex}
 .coreness-pickerList{position:absolute;z-index:30;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;background:var(--dsw-alias-bg-layer-3,#fff);border:.5px solid var(--dsw-alias-border-l2,#0000001f);border-radius:var(--dsw-radius-md);box-shadow:var(--coreness-elevation);padding:4px;flex-direction:column;display:flex}
 /* The row is the page's shared button beside its own differences: a borderless row that parts its words from its
-   check, the list's own padding and gap, and the row's left alignment. It used to state the shared rule's own
-   values beside them — the box, the radius, the transparent ground, the ink, the font, the pointer — and a
-   declaration repeating a shared value holds that value still while the shared rule moves: the base changed,
-   the row did not. The eight between the row's words and its check belongs to the row: the words take the room
-   and the mark stands at its far side, so the two are parts of one line and not a pair of blocks. */
+   check, the list's own padding and gap, and the row's left alignment. A declaration repeating a shared value holds
+   that value still while the shared rule moves, so only the differences stand here. The eight between the row's words
+   and its check belongs to the row: the words take the room and the mark stands at its far side, so the two are parts
+   of one line and not a pair of blocks. */
 .coreness-pickerItem{border:none;padding:6px 8px;justify-content:space-between;gap:8px;display:flex;text-align:left}
 .coreness-pickerCheck{color:var(--dsw-alias-state-business-primary);flex:none;display:inline-flex}
 `;
@@ -204,8 +201,8 @@ window.__ModuleLoader__.load({
      * the module cache, so a factory does not run twice — and
      * it takes the package's own style tags away in the same act (`removeOwnedStyles`). The one thing
      * it re-runs is the mount, which covers a section that is left and entered again; it does not cover a
-     * component that stays mounted while the tags go, and that is the case the user read as a broken page —
-     * the frame's rules gone with the markup still drawn. So the head is watched while this component stands.
+     * component that stays mounted while the tags go, so the frame's rules can vanish while the markup stays
+     * drawn. The head is watched while this component stands.
      *
      * The hold ends with the effect: when the component goes, nothing puts the sheet back, and the platform's
      * own removal of a package that goes — a deliberate act — is left as it is. A sheet that outlived its

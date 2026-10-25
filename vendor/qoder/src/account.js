@@ -28,7 +28,7 @@ const defaults = { now: () => Date.now(), log: () => {} }
 /**
  * How many of the account's own lines the route's answer carries.
  *
- * The platform's logger has no sink in this build beyond its own in-memory ring, so a line written
+ * The platform's logger has no sink beyond its own in-memory ring, so a line written
  * there reaches nobody who is not holding the service. What fires — every sweep, every claim, every
  * failure — therefore also travels in the answer, where a reader can see it.
  */
@@ -64,6 +64,11 @@ export function createAccount({ credits, everyMs, autoClaim, now = defaults.now,
    * would otherwise never see it, since the sweep that made it is followed by its own plain readings.
    */
   let collection
+  /**
+   * The policy the last press read, held beside the picture rather than inside a `done` one: a press can
+   * succeed while the balance read is failing, and the answer must still say what the press read.
+   */
+  let privacyHeld
   /** One reading at a time: a sweep and a press must not exchange the account's token twice over. */
   let running = null
   /** One data-sharing press at a time: a second press reads the held picture, it sends no second change. */
@@ -87,6 +92,7 @@ export function createAccount({ credits, everyMs, autoClaim, now = defaults.now,
    */
   const picture = () => ({
     last: held.kind === 'done' && collection !== undefined ? { ...held, collection } : held,
+    privacy: privacyHeld ?? (held.kind === 'done' ? held.privacy : null),
     sweep: { everyMs, autoClaim },
     notes: notes.slice(),
   })
@@ -141,6 +147,7 @@ export function createAccount({ credits, everyMs, autoClaim, now = defaults.now,
     try {
       const answer = await credits.read()
       held = { kind: 'done', at: answer.at, quota: answer.quota, campaigns: answer.campaigns, privacy: answer.privacy }
+      privacyHeld = answer.privacy
       note(`the account was read (${why}): ${held.campaigns.list.length} campaign(s), the plan ${held.quota.plan.remaining} of ${held.quota.plan.total} left`)
       const targets = autoClaim ? claimable() : []
       if (targets.length > 0) {
@@ -148,6 +155,7 @@ export function createAccount({ credits, everyMs, autoClaim, now = defaults.now,
         collection = summary
         const after = await credits.read()
         held = { kind: 'done', at: after.at, quota: after.quota, campaigns: after.campaigns, privacy: after.privacy }
+        privacyHeld = after.privacy
         note(`the sweep collected ${summary.claimed} reward(s) and read the account again`)
       }
     } catch (error) {
@@ -182,6 +190,7 @@ export function createAccount({ credits, everyMs, autoClaim, now = defaults.now,
       collection = summary
       const after = await credits.read()
       held = { kind: 'done', at: after.at, quota: after.quota, campaigns: after.campaigns, privacy: after.privacy }
+      privacyHeld = after.privacy
       return held
     },
     /**
@@ -194,13 +203,13 @@ export function createAccount({ credits, everyMs, autoClaim, now = defaults.now,
       pressing = true
       try {
         const privacy = await credits.privacySet()
+        privacyHeld = privacy
         if (held.kind === 'done') held = { ...held, privacy }
+        note(`the data-sharing press read the policy after the change (share_enabled: ${privacy.share_enabled})`)
         return held
       } finally {
         pressing = false
       }
     },
-    /** Whether a reading is in flight — the route says so instead of answering a second one. */
-    busy: () => running !== null,
   }
 }

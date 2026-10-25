@@ -39,9 +39,6 @@ export const CONTOURS = Object.freeze({
   }),
 })
 
-/** The values `region` admits: the automatic detection and the two contours by name. */
-export const REGIONS = Object.freeze(['auto', 'global', 'cn'])
-
 /**
  * The contour a row's own settings name, or `undefined` when the token has to decide.
  *
@@ -207,14 +204,18 @@ export async function detectContour({ pat, calls, signal }) {
     const allValue = errors.length > 0 && errors.every(judged)
     const first = errors.find((error) => !judged(error)) ?? errors.at(-1)
     const last = errors.at(-1)
+    if (allValue) {
+      throw new QoderError(
+        'the Qoder token was refused on both contours (qoder.sh and qoder.com.cn)',
+        'AUTH',
+        { vendor: last?.vendor, vendorCode: first?.vendorCode ?? null },
+      )
+    }
+    const words = typeof first?.message === 'string' && first.message !== '' ? `: ${first.message}` : ''
     throw new QoderError(
-      'the Qoder token was refused on both contours (qoder.sh and qoder.com.cn)',
-      allValue ? 'AUTH' : (first?.code ?? 'AUTH'),
-      {
-        status: allValue ? undefined : first?.status,
-        vendor: last?.vendor,
-        vendorCode: allValue ? (first?.vendorCode ?? null) : null,
-      },
+      `the Qoder token could not be checked on either contour (qoder.sh and qoder.com.cn)${words}`,
+      first?.code ?? 'TRANSPORT',
+      { status: first?.status, vendor: last?.vendor },
     )
   }
 }

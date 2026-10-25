@@ -33,8 +33,8 @@ window.__ModuleLoader__.load({
     const CHUNKS = ['./client.general.js', './client.mcp.js', './client.provider.js', './client.credits.js', './client.gate.js'];
     /** The locale namespace the visible text is taken from. */
     const NS = 'coreness';
-    /* The sheet's own id, in this package's namespace: the old `coreness-page` package kept the donor's ids,
-       and the two pages never share a document after the switch. */
+    /* The sheet's own id, in this package's namespace: another package's id would name a second owner of
+       these rules. */
     const STYLE_ID = 'coreness-ui-page-style';
     /** The module id the sheet is marked with, as the host marks its own (`data-plugin-css`). */
     const STYLE_TAG = '@coreness/ui/client';
@@ -75,8 +75,8 @@ window.__ModuleLoader__.load({
 .coreness-card-head{align-items:center;gap:10px;flex-wrap:nowrap;display:flex}
 .coreness-list{flex-direction:column;gap:8px;margin:0;padding:0;list-style:none;display:flex}
 /* A list of cards takes one line of air under the section's head. Both classes are named because the base list
-   resets its own margin: as a lone class this rule had equal specificity and stood first in the sheet, so the base
-   rule's margin:0 won and the rate limiter's card stood on its caption — measured, not judged. */
+   resets its own margin: as a lone class this rule has equal specificity, and a later base rule's margin:0 would win
+   and stand the card on its caption. */
 .coreness-list.coreness-card-list{margin:12px 0 0}
 .coreness-tag{display:inline-flex;align-items:center;border-radius:var(--dsw-radius-xs);corner-shape:round;padding:1px 6px;font-size:12px;line-height:18px;font-weight:400;white-space:nowrap;color:var(--dsw-alias-label-tertiary)}
 /* A tone names the chip's own background; the colour of its words belongs to the class beside it. */
@@ -340,8 +340,16 @@ window.__ModuleLoader__.load({
               (loaded) => {
                 if (!live) return;
                 pendingPulls -= 1;
-                dispose = loaded.apply(ctx) ?? null;
-                settle();
+                /* A chunk whose apply throws is named like a pull that never arrived: the section's half is
+                   missing, and a page standing without it and no line anywhere is the failure this entry
+                   exists to say. The other settles still run. */
+                try {
+                  dispose = loaded.apply(ctx) ?? null;
+                } catch (error) {
+                  console.error(`${PACKAGE}: the chunk ${chunk} did not apply: ${error?.message ?? error}`);
+                } finally {
+                  settle();
+                }
               },
               (error) => {
                 pendingPulls -= 1;

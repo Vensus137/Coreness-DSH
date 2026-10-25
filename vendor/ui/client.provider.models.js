@@ -22,9 +22,9 @@ window.__ModuleLoader__.load({
        * A capacity the user typed, or the reason it is not one.
        *
        * `undefined` is an empty field — the row then says nothing about the window, and the schema's own
-       * default stands; `NaN` is a refusal the field is marked with. The donor's rule, kept whole: the
-       * value is not weighed against the catalogue, because a window may be raised by hand and the
-       * catalogue's own number is this row's declaration read back.
+       * default stands; `NaN` is a refusal the field is marked with. The value is not weighed against the
+       * catalogue, because a window may be raised by hand and the catalogue's own number is this row's
+       * declaration read back.
        */
       function parseCapacity(text) {
         const trimmed = String(text ?? '').trim();
@@ -36,7 +36,7 @@ window.__ModuleLoader__.load({
         return Number.isInteger(value) ? value : Math.round(value);
       }
 
-      /** A capacity as the donor wrote it: whole thousands and millions read as K and M. */
+      /** A capacity in the page's own short form: whole thousands and millions read as K and M. */
       function formatCapacity(value) {
         if (!Number.isInteger(value) || value <= 0) return '';
         if (value % 1e6 === 0) return `${value / 1e6}M`;
@@ -47,13 +47,11 @@ window.__ModuleLoader__.load({
       /**
        * One row of the draft: the fields the section draws, with the window as the user types it.
        *
-       * What this is handed is the section's own projection — the route's row joined with the live
-       * catalogue and the current model (`state.models`, built in the read) — and not the row the settings
-       * carry. The stored row travels on that projection as `stored`, the way the donor's draft keeps the
-       * record it is handed: the page draws four of a row's
-       * fields and a row may carry others — `maxTokens` today, and whatever the route adds next — and a
-       * draft that kept only the drawn ones
-       * would delete the rest on the first Apply.
+       * What this is handed is the section's own projection — the route's row joined with the live catalogue
+       * and the current model (`state.models`, built in the read) — and not the row the settings carry. The
+       * stored row travels on that projection as `stored`: the page draws four of a row's fields and a row may
+       * carry others — `maxTokens` in the platform's own row, and whatever the route adds next — and a draft that kept only the
+       * drawn ones would delete the rest on the first Apply.
        */
       function draftRow(entry) {
         return {
@@ -71,17 +69,17 @@ window.__ModuleLoader__.load({
       /**
        * The row a draft writes back.
        *
-       * It starts from the stored row, as the donor's own builder does:
-       * the page draws four of a row's fields and a row may carry others, so one rebuilt from the drawn
-       * fields alone would delete what it never showed — `maxTokens` today, and whatever the route adds next.
+       * It starts from the stored row: the page draws four of a row's fields and a row may carry others, so one
+       * rebuilt from the drawn fields alone would delete what it never showed — `maxTokens` in the platform's own row, and whatever the
+       * route adds next.
        *
-       * `vision` is written either way, unlike the donor's: its model schema left the field optional, so
-       * an omitted key read back as "no claim", while ours defaults it to true — an omitted key would come
-       * back checked, and a box that cannot be cleared is a lie. A name and a window the user emptied are
-       * removed: the schema's own defaults stand for them, and the row says nothing it does not mean. With
-       * the stored row underneath, "removed" has to be a deletion rather than a silence — hence the two
-       * `delete`s. The effort is written as it stands, empty string included: that is the field's own word
-       * for "this model names none", and the route's own schema stays what answers for it.
+       * `vision` is written either way: the model schema leaves the field optional, so an omitted key would read
+       * back as "no claim", while ours defaults it to true — an omitted key would come back checked, and a box that
+       * cannot be cleared is a lie. A name and a window the user emptied are removed: the schema's own defaults
+       * stand for them, and the row says nothing it does not mean. With the stored row underneath, "removed" has to
+       * be a deletion rather than a silence — hence the two `delete`s. The effort is written as it stands, empty
+       * string included: that is the field's own word for "this model names none", and the route's own schema stays
+       * what answers for it.
        */
       function storedRow(row) {
         const next = { ...row.stored, id: row.id.trim() };
@@ -108,13 +106,11 @@ window.__ModuleLoader__.load({
           /* An empty window is not a wrong number: it is no window at all, and the schema's own default would answer for a row that states none — while the row is a declaration to the platform's compaction trigger and a model must state the window it declares. The refusal stands here, where the value appears, so the bar goes off and the press is refused by name before a write can carry a row whose window was dropped. */
           if (String(row.window ?? '').trim() === '') problems.push({ index, field: 'window', message: t('models.windowRequired') });
           else if (Number.isNaN(parseCapacity(row.window))) problems.push({ index, field: 'window', message: t('models.windowInvalid') });
-          /* The effort is deliberately not checked here any more. The levels a row may name are the ones
-             its own model publishes, and the vendor may narrow that menu after the row was written: a
-             refusal would leave the user with a row they cannot apply and a value nothing on this page can
-             put back: the name travels as it stands whatever the menu names, so the wire is not the reason
-             to refuse it either. The control says what
-             stands instead, in its own value, and says nothing more about it: the user read that sentence as
-             noise ("Раньше её не было. Зачем её добавили? Надо убрать"), and a level the vendor never
+          /* The effort is deliberately not checked here. The levels a row may name are the ones its own model
+             publishes, and the vendor may narrow that menu after the row was written: a refusal would leave the
+             user with a row they cannot apply and a value nothing on this page can put back. The name travels as
+             it stands whatever the menu names, so the wire is not a reason to refuse it either. The control says
+             what stands instead, in its own value, and says nothing more about it; a level the vendor never
              published cannot enter the row at all — it is chosen from the model's own menu. */
         });
         return problems;
@@ -161,21 +157,21 @@ window.__ModuleLoader__.load({
        * The names this page writes, in the words the cards use for them: a refusal that names the row's
        * own config paths would put the plumbing on the surface, and a reader cannot act on a key name.
        */
-      const FIELD_WORDS = {
-        models: 'Models',
-        inferBase: 'Node',
-        defaultContextWindow: 'the fallback window',
+      const FIELD_KEYS = {
+        models: 'status.subject.models',
+        inferBase: 'status.subject.node',
+        defaultContextWindow: 'models.fallbackWindow',
       }
-      const fieldWords = (names) => names.map((name) => FIELD_WORDS[name] ?? name).join(', ')
+      const fieldWords = (names) => names.map((name) => (FIELD_KEYS[name] === undefined ? name : t(FIELD_KEYS[name]))).join(', ')
 
       /**
-       * The levels one model's row offers: that model's own menu, the level that stands for the row, and our
-       * own `Off`, and nothing else.
+       * The levels one model's row offers: that model's own menu, the level that stands for the row, and this
+        * package's own `Off`, and nothing else.
        *
        * The list is that model's own menu, in the vendor's ascending order: the catalogue publishes it as an
        * object whose keys carry no order at all, and a menu drawn in whatever order two reads happened to give
        * would move under the reader's hand. Beside the menu stand exactly two things — the level that stands for
-       * this row when the menu does not name it, and our own `Off` — and nothing else: a level the vendor does
+       * this row when the menu does not name it, and this package's own `Off` — and nothing else: a level the vendor does
        * not publish is not invented here, and the platform's own three are not offered as if they were this
        * model's own levels.
        *
@@ -373,7 +369,7 @@ window.__ModuleLoader__.load({
        *
        * The answer carries the moment it was read (`at`), because the vendor's price multiplier travels with
        * the same listing and is a rate **in force when it was read**: the section draws it beside the model
-       * and says when, rather than letting a remembered number read as today's. A read that answered nothing
+       * and says when, rather than letting a remembered number read as a fresh one. A read that answered nothing
        * carries no moment — no rate was read, and the state room names the refusal instead.
        */
       async function readCatalogue() {
@@ -429,10 +425,9 @@ window.__ModuleLoader__.load({
         return h('div', { key: 'models', className: 'coreness-qoder-card' }, [
           headOf('models', `${t('models.label')} (${rows.length})`, [
             /* The tag says the one thing a reader cannot get anywhere else: a route that is declared and **not**
-               registered fails every request through it. The word about the ordinary state — "registered in this
-               profile" — left by the user's word ("есть ли в них какой-то смысл"): the ordinary state is not news,
-               and the head says it by being there. */
-            state.live ? null : h('span', { key: 'live', className: 'coreness-qoder-tag' }, t('state.unregistered')),
+               registered fails every request through it. A word about the ordinary state is not news, and the head
+               says the ordinary state by being there. */
+            state.live ? null : h('span', { key: 'live', className: 'coreness-tag coreness-qoder-tag' }, t('state.unregistered')),
           ]),
           /* The list's own room, with the list's own news inside it: what the catalogue is doing or what it
              answered, the sentence a route with no model gets, and the rows — one block whatever the state.
@@ -495,7 +490,7 @@ window.__ModuleLoader__.load({
 
       return {
         CAPACITY, parseCapacity, formatCapacity, draftRow, storedRow, checkRows, rateWords, optionWords,
-        clashingNames, FIELD_WORDS, fieldWords, effortOptions, rankOf, modelRow, readCatalogue, catalogueNote,
+        clashingNames, FIELD_KEYS, fieldWords, effortOptions, rankOf, modelRow, readCatalogue, catalogueNote,
         modelsCard,
       };
     }

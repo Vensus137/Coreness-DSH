@@ -10,7 +10,9 @@
  * refused in words that name which link was missing.
  *
  * The authorization server's own metadata is then read the same way: the well-known addresses derived
- * from the issuer, and the OpenID configuration as the second habit the standard allows.
+ * from the issuer — the RFC 8414 address with the path inserted, and the OpenID configuration with the
+ * path appended, which is the address that standard names — and a resource or an issuer that is not an
+ * http(s) address is refused in words before anything is asked of it.
  *
  * @module @coreness/oauth/src/discovery
  */
@@ -32,6 +34,34 @@ const SERVER_WELL_KNOWN = '/.well-known/oauth-authorization-server'
 /** The OpenID configuration, the second address a server may publish its metadata at. */
 const OPENID_WELL_KNOWN = '/.well-known/openid-configuration'
 
+/** The largest document this flow reads from a server; a bigger answer is refused, not parsed. */
+export const MAX_DOCUMENT = 64 * 1024
+
+/**
+ * Check that an address is one this flow follows: an absolute http or https URL.
+ *
+ * A metadata document, a pointer or an endpoint is the server's own word, and a flow that hands the
+ * page whatever the server named turns a server's link into the page's action. The rule lives here —
+ * one predicate, used by every address the flow is about to ask or hand out — so no branch can add a
+ * scheme of its own.
+ * @param {string} address the address to check
+ * @param {string} [what] what the address is, for the words
+ * @returns {string} the address, normalized by the URL parser
+ * @throws {Refusal} `bad-metadata` naming the address and the rule it broke
+ */
+export function assertHttpAddress(address, what = 'the address') {
+  let url
+  try {
+    url = new URL(String(address))
+  } catch {
+    throw refuse('bad-metadata', `${what} ${JSON.stringify(String(address))} is not an absolute address`)
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    throw refuse('bad-metadata', `${what} ${url.href} is not an http(s) address`)
+  }
+  return url.href
+}
+
 /**
  * The pointer a response carries, or null when it names none.
  *
@@ -52,47 +82,61 @@ export function pointerOf(response) {
  * The well-known address of a resource: the standard's path insertion, before the resource's own path.
  * @param {string} resource the resource's address
  * @returns {string} the address its document would stand at
+ * @throws {Refusal} `bad-metadata` when the resource is not an http(s) address
  */
 export function resourceWellKnownAt(resource) {
-  const url = new URL(resource)
+  const url = new URL(assertHttpAddress(resource, 'the resource'))
   return `${url.origin}${RESOURCE_WELL_KNOWN}${url.pathname === '/' ? '' : url.pathname}`
 }
 
 /**
- * The well-known addresses of an authorization server, in the order they are tried.
+ * The well-known addresses of an authorization server, in the order they are tried: the RFC 8414
+ * address with the issuer's path inserted, then the OpenID configuration with that path appended.
  * @param {string} issuer the issuer's address
  * @returns {string[]} the addresses to try
+ * @throws {Refusal} `bad-metadata` when the issuer is not an http(s) address
  */
 export function serverWellKnownAt(issuer) {
-  const url = new URL(issuer)
+  const url = new URL(assertHttpAddress(issuer, 'the issuer'))
   const path = url.pathname === '/' ? '' : url.pathname
-  return [`${url.origin}${SERVER_WELL_KNOWN}${path}`, `${url.origin}${OPENID_WELL_KNOWN}${path}`]
+  return [`${url.origin}${SERVER_WELL_KNOWN}${path}`, `${url.origin}${path}${OPENID_WELL_KNOWN}`]
 }
 
 /**
  * Ask one address for one document.
  *
- * A document that answers is parsed; anything else — a network failure, a status outside 200, a body
- * that does not parse — answers null, so the caller can try its next habit and name the link that was
- * missing only once every habit has been tried. The reason is kept for the words.
+ * A document that answers is parsed; anything else — an address this flow does not follow, a network
+ * failure, a status outside 200, an answer bigger than `MAX_DOCUMENT`, a body that does not parse —
+ * answers null, so the caller can try its next habit and name the link that was missing only once every
+ * habit has been tried. The reason is kept for the words, and no answer is trusted with an unbounded
+ * parse: a server's document is read as text first, capped, and only then parsed.
  * @param {string} address the address to ask
  * @param {object} fetchImpl the fetch to ask with
  * @returns {Promise<{ document: object | null, why: string }>} the document, or why it did not come
  */
 async function documentAt(address, fetchImpl) {
+  let checked
+  try {
+    checked = assertHttpAddress(address, 'the document address')
+  } catch (error) {
+    return { document: null, why: error instanceof Error ? error.message : String(error) }
+  }
   let response
   try {
-    response = await fetchImpl(address, { headers: { accept: 'application/json' } })
+    response = await fetchImpl(checked, { headers: { accept: 'application/json' } })
   } catch (error) {
-    return { document: null, why: `${address} could not be reached (${error instanceof Error ? error.message : String(error)})` }
+    return { document: null, why: `${checked} could not be reached (${error instanceof Error ? error.message : String(error)})` }
   }
-  if (!response?.ok) return { document: null, why: `${address} answered ${response?.status ?? 'nothing'}` }
+  if (!response?.ok) return { document: null, why: `${checked} answered ${response?.status ?? 'nothing'}` }
   try {
-    const document = await response.json()
-    if (document === null || typeof document !== 'object' || Array.isArray(document)) return { document: null, why: `${address} answered a document that is not an object` }
+    const text = await response.text()
+    if (typeof text !== 'string') return { document: null, why: `${checked} answered no text to parse` }
+    if (text.length > MAX_DOCUMENT) return { document: null, why: `${checked} answered more than ${MAX_DOCUMENT} characters` }
+    const document = JSON.parse(text)
+    if (document === null || typeof document !== 'object' || Array.isArray(document)) return { document: null, why: `${checked} answered a document that is not an object` }
     return { document, why: '' }
   } catch (error) {
-    return { document: null, why: `${address} answered a body that does not parse (${error instanceof Error ? error.message : String(error)})` }
+    return { document: null, why: `${checked} answered a body that does not parse (${error instanceof Error ? error.message : String(error)})` }
   }
 }
 
@@ -164,24 +208,26 @@ export function issuerOf(document) {
  * The token endpoint of an authorization server's metadata, checked rather than assumed.
  * @param {object} metadata the authorization server's metadata
  * @returns {string} the endpoint
- * @throws {Refusal} `no-token-endpoint` when the document publishes none
+ * @throws {Refusal} `no-token-endpoint` when the document publishes none, or `bad-metadata` when it
+ *   publishes an address this flow does not follow
  */
 export function tokenEndpointOf(metadata) {
   const endpoint = metadata?.token_endpoint
   if (typeof endpoint !== 'string' || endpoint === '') throw refuse('no-token-endpoint', 'the authorization server\'s metadata names no token endpoint')
-  return endpoint
+  return assertHttpAddress(endpoint, 'the token endpoint')
 }
 
 /**
  * The authorization endpoint of an authorization server's metadata, checked rather than assumed.
  * @param {object} metadata the authorization server's metadata
  * @returns {string} the endpoint
- * @throws {Refusal} `no-authorization-url` when the document publishes none
+ * @throws {Refusal} `no-authorization-url` when the document publishes none, or `bad-metadata` when it
+ *   publishes an address this flow does not follow
  */
 export function authorizationEndpointOf(metadata) {
   const endpoint = metadata?.authorization_endpoint
   if (typeof endpoint !== 'string' || endpoint === '') throw refuse('no-authorization-url', 'the authorization server\'s metadata names no authorization endpoint')
-  return endpoint
+  return assertHttpAddress(endpoint, 'the authorization endpoint')
 }
 
 /**

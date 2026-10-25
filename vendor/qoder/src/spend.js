@@ -1,7 +1,7 @@
 /**
  * The spend journal: what one request cost, in the vendor's own counters.
  *
- * The file is the donor provider's own and appending continues that ledger rather than starting a second
+ * The file is the earlier Coreness build's own — the donor's — and appending continues that ledger rather than starting a second
  * one: a journal is append-only, and the donor's rows stand as they are. What this route's own rows carry
  * is the **spend alone** — the moment, the model, the ending, the duration, and the two counter objects the
  * wire reported — where the donor's rows carried the whole request and the whole answer beside them. The
@@ -19,17 +19,16 @@
  * of costs is worse than no row. A row keeps the rate it was written with, so a re-valued rate moves the
  * rows written after it and never the ones behind.
  *
- * **The bound, and why this number.** The donor rotated this file itself at the round number inside its own
- * two generations — 4 MiB was the only round number in that window — which left a row quoted by its **line
+ * **The bound, and why this number.** A ledger rotated at a small round number leaves a row quoted by its **line
  * number** a shelf life of hours: after a rotation the index names nothing or another row, and a second
  * rotation leaves the row in no file at all. The bound is 64 MiB **on the user's own word**, because depth
- * is what a ledger is read for: two generations then hold hundreds of thousands of rows and weeks of this
- * route's own traffic. The reader globs every generation the file keeps, so all of them are the ledger.
+ * is what a ledger is read for: two generations then hold deep history. The reader globs
+ * every generation the file keeps, so all of them are the ledger.
  *
  * **The donor's generation is kept, not replaced.** It is quoted: the model menu is measured over this
  * journal with it included, so replacing it would destroy a measurement without a trace. A generation whose
  * rows are all older than the oldest row of the file being rotated — an era before this route's own —
- * therefore moves aside once and stays; every rotation after that replaces our own previous generation,
+ * therefore moves aside once and stays; every rotation after that replaces the route's previous generation,
  * which is what the bound is for.
  *
  * A write never fails a turn and never throws: a path that cannot be written — no rights, a directory that
@@ -49,7 +48,7 @@ export const ROTATE_AT = 64 * 1024 * 1024
 /** US dollars per credit, fixed by the owner: a dollar buys a hundred credits. */
 export const USD_PER_CREDIT = 0.01
 
-/** How much of a file is read to date one of its ends. The longest donor row is 40 612 bytes, so this holds a whole one. */
+/** How much of a file is read to date one of its ends. It is enough for the longest row this ledger writes. */
 const HEAD_BYTES = 128 * 1024
 const TAIL_BYTES = 64 * 1024
 
@@ -98,9 +97,36 @@ export function createSpendJournal({ path, now = () => Date.now(), log = () => {
   let failures = 0
 
   /**
-   * The donor's own generation, kept before the first rotation of this route's own (see the header).
+   * End a torn tail at a line boundary before the next row is appended.
+   *
+   * An interrupted append leaves a partial line without a newline; appending straight after it glues the
+   * new row onto the fragment and the reader loses both. One byte tells the truth, and the repair is
+   * counted: the interrupted row is a row this journal failed to write, so `failures` says so instead of
+   * leaving it only to a log line. A healthy file is not touched.
+   * @returns {void}
+   */
+  function repairTornTail() {
+    const size = statSync(path, { throwIfNoEntry: false })?.size
+    if (size === undefined || size === 0) return
+    const handle = openSync(path, 'r')
+    let last
+    try {
+      const buffer = Buffer.alloc(1)
+      readSync(handle, buffer, 0, 1, size - 1)
+      last = buffer[0]
+    } finally {
+      closeSync(handle)
+    }
+    if (last === 0x0a) return
+    appendFileSync(path, '\n')
+    failures += 1
+    log(`the spend journal's last line at ${path} was torn: a newline was appended, and the interrupted row is counted as a failed write`)
+  }
+
+  /**
+   * The earlier era, kept before this route's first rotation.
    * The test is the rows' own times: a generation that ended before the file began is an earlier era,
-   * while our own previous generation ends where the file begins and is what a rotation replaces.
+   * while the route's previous generation ends where the file begins and is what a rotation replaces.
    * A generation that cannot be dated is kept — a stray file costs less than a lost measurement.
    */
   function keepTheDonorEra() {
@@ -133,6 +159,7 @@ export function createSpendJournal({ path, now = () => Date.now(), log = () => {
           keepTheDonorEra()
           renameSync(path, `${path}.1`)
         }
+        repairTornTail()
         const vendor = vendorUsageOf(usage)
         const credits = vendor.credits
         const row = {

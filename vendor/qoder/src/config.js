@@ -14,8 +14,7 @@ import { DEFAULT_CONTEXT_WINDOW, DEFAULT_MODEL_MAX_TOKENS } from './models.js'
  * How often the sweep reads the account, unless the row says otherwise: ten minutes.
  *
  * The reason in words: the vendor's reward window opens once a day and the balance moves with use, so a
- * figure at most ten minutes old is as useful as one at most five — at half the requests the donor's
- * number cost.
+ * figure at most ten minutes old is as useful as one at most five; the sweep is a courtesy, not a gate.
  */
 export const DEFAULT_SWEEP_MS = 10 * 60 * 1000
 
@@ -49,7 +48,7 @@ export const MAX_SWEEP_MS = 24 * 60 * 60 * 1000
  * field at all — so the declared window is a budget for the platform's own condensing, and it stands above
  * the tier the vendor recommends because this node is measured to serve deeper prompts than that: the
  * condensing trigger (`floor(min(W × 0.8, W − output − 65 536))`) must not fire below what the node serves,
- * and the reading behind the measurement stands in the shipped journal.
+ * 
  */
 export const DEFAULT_MODELS = Object.freeze([
   Object.freeze({ id: 'auto', name: 'Auto', contextWindow: 200_000, vision: true, effort: '' }),
@@ -104,7 +103,7 @@ export const Config = z.object({
    *
    * `effort` is this model's own reasoning effort, in the vocabulary of the model itself: the page draws each
    * row's choices from the vendor's live catalogue and writes the chosen name here. Two dictionaries live
-   * beside each other by design: **this field is the vendor's** (`VENDOR_EFFORTS`), and the declaration the
+   * beside each other by design: **this field is the vendor's own vocabulary**, and the declaration the
    * platform reads is its own — the three names plus whatever this row holds (`declaredEfforts`) — because the
    * platform refuses a value its declaration does not carry before any request leaves.
    *
@@ -177,7 +176,7 @@ export const Config = z.object({
    * The account's credits, as the product's own widget reads them: how often the sweep reads the
    * vendor's account, and whether that sweep takes what is claimable.
    *
-   * Both are ours, not the donor's, and they live in the row because they are a choice a user may want
+   * Both are the product's own choices, not inherited, and they live in the row because they are a choice a user may want
    * to move — a slower sweep costs fewer requests, and a user who would rather take every reward by
    * their own hand turns the collection off without a code change.
    */

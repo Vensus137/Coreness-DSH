@@ -1,5 +1,5 @@
 /**
- * The Qoder route: our own transport, the adapter the platform's model service calls, and the door
+ * The Qoder route: the package's own transport, the adapter the platform's model service calls, and the door
  * the product's own widget reads the account's credits through.
  *
  * This plugin owns the wire (getting in, the signature, the body and the frames) and the route built on
@@ -19,8 +19,7 @@
  * The account's credits are the second thing this plugin serves, and they come through a route of the
  * product's own (`CREDITS_ROUTE`, the door the MCP plugin already uses) rather than through the row's
  * settings section: that section *is* the profile's Cordis patch, and a sweep that wrote its answer
- * there would rewrite a file the user owns on every tick — which is what the donor did, 847 times in
- * four days, and what the port left behind.
+ * there would rewrite a file the user owns on every tick — what the port left behind.
  *
  * @module @coreness/qoder
  */
@@ -69,8 +68,8 @@ export const CREDITS_ROUTE = '/api/coreness.credits'
 /**
  * The exact route the product's own page reads this route's live facts through.
  *
- * The donor carried the same request as a pair of fields in the settings section — `probeRequest` and
- * `probeResult` — because its browser half had no route of its own. Ours
+ * The platform's own row carried the same request as a pair of fields in the settings section — `probeRequest` and
+ * `probeResult` — because its browser half had no route of its own. This route
  * has one, and the section *is* the profile's Cordis patch: a sweep's answer written back there would
  * rewrite a file the user owns on every press, which is what the port left behind for the credits.
  * The page presses; the host answers; the profile's patch is

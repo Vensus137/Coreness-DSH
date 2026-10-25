@@ -137,7 +137,7 @@ window.__ModuleLoader__.load({
           updated: 'done.updated',
           nothing: 'done.nothing',
           removed: 'done.removed',
-          /* The two names a toggle answers with read as a save reads: the file was written, and that is the
+          /* The two names a toggle answers with read as a save reads: the tree was written, and that is the
              outcome. The row's own control already says Enabled or Disabled — the row carries the state and the
              answer carries what the press did — so no word is invented for the switch. */
           enabled: 'done.updated',
@@ -147,8 +147,8 @@ window.__ModuleLoader__.load({
       }
 
       /**
-       * The words of one note, and whether it carries a refusal: the sentence a card draws and the sentence
-       * its hold is measured over are the same one, so it is written once.
+       * The words of one note, and whether it carries a refusal: the sentence a card draws and the sentence its
+       * hold is kept for are the same one, so it is written once.
        */
       function noteTextOf(note) {
         /* A refusal's word is the page's own ('Not saved') unless the press that was refused carries a word of

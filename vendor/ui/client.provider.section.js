@@ -56,7 +56,16 @@ window.__ModuleLoader__.load({
            picture can be older than the store. The cleanup waits for `take` to publish a fresh read. */
         const [readGeneration, setReadGeneration] = React.useState(0);
 
-        const take = (view) => {
+        /* A part draws inside this component and presses through it: a press made in a part — the data-sharing
+           button — leaves its refusal where this section's other presses do. */
+        React.useEffect(() => {
+          shared.setNote = setNote;
+          return () => {
+            shared.setNote = null;
+          };
+        }, []);
+
+        const take = (view, options = {}) => {
           /* The vendor's live catalogue is not part of this read and is kept across every re-read of the
              settings: a write of the list must not lock the picker it was written from, and the catalogue
              is the node's own answer, which no write of ours changes. A read about another row starts from
@@ -68,18 +77,19 @@ window.__ModuleLoader__.load({
               ? view
               : { ...view, catalogue: current.view.catalogue },
           }));
-          /* Every read drops the draft: what the fields show after a write is the section, not what was
-             typed before it. */
-          setDraft(null);
+          /* A read that follows this section's own write drops the draft: what the fields show after a write
+             is the section, not what was typed before it. A read the platform announced is not that write and
+             leaves the reader's list where it stands. */
+          if (options.dropDraft !== false) setDraft(null);
           setReadGeneration((count) => count + 1);
         };
 
         /* One door for the settings read, so every reader is ticketed the same way: `readState` is asked
            here and nowhere else, and the publish is the ticket's to allow. */
-        const read = async () => {
+        const read = async (options = {}) => {
           const ticket = ++readTicket;
           const view = await shared.readState(ctx.remote);
-          if (ticket === readTicket) take(view);
+          if (ticket === readTicket) take(view, options);
           return view;
         };
 
@@ -120,19 +130,27 @@ window.__ModuleLoader__.load({
              patched into the read it belongs to, so a stale answer about another row never replaces a newer
              one — and the draft the user is typing in is left where it stands. */
           const start = async () => {
+            const ticket = readTicket + 1;
+            let view;
             try {
-              const view = await read();
-              if (!live) return;
+              view = await read();
+            } catch (error) {
+              /* A read that fails keeps the section the user is reading: the reason stands in the state
+                 area beside the rows, and only a first read — which has nothing to keep — is replaced by
+                 it. A failed read that emptied the section would take away what the reader had in front
+                 of them because a later read went wrong. A failure that is no longer the newest read's is
+                 not published. */
+              if (live && ticket === readTicket) setState((current) => ({ status: 'failed', view: current.view, reason: shared.reasonOf(error) }));
+              return;
+            }
+            if (!live) return;
+            try {
               const answer = await shared.readCatalogue();
               if (!live) return;
               setState((current) => current.view === null || current.view.ns !== view.ns
                 ? current
                 : { status: current.status, reason: current.reason, view: { ...current.view, catalogue: answer } });
             } catch (error) {
-              /* A read that fails keeps the section the user is reading: the reason stands in the state
-                 area beside the rows, and only a first read — which has nothing to keep — is replaced by
-                 it. A failed read that emptied the section would take away what the reader had in front
-                 of them because a later read went wrong. */
               if (live) setState((current) => ({ status: 'failed', view: current.view, reason: shared.reasonOf(error) }));
             }
           };
@@ -146,11 +164,14 @@ window.__ModuleLoader__.load({
            host's own announcement, and this section reads again on it, as that page does. */
         React.useEffect(() => {
           const reread = async () => {
+            const ticket = readTicket + 1;
             try {
-              await read();
+              /* An announcement is not this section's write: a list being typed is not dropped by it. */
+              await read({ dropDraft: false });
             } catch (error) {
-              /* As the mount's own read: the reason stands beside the rows the reader already has. */
-              setState((current) => ({ status: 'failed', view: current.view, reason: shared.reasonOf(error) }));
+              /* As the mount's own read: the reason stands beside the rows the reader already has, and a
+                 failure that is no longer the newest read's is not published. */
+              if (ticket === readTicket) setState((current) => ({ status: 'failed', view: current.view, reason: shared.reasonOf(error) }));
             }
           };
           const disposers = shared.WATCHED.map((name) => ctx.remote.$on(name, reread));
@@ -161,93 +182,11 @@ window.__ModuleLoader__.load({
           };
         }, []);
 
-        /**
-         * The press that asks the vendor about the value that stands.
-         *
-         * Nothing is written: the answer is news and nothing else. It is the second moment this check runs —
-         * the first is a write — and it exists because a value goes bad *after* it was stored: without it
-         * the only way to ask would be to write the same value again.
-         */
-        const verify = async () => {
-          setBusy('verify');
-          setNote(null);
-          try {
-            setNote(shared.verdictNote(await shared.askVerify(), shared.credentialWord(state.view?.credential)));
-          } finally {
-            setBusy(null);
-          }
-        };
-
-        /**
-         * The token: written through the store, then read back through the store, and then put to the vendor.
-         * @returns {Promise<void>}
-         */
-        const save = async () => {
-          const view = state.view;
-          if (view === null || view.ref === null) return;
-          /* An empty field is not a write: the button stands disabled while the field is empty, so this
-             guard is the second door of the same rule — a stray keypress writes nothing. */
-          if (field === '') return;
-          setBusy('token');
-          setNote(null);
-          try {
-            const outcome = await shared.saveCredential(ctx.remote, view.ref, field);
-            setField('');
-            /* One read answers both questions. The strip's word and the word beside the field are drawn
-               from the same answer about the same reference, so the card cannot say two things at once —
-               and it is read *after* the write, because the verdict is stamped with the word this answer
-               gives: stamped with the older one it would be dropped by its own effect the moment it was
-               drawn. */
-            const after = await read();
-            /* What the store did and what the vendor says are two facts, and the reader handed the value
-               over to learn the second: the store's own word stands first, and the verdict replaces it. No
-               check runs where the store did not take the value — there is nothing to put to anyone. */
-            if (outcome.fault !== null) {
-              setNote({ where: 'credential', value: 'unsaved', detail: outcome.fault });
-            } else {
-              const took = after.credential?.configured === true;
-              /* A note about a value lives while that value stands: the stamp is the word this write read
-                 back, the same word the effect below compares against, so the note dies exactly when a later
-                 read contradicts it and not before. A write's note had no stamp — a save outlived the read
-                 that said the store was empty, which is the other half of the same design. */
-              setNote(took
-                ? { where: 'credential', value: 'saved', stamp: shared.credentialWord(after.credential) }
-                : { where: 'credential', value: 'unsaved', detail: t('fault.notsaved') });
-              /* The write is over and the check begins: the press that says "saving" is not the press that is
-                 asking the vendor, and the control a reader watches while the exchange is on the wire is the
-                 check's own — one busy, and its word stands on the control that answers for it. */
-              if (took) {
-                setBusy('verify');
-                setNote(shared.verdictNote(await shared.askVerify(), shared.credentialWord(after.credential)));
-              }
-            }
-          } catch (error) {
-            setNote({ where: 'credential', value: 'unsaved', detail: `${t('fault.set')} — ${shared.reasonOf(error)}` });
-          } finally {
-            setBusy(null);
-          }
-        };
-
-        /** The clear: the store's own door, and the same confirmation — the state read back. */
-        const clear = async () => {
-          const view = state.view;
-          if (view === null || view.ref === null) return;
-          setBusy('token');
-          setNote(null);
-          try {
-            const outcome = await shared.clearCredential(ctx.remote, view.ref);
-            /* The same one read: the clear is confirmed by the state the section reads back, and the strip
-               says what that answer says — never the call's own word about itself. */
-            const after = await read();
-            if (outcome.fault !== null) setNote({ where: 'credential', value: 'unsaved', detail: outcome.fault });
-            else if (after.credential?.configured === true) setNote({ where: 'credential', value: 'unsaved', detail: t('fault.notcleared') });
-            else setNote({ where: 'credential', value: 'unset', stamp: shared.credentialWord(after.credential) });
-          } catch (error) {
-            setNote({ where: 'credential', value: 'unsaved', detail: `${t('fault.clear')} — ${shared.reasonOf(error)}` });
-          } finally {
-            setBusy(null);
-          }
-        };
+        /* The token's three presses stand in the connection card's part, with the words they say: the section
+           hands in the picture they answer into and the setters their answers land in. */
+        const verify = () => shared.verifyToken({ view: state.view, setBusy, setNote });
+        const save = () => shared.saveToken({ view: state.view, field, setBusy, setField, setNote, read });
+        const clear = () => shared.clearToken({ view: state.view, setBusy, setNote, read });
 
         /**
          * One press: the nodes are asked, and the one that answered is pinned — then the section is read
@@ -307,9 +246,9 @@ window.__ModuleLoader__.load({
             await read();
           } catch (error) {
             /* A sweep is not a write: the route's words are the console's, and what stands on the face is
-               this press's news — the sweep found nobody, which is what the reasons list under the card says
-               in full. This site used to set a note naming a failed save, which made the row say "Node was
-               not saved" about something nobody tried to save — a source defect the migration found. */
+               this press's news — the sweep found nobody, which is what the reasons list under the card says in full.
+               A note naming a failed save here would make the row say "Node was not saved" about something nobody
+               tried to save. */
             kit.statusDetail(t('status.subject.node'), shared.reasonOf(error));
             /* The refusal is a sweep that answered nobody, recorded as one: null keeps its single meaning —
                nobody has asked — and the record has something to say about a sweep that was tried. */
@@ -473,6 +412,15 @@ window.__ModuleLoader__.load({
           setDraft(null);
         };
 
+        /** The live read after a failed write: the note stands where it is while the read corrects the values. */
+        const rereadAfterFailure = async () => {
+          try {
+            await read();
+          } catch (error) {
+            kit.statusDetail(t('status.subject.models'), shared.reasonOf(error));
+          }
+        };
+
         /**
          * Write the list: one `set` of the row's `models`, with the revision this section read. A row
          * carries its own window and its own effort (`storedRow`); the fallback window a model id the row
@@ -494,15 +442,17 @@ window.__ModuleLoader__.load({
             ]);
             if (!written.wrote) {
               setNote({ where: 'models', value: 'unsaved', detail: written.fault });
-              /* A conflict is the platform's own refusal and the section moved under the draft: the
-                 fields are shown the section as it stands now, as that sentence promises. */
+              /* A failed write is followed by the live read: a conflict drops the draft because the section
+                 moved, any other refusal is the platform's word about this write and is followed too. */
               if (written.conflict === true) await read();
+              else await rereadAfterFailure();
               return;
             }
             setNote({ where: 'models', value: 'saved' });
             await read();
           } catch (error) {
             setNote({ where: 'models', value: 'unsaved', detail: shared.reasonOf(error) });
+            await rereadAfterFailure();
           } finally {
             setBusy(null);
           }
@@ -529,12 +479,14 @@ window.__ModuleLoader__.load({
             ]);
             if (!written.wrote) {
               setNote({ where: 'models', value: 'unsaved', detail: written.fault });
+              await rereadAfterFailure();
               return;
             }
             setNote({ where: 'models', value: 'saved' });
             await read();
           } catch (error) {
             setNote({ where: 'models', value: 'unsaved', detail: shared.reasonOf(error) });
+            await rereadAfterFailure();
           } finally {
             setBusy(null);
           }

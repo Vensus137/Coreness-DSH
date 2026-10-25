@@ -6,7 +6,7 @@
  * token coexist**: a second exchange, and a refresh, leave the first one answering — measured over three
  * repetitions, a refresh, bursts and a flood of exchanges. What a job token cannot survive is the
  * vendor's own eviction: the contour then answers `403 {"code":"105","message":"Login expired"}` — the
- * wording for "the token I was given is not active", reachable with a token no account event ever touched —
+ * wording for "the token it was given is not active", reachable with a token no account event ever touched —
  * and a cached token refused this way stays worthless for the rest of its declared life, so the cache is
  * keyed by the personal token's fingerprint and **a dead-session refusal drops it** wherever the refusal
  * arrives (`sessionExpired`).
@@ -87,9 +87,9 @@ export class QoderError extends Error {
    * @param {string} code the stable code the caller routes on
    * @param {{status?: number, cause?: unknown, vendor?: string, vendorCode?: string|null}} [details] the
    *   wire status, the cause, the far side's own words when a refusal carried them — the words are what a
-   *   reader routes a dead session by (`sessionExpired`), and reading them off our own sentence would be a
+   *   reader routes a dead session by (`sessionExpired`), and reading them off this package's sentence would be a
    *   copy — and the far side's **own code** out of that body (`vendorCodeOf`), which is the only thing a
-   *   reader may convict a value by: our own `AUTH` is a status read, and every `401`/`403` gets it
+   *   reader may convict a value by: this package's own `AUTH` is a status read, and every `401`/`403` gets it
    */
   constructor(message, code, details = {}) {
     super(message, details.cause === undefined ? undefined : { cause: details.cause })
@@ -127,7 +127,7 @@ export function vendorCodeOf(text) {
 /**
  * The vendor's own request id out of a refusal body, when it sent one.
  *
- * Measured on the exchange door: `{"errorCode":"BadRequest","errorMessage":"Bad request","requestId":
+ * The exchange door answers in this shape: `{"errorCode":"BadRequest","errorMessage":"Bad request","requestId":
  * "7ceed3ff-…"}`. It is the field a support question needs, and the body itself stays in the log and in
  * `QoderError.vendor`, never in a sentence a reader acts on. A body that is not JSON, or one without a
  * usable id, answers `null`.
@@ -269,7 +269,7 @@ export function sessionExpired(text) {
  * The vendor's detail is not dropped, it moves: the whole body, the id inside it, goes out through
  * `warn` — the door this half keeps for reasons — and stands verbatim on `QoderError.vendor` for a
  * reader that routes by it. The price is named here rather than discovered later: `warn` is the
- * platform's logger, and in this build that logger has no sink beyond its own in-memory ring, so this
+ * platform's logger, and that logger has no sink beyond its own in-memory ring, so this
  * is the right home for the vendor's detail and not yet a place a user can open. Their copy of it is
  * whatever a caller of this module publishes beside the state.
  * @param {Response} response the refused answer
@@ -315,7 +315,7 @@ export function refusalIn(line, what) {
  * first-byte ceiling (`refusalInText`), and a line a later chunk carried (`translate`) — and both answer
  * the platform with these words and this code. The code is what decides whether the attempt
  * may be re-asked, so a refusal is classified by what it says and not by which chunk carried it: read as
- * a malformation of our own, a counted allowance was re-asked five times and finally reported as an
+ * a malformation of this package's, a counted allowance was re-asked five times and finally reported as an
  * unreadable answer.
  *
  * The sentence is the failure of a turn, drawn where a turn's failure is drawn, so it carries the
@@ -510,6 +510,8 @@ export function reasonOf({ finishReason, sawTerminal, textChars, callCount, coun
 export function expiryOf(answer, at) {
   const absolute = typeof answer.expires_at === 'string' ? Date.parse(answer.expires_at) : Number.NaN
   if (Number.isFinite(absolute)) return absolute
+  // The tree records no measurement of `expires_in`'s unit; the fixtures declare lives in milliseconds
+  // (`86_400_000`), and the owner's live exchange answer is the only proof if that unit is seconds.
   const relative = Number.isFinite(answer.expires_in) ? answer.expires_in : Number.NaN
   if (Number.isFinite(relative) && relative > 0) return at + relative
   return at + ASSUMED_TTL_MS
@@ -522,7 +524,7 @@ export function expiryOf(answer, at) {
  * for the user is the display name when there is one. The tiers of `context_config` are
  * the node's menu, and the declared window is its default tier — the largest only when no
  * tier says it is the default. `reasoning` is the contour's own flag for the model, read exactly as it
- * parses it (`is_reasoning:!!i.is_reasoning`) — a capability the entry publishes, not
+ * parses it — a capability the entry publishes, not
  * one derived from a request's effort. `efforts` is the menu the entry publishes, empty when it
  * publishes none, which is what their own reader makes of an empty menu as well (`Srn`).
  * `priceFactor` is the vendor's own multiplier to its own base rate (`price_factor`), with

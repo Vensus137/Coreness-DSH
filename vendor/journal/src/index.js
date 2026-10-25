@@ -4,9 +4,8 @@
  * The plugin provides the service and the door: the journal itself (records in a storage
  * domain, its rotation and the composition print), the tools `journal` and `journal_note`
  * for agents, and one exact route on the connection that answers the summary and the
- * faults of observation. The package is host-only: no browser half, no client entry, and
- * **no page reads the route today** — its readers are agents calling the tools and, later,
- * a surface that does not exist yet.
+ * faults of observation. The package is host-only: no browser half, no client entry; its
+ * readers are agents calling the tools.
  *
  * The route is the door because the Remote (Typert) door would need generated twins and
  * nothing in the installed application regenerates them; the platform's own packages read
@@ -27,6 +26,7 @@ import z from '@deepseek-ai/schemastery'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { journalDomain } from './domain.js'
+import { boundConfig } from './bounds.js'
 import { createJournal } from './journal.js'
 import { journalTools, lossless } from './tools.js'
 
@@ -36,7 +36,9 @@ export const inject = ['storageDomain', 'tools', 'pluginManager', 'profileContex
 /** The exact route the page reads. */
 export const ROUTE = '/api/coreness.journal'
 
-/** The row's settings: the limits of rotation and the limit of a selection. */
+/** The row's settings: the limits of rotation and the limit of a selection. The floors are held at the mount:
+ * the schema cannot refuse a value without unmounting the journal and taking its tools and route with it, so a
+ * value under the floor runs at the floor and the substitution is said in the log. */
 export const Config = z.object({
   rotationDays: z.number().default(30),
   rotationBytes: z.number().default(2 * 1024 * 1024),
@@ -50,7 +52,7 @@ export const Config = z.object({
  * @returns {void}
  */
 export function apply(ctx, rawConfig) {
-  const config = Config(rawConfig ?? {})
+  const config = boundConfig(Config(rawConfig ?? {}), message => ctx.logger?.warn?.(`${name}: ${message}`))
   const profileDir = ctx.profileContext?.dir
   const profileName = ctx.profileContext?.name
   const journal = createJournal({
@@ -62,10 +64,15 @@ export function apply(ctx, rawConfig) {
     profileName,
   })
 
+  /* The journal's own effect owns the domain handle: the storage facility reserves the domain's name until
+     the handle is closed and does not tie it to a consumer fiber, so a re-applied row would open a second
+     domain that cannot succeed while the first one stands. The close comes after the stop record, and the
+     domain's `close()` waits for the write chain the stop enqueued. */
   ctx.effect(() => {
     void journal.start()
-    return () => {
-      void journal.stop()
+    return async () => {
+      await journal.stop()
+      await journal.close()
     }
   })
 
@@ -153,7 +160,10 @@ function readProfileText(dir, fileName) {
 }
 
 /**
- * The live composition: bundles and rows as the plugin manager sees them.
+ * The live composition: the bundles the profile selects or installs, and the rows as the plugin manager
+ * sees them. The manager's list also carries the application's whole official catalogue — entries the
+ * profile does not carry — and printing those would make an application update read as a change of the
+ * profile.
  * @param {object} ctx the plugin's context
  * @returns {Promise<object>} bundles and rows
  */
@@ -161,6 +171,7 @@ async function readLiveComposition(ctx) {
   const [bundles, rows] = await Promise.all([ctx.pluginManager.listBundles(), ctx.pluginManager.listPlugins()])
   return {
     bundles: bundles
+      .filter(item => item.enabled === true || item.installed === true)
       .map(item => ({ name: String(item.name), enabled: item.enabled === true }))
       .sort((left, right) => left.name.localeCompare(right.name)),
     rows: rows

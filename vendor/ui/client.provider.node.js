@@ -16,8 +16,7 @@ window.__ModuleLoader__.load({
     const CREDITS_ROUTE = '/api/coreness.credits';
 
     /** How often the row asks the route again while the held picture carries no policy yet. */
-    const PRIVACY_RECHECK_MS = 2000;
-
+    
     /** The node's own functions, made once over the section's words and the parts beside them. */
     function create({ t, kit, picker, hold, ctx, shared }) {
       /**
@@ -154,13 +153,14 @@ window.__ModuleLoader__.load({
         return payload.value?.last?.privacy ?? null;
       }
 
-      /** What the policy is, in the words the button's title uses; the enums stay identifiers in it. */
+      /** What the policy is, in the page's own words; the enums stay identifiers in it. */
       function privacyTitle(privacy) {
         const state = privacy.can_update === false
-          ? 'Data sharing: on — the plan locks it'
-          : privacy.attempted === true ? 'Data sharing: on — the vendor did not change it' : 'Data sharing: on';
-        const plan = privacy.plan_tier === undefined ? '' : ` · plan: ${privacy.plan_tier}`;
-        return `${state} · source: ${privacy.source}${plan}`;
+          ? t('privacy.locked')
+          : privacy.attempted === true ? t('privacy.attempted') : t('privacy.on');
+        const parts = [state, t('privacy.source', { source: String(privacy.source) })];
+        if (privacy.plan_tier !== undefined) parts.push(t('privacy.plan', { plan: String(privacy.plan_tier) }));
+        return parts.join(' · ');
       }
 
       /**
@@ -175,7 +175,6 @@ window.__ModuleLoader__.load({
       function PrivacyButton({ enabled }) {
         const [privacy, setPrivacy] = React.useState(null);
         const [busy, setBusy] = React.useState(false);
-        const [error, setError] = React.useState(null);
         React.useEffect(() => {
           if (!enabled) {
             setPrivacy(null);
@@ -188,7 +187,7 @@ window.__ModuleLoader__.load({
               .then((next) => {
                 if (!live) return;
                 setPrivacy(next);
-                if (next === null) beat = setTimeout(read, PRIVACY_RECHECK_MS);
+                if (next === null) beat = setTimeout(read, hold.BEAT_MS);
               })
               .catch((reason) => {
                 if (!live) return;
@@ -203,25 +202,37 @@ window.__ModuleLoader__.load({
             if (beat !== null) clearTimeout(beat);
           };
         }, [enabled]);
-        if (privacy === null || privacy.kind === 'failed' || privacy.share_enabled !== true) return null;
+        /* A read that failed keeps the button's room and says the state: a control that vanishes because a
+           read went wrong takes away the thing a reader was about to press. */
+        if (privacy === null) return null;
+        if (privacy.kind === 'failed') {
+          return h('button', {
+            type: 'button',
+            className: 'coreness-qoder-button coreness-button',
+            disabled: true,
+          }, t('privacy.unread'));
+        }
+        if (privacy.share_enabled !== true) return null;
         return h('button', {
           type: 'button',
           className: 'coreness-qoder-button coreness-button',
           disabled: busy,
-          title: error === null ? privacyTitle(privacy) : `the change failed: ${error}`,
+          title: privacyTitle(privacy),
           onClick: async () => {
             setBusy(true);
-            setError(null);
             try {
               const next = await pressPrivacy();
               if (next !== null) setPrivacy(next);
             } catch (reason) {
-              setError(shared.reasonOf(reason));
+              /* The press's failure is a word on the face and a sentence in the console, never a tooltip. */
+              const said = shared.reasonOf(reason);
+              kit.statusDetail(t('status.subject.token'), t('privacy.failed', { reason: said }));
+              shared.setNote?.({ where: 'node', value: 'unsaved', detail: said });
             } finally {
               setBusy(false);
             }
           },
-        }, busy ? 'Stopping…' : 'Stop sharing');
+        }, busy ? t('privacy.stopping') : t('privacy.stop'));
       }
 
       /** The node the requests go to, or the map that answers for it. */
@@ -231,14 +242,13 @@ window.__ModuleLoader__.load({
 
       /* The node's own row, inside the connection card: the address and the one action that pins a node. The
          answer of the sweep is not drawn here — a word beside the address pushes the press that asked for it to
-         the right, and the reserved room of the card's header takes it — and **no mark stands here either**: a
-         node is assumed to answer, so a dot saying "it works" states what nobody needs told (the user's word:
-         «у ноды не нужно ставить круг зеленый… это лишнее»), while a red dot beside an address would say "a
-         connection" in the colour that means a fault. What a node answered stands in the corner's word and in
-         the reasons list under the card, and with nothing standing between the address and the press nothing
-         arriving can move it. The action stays a hand and never a tick — pinning writes the profile's patch, and
-         a pin made by a timer is the donor's own failure. Its
-         class is kept for the live walk, which presses it and reads the answer in the card's own room. */
+         the right, and the reserved room of the card's header takes it — and **no mark stands here either**: a node
+         is assumed to answer, so a dot saying "it works" states what nobody needs told, while a red dot beside an
+         address would say "a connection" in the colour that means a fault. What a node answered stands in the
+         corner's word and in the reasons list under the card, and with nothing standing between the address and
+         the press nothing arriving can move it. The action stays a hand and never a tick — pinning writes the
+         profile's patch, and a pin made by a timer would be a claim about a state nobody read. Its class is kept
+         for the live walk, which presses it and reads the answer in the card's own room. */
       function nodeRow(view, act) {
         const state = view.view;
         return h('div', { key: 'node', className: 'coreness-qoder-node' }, [

@@ -1,12 +1,12 @@
 /**
- * The route's adapter: the platform's contract against our own transport, and the declaration that
+ * The route's adapter: the platform's contract against this package's transport, and the declaration that
  * makes the route usable from the product's doors.
  *
  * The platform's model service calls this object: `providerInfo` at registration,
  * `providerRetryPolicy` once with it, `listModels`/`resolveModel` for the picker and the settings
  * page, `prepareCall`/`stream` for one attempt. Registration is duck-typed — the service reads those
  * methods off the object and never asks what it extends — which is why this module imports nothing
- * from the platform: **our failure codes travel in the terminal chunk we yield ourselves**, while a
+ * from the platform: **this package's failure codes travel in the terminal chunk it yields itself**, while a
  * thrown error keeps its code only when it is an instance of the harness's own class
  * (`harnessErrorCode`) — and the copy of that class a plugin can import is not guaranteed to be the
  * app's own instance.
@@ -39,7 +39,7 @@ export const DEFAULT_RETRYABLE_CODES = Object.freeze(['EMPTY_RESPONSE', 'RATE_LI
 export const RETRY_DEFAULTS = Object.freeze({ maxRetries: 5, initialDelayMs: 500, maxDelayMs: 10_000, jitterRatio: 0.1 })
 
 /**
- * Our transport's codes in the platform's vocabulary, where the two differ.
+ * This package's codes in the platform's vocabulary, where the two differ.
  *
  * Everything else passes through unchanged: `AUTH`, `QUOTA`, `RATE_LIMIT`, `SERVER`, `TIMEOUT`,
  * `TRANSPORT` and `MISSING_CREDENTIAL` are already the platform's own words — `QUOTA` being the one
@@ -278,8 +278,8 @@ export function createAdapter(options) {
      * (the page's picker does, through `llm/discoverModels`).
      *
      * The request is not read: its contract carries a provider, an address and a one-shot key
-     * (`LlmModelDiscoveryRequest`), and there is no field that would say "the live one" — the donor's
-     * own note on the same joint. The catalogue is always asked with the credential the row's
+     * (`LlmModelDiscoveryRequest`), and there is no field that would say "the live one" — the platform's request
+     * carries no such field. The catalogue is always asked with the credential the row's
      * reference holds, which is the account whose models this row is about; a draft provider carrying
      * a key nobody has stored yet is answered from the stored one, and the caller's own cancellation
      * is honoured through the transport.
@@ -475,7 +475,7 @@ async function* translate(response, call, { transport, log, journal, startedAt }
     if (read.kind === 'refusal') {
       // Read through the same reader the first chunk goes through, and for the reason that reader exists:
       // the code a refusal travels as decides whether the policy may re-ask the turn. As a malformation of
-      // our own reading it was retryable, so a counted allowance arriving in a later chunk was re-asked
+      // this package's reading it was retryable, so a counted allowance arriving in a later chunk was re-asked
       // five times, each re-ask meeting the same refusal, and the attempt finally reported an answer it
       // could not read instead of the contour's own words.
       throw refusalOfRead(read, 'the Qoder chat turn')

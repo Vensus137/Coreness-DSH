@@ -9,7 +9,7 @@
  */
 
 import { METHOD } from './pkce.js'
-import { authorizationEndpointOf, tokenEndpointOf } from './discovery.js'
+import { assertHttpAddress, authorizationEndpointOf, tokenEndpointOf } from './discovery.js'
 import { refuse } from './refusals.js'
 
 /** The name this flow registers itself as, when a server asks for a name rather than a client id. */
@@ -106,6 +106,7 @@ async function postForm(endpoint, form, fetchImpl, headers = {}) {
 export async function registerClient(metadata, { redirectUrl, fetch = globalThis.fetch, name = CLIENT_NAME } = {}) {
   const endpoint = metadata?.registration_endpoint
   if (typeof endpoint !== 'string' || endpoint === '') return null
+  const checked = assertHttpAddress(endpoint, 'the registration endpoint')
   const wanted = {
     client_name: name,
     redirect_uris: [redirectUrl],
@@ -115,23 +116,23 @@ export async function registerClient(metadata, { redirectUrl, fetch = globalThis
   }
   let response
   try {
-    response = await fetch(endpoint, {
+    response = await fetch(checked, {
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'application/json' },
       body: JSON.stringify(wanted),
     })
   } catch (error) {
-    throw refuse('registration-refused', `${endpoint} could not be reached (${error instanceof Error ? error.message : String(error)})`)
+    throw refuse('registration-refused', `${checked} could not be reached (${error instanceof Error ? error.message : String(error)})`)
   }
-  if (!response.ok) throw refuse('registration-refused', `${endpoint} answered ${response.status}`)
+  if (!response.ok) throw refuse('registration-refused', `${checked} answered ${response.status}`)
   let document
   try {
     document = await response.json()
   } catch (error) {
-    throw refuse('registration-invalid', `${endpoint} answered a body that does not parse (${error instanceof Error ? error.message : String(error)})`)
+    throw refuse('registration-invalid', `${checked} answered a body that does not parse (${error instanceof Error ? error.message : String(error)})`)
   }
   if (typeof document?.client_id !== 'string' || document.client_id === '') {
-    throw refuse('registration-invalid', `${endpoint} answered without a client id`)
+    throw refuse('registration-invalid', `${checked} answered without a client id`)
   }
   return document
 }

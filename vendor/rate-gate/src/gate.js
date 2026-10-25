@@ -34,6 +34,10 @@
 
 const BASE64_DATA_URL = /^data:[a-z0-9.+-]+\/[a-z0-9.+-]+;base64,/iu;
 
+/** The role line the platform's meter prices on every model-visible message: four tokens, as its own
+ * `estimateMessage` adds — `estimateContent(...) + 4` — and once more for the system message. */
+const ROLE_OVERHEAD = 4
+
 /** The numbers the gate runs at when the row names none of them. Every one is moved from the row. */
 export const DEFAULTS = Object.freeze({
   windowMs: 60_000,
@@ -50,7 +54,7 @@ export const DEFAULTS = Object.freeze({
 })
 
 /** The bounds a plugin-level number is held inside, with the reason each bound exists. */
-export const BOUNDS = Object.freeze({
+const BOUNDS = Object.freeze({
   windowMs: { min: 1_000, max: 24 * 60 * 60 * 1000 },
   maxWaitMs: { min: 0, max: 24 * 60 * 60 * 1000 },
   charsPerToken: { min: 1, max: 16 },
@@ -268,9 +272,17 @@ export function estimateRequestTokens(request, settings) {
   collect(request.messages, acc)
   collect(request.tools, acc)
   collect(request.toolHistory, acc)
+  /* The platform's meter charges four tokens for each message and four for the system message, beside the
+     characters of its blocks (`estimateMessage` / `estimateSystemMessage`). The estimate copies that shape,
+     so the first waits are not undercounted until the calibration factor has climbed. */
+  const messages = (Array.isArray(request.messages) ? request.messages.length : 0)
+    + (Array.isArray(request.toolHistory) ? request.toolHistory.length : 0)
+  const system = request.system === undefined || request.system === null || request.system === '' ? 0 : ROLE_OVERHEAD
   return Math.ceil(acc.chars / settings.charsPerToken)
     + acc.blocks * settings.blockOverheadTokens
     + acc.images * settings.imageTokens
+    + messages * ROLE_OVERHEAD
+    + system
 }
 
 /**

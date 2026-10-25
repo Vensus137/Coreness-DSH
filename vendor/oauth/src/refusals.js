@@ -12,7 +12,7 @@
 
 /**
  * The codes, each with the sentence it carries. The keys are the vocabulary a caller branches on and
- * the values are what a person reads; a check holds every code to a case of its own.
+ * the values are what a person reads; the fixture holds every code to a sentence of its own.
  */
 export const WORDS = {
   'no-resource-metadata': 'the server answers 401, and neither the pointer it gave nor the well-known address of the standard carries a protected-resource document',

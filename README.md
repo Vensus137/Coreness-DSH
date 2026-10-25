@@ -14,7 +14,7 @@ github:Vensus137/Coreness-DSH
 
 The same page switches the package off without removing it, and takes it off again.
 
-That address follows the newest release, and what stands published is a release — so the address and the newest release are one thing here. A fixed release is named by its own tag — `…Coreness-DSH#v0.7.1` — and a released tag is never moved: that line gives the same code whenever it is run.
+That address follows the newest release, and what stands published is a release — so the address and the newest release are one thing here. A fixed release is named by its own tag — `…Coreness-DSH#<tag>` — and that line gives the same code whenever it is run.
 
 <details>
 <summary><b>By command line</b> — for a terminal; nothing above needs it</summary>
@@ -27,7 +27,7 @@ dsh plugin --profile desktop add github:Vensus137/Coreness-DSH
 
 Another profile is named by its own name instead — the web surface's is `web` — and naming a profile that does not stand yet creates it.
 
-`dsh` is the application's own command and is not one Windows or macOS comes with, so until the application puts it on the path a terminal answers *not recognized*. The application does that from its own menu: in the window's title bar beside the app icon, **Application** → **Manage dsh Command…** — the dialog shows the location it manages, and the same dialog takes the command off the path again. A terminal opened before that act keeps the path it started with, so open a new one afterwards.
+`dsh` is the application's own command and is not one Windows or macOS comes with, so until the application puts it on the path a terminal answers *not recognized*. The application does that from its own menu: in the window's title bar beside the app icon, **Application** → **Manage dsh Command…** — the dialog shows the location it manages, and the same dialog takes the command off the path again. A terminal opened before that act keeps the path it started with; one opened afterwards finds the command.
 
 </details>
 
@@ -35,26 +35,19 @@ The profile's composition is read when the application starts, so the package be
 
 ### Updates through the market
 
-The application has its own **Discover** tab: it reads a plugin market, and the market is a list you add. Turn
-on *Custom plugin markets* once — **Plugins → More** beside *Experimental plugins* — then add this address in
-Discover:
+The application has its own **Discover** tab: it reads a plugin market, and the market is a list the profile adds. *Custom plugin markets* is switched on once — **Plugins → More** beside *Experimental plugins* — and then this address is added in Discover:
 
 ```
 https://raw.githubusercontent.com/Vensus137/Coreness-DSH/main/market.json
 ```
 
-The plugin stands listed with its versions, and the market tells you when a newer one exists: the
-application compares the versions itself.
+The plugin stands listed with its versions; the application compares them itself and shows when a newer one exists.
 
-The market lists and compares; it does not upgrade. Its own note says so — *no upgrade action* — and its
-**Update available** press only opens the plugin's page. The update is the same act as the install:
-**Add plugin** with the same address picks up the newest release, and the application says when a restart is
-needed. A version that does not move after that is a pinned lockfile: take the plugin off and add it again.
+The market lists and compares; it does not upgrade. Its own note says so — *no upgrade action* — and its **Update available** press only opens the plugin's page. The update is the same act as the install: **Add plugin** with the same address picks up the newest release, and the application says when a restart is needed. A version that does not move after that is a pinned lockfile: the plugin is taken off and added again.
 
 Nothing checks in the background and nothing notifies — the market is read when the page is opened.
 
-A profile that mounts a working tree (`file:` dependency) is the development case: the market's install would
-replace that mount with the published copy, so a development profile updates by re-mounting instead.
+A profile that mounts a working tree (`file:` dependency) is the development case: the market's install would replace that mount with the published copy, so a development profile updates by re-mounting instead.
 
 ## ✨ What a profile gets
 
@@ -62,7 +55,7 @@ replace that mount with the published copy, so a development profile updates by 
 - 🔌 **The MCP servers, seen and edited** — one card per server: its kind, its address, the environment it needs, and switches whose effect lands in the profile rather than in a copy.
 - 📓 **The journal** — the environment's memory: what changed in the profile and what a participant did, kept as records that carry a kind, an area, a name and an author.
 - 🚦 **A limiter that waits instead of refusing** — a call over the limit takes its turn in a queue; nothing is limited as the package ships.
-- 🤝 **The Agent Team, on the page and on its own terms** — the platform's teammates, board and mailbox, and a card on the General page: how many teammates a session may hold, written through the platform's own editor, and a switch that puts the product's paragraph in place of the platform's last sentence of the team policy — the one that tells the Lead to wait — so the Lead leads, sets the plan, breaks the work into shared tasks and hands them out, answers when the required results are in hand, never holds a turn open — when time must pass it sets a reminder and ends the turn — while every other line of the policy stays as the platform wrote it, and the platform's own text stands when the switch is off. A second switch appends the review paragraph to that text: a review as the normal step of every circle of work with a small task as the exception, what the reviewer looks at, and the authorship bar. No value ships with the package.
+- 🤝 **The Agent Team, on the page and on its own terms** — the platform's teammates, board and mailbox, and a card on the General page: how many teammates a session may hold, written through the platform's own editor, and two switches that put the product's paragraph in place of the platform's last team-policy sentence and add the review paragraph after it, while every other line of the policy stays as the platform wrote it and the platform's own text stands when the first switch is off.
 - 🧠 **A route to the Qoder models** — the account's own models, each with the reasoning levels it accepts and the output budget it allows. The account's token is entered once, in the Qoder section, and kept by the platform's own store; no value of it stands in the package. A token from either Qoder contour — the international one or the Chinese one — is accepted there the same way, and the route reads the account on its own contour. The credits foot reads the balance while the account is reachable; the Qoder section's node row carries one press that asks the vendor to turn sharing off, reports a plan that locks it, and keeps the state in its title.
 - 📜 **The rules of its own tree, in force** — one prompt section, registered through the platform's own prompt registry, so a session of the profile carries them in every request and no compaction can take them out of the model's sight.
 

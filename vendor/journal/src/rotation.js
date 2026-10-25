@@ -52,16 +52,23 @@ export function recordBytes(record) {
 }
 
 /**
- * The plan of one rotation: what to drop and why.
+ * The plan of one rotation: what to drop, why, and whether the bound could be met at all.
+ *
+ * A record the journal has just written is passed as protected: the sweep that follows a write must not
+ * delete the record it was told to keep, even when that record alone is over the byte bound. The baseline and
+ * the rollups are protected by the rules above; a protected record larger than the whole bound leaves the
+ * plan with nothing to drop and the size still over — that is reported through `overBytes`, because a bound
+ * that cannot be met must be said rather than inferred from a file that keeps growing.
  * @param {Array<{key: string, record: object}>} entries the journal's records
- * @param {object} limits the limits: `now` (the moment of the sweep), `days`, `bytes`
- * @returns {object} `drop` (keys), `kept` (how many stay) and `reason` (the cause)
+ * @param {object} limits the limits: `now` (the moment of the sweep), `days`, `bytes`, `protect` (keys that stay)
+ * @returns {{drop: string[], kept: number, reason: string|undefined, overBytes?: number}} the plan
  */
 export function planRotation(entries, limits) {
   const { now, days, bytes } = limits
+  const protect = new Set(limits.protect ?? [])
   const ordered = [...entries].sort((left, right) => left.record.time.localeCompare(right.record.time))
   const baseline = [...ordered].reverse().find(item => item.record.composition !== undefined)
-  const droppable = ordered.filter(item => item.key !== baseline?.key && item.record.kind !== 'оборот')
+  const droppable = ordered.filter(item => item.key !== baseline?.key && item.record.kind !== 'оборот' && protect.has(item.key) === false)
   const cutoff = new Date(Date.parse(now) - days * DAY_MS).toISOString()
   const drop = []
   const aged = droppable.filter(item => item.record.time < cutoff)
@@ -77,6 +84,7 @@ export function planRotation(entries, limits) {
       size -= recordBytes(item.record)
     }
   }
+  if (size > bytes) return { drop, kept: ordered.length - drop.length, reason, overBytes: size }
   if (drop.length === 0) return { drop, kept: ordered.length, reason: undefined }
   return { drop, kept: ordered.length - drop.length, reason }
 }

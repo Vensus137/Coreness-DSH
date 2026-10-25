@@ -22,14 +22,13 @@
  * @module @coreness/qoder/src/credits
  */
 
-import { DEFAULT_CONTROL_CEILING_MS, QoderError, bounded, codeFor } from './in.js'
+import { DEFAULT_CONTROL_CEILING_MS, QoderError, bounded, codeFor, jsonOf } from './in.js'
+import { CONTOURS } from './contour.js'
 
 /** The balance of the account. */
 export const QUOTA_PATH = '/api/v2/quota/usage'
 /** The campaign list, and the base of a reward's own address. */
 export const CAMPAIGNS_PATH = '/sash/api/v1/me/campaigns'
-/** The site the account belongs to: the contour checks it in the account calls. */
-export const SITE_ORIGIN = 'https://qoder.com'
 /** The client type the contour shows the campaign list to — the desktop one. */
 export const DESKTOP_CLIENT_TYPE = '10'
 /** The version that travels beside the client type; the contour's own value, not a choice. */
@@ -57,16 +56,6 @@ function numberOrUndefined(value) {
 
 /** A string field that is present and not empty. */
 const stringOrUndefined = (value) => (typeof value === 'string' && value !== '' ? value : undefined)
-
-/** The body of an answer as JSON, or a refusal in words when it is not JSON. */
-async function jsonOf(response, what) {
-  const text = await response.text().catch(() => '')
-  try {
-    return JSON.parse(text)
-  } catch (cause) {
-    throw new QoderError(`${what} did not answer with JSON: ${text.slice(0, 120)}`, 'MALFORMED', { cause })
-  }
-}
 
 /** The object behind a field, when the field carries one. */
 const objectOrUndefined = (value) => (typeof value === 'object' && value !== null && !Array.isArray(value) ? value : undefined)
@@ -226,7 +215,7 @@ export function parseClaim(payload) {
  * @param {string} [siteOrigin] the account's own site origin, for the `Origin` and `Referer` headers
  * @returns {Record<string, string>} the headers
  */
-export function accountHeaders(token, machineId = '', desktop = false, siteOrigin = SITE_ORIGIN) {
+export function accountHeaders(token, machineId = '', desktop = false, siteOrigin = CONTOURS.global.siteOrigin) {
   return {
     Accept: 'application/json, text/plain, */*',
     Authorization: `Bearer ${token}`,
@@ -285,7 +274,7 @@ async function accountCall({ what, url, init, fetchImpl, ceilingMs, signal }) {
  * @param {AbortSignal} [call.signal] the caller's cancellation
  * @returns {Promise<object>} the balance
  */
-export async function readQuota({ jobToken, openapiOrigin, siteOrigin = SITE_ORIGIN, machineId = '', fetchImpl = globalThis.fetch, ceilingMs = DEFAULT_CONTROL_CEILING_MS, signal }) {
+export async function readQuota({ jobToken, openapiOrigin, siteOrigin = CONTOURS.global.siteOrigin, machineId = '', fetchImpl = globalThis.fetch, ceilingMs = DEFAULT_CONTROL_CEILING_MS, signal }) {
   const payload = await accountCall({
     what: 'the Qoder balance read',
     url: `${openapiOrigin}${QUOTA_PATH}`,
@@ -302,7 +291,7 @@ export async function readQuota({ jobToken, openapiOrigin, siteOrigin = SITE_ORI
  * @param {object} call the call, as {@link readQuota}'s
  * @returns {Promise<object>} the list and whether the contour showed it
  */
-export async function readCampaigns({ jobToken, openapiOrigin, siteOrigin = SITE_ORIGIN, machineId = '', fetchImpl = globalThis.fetch, ceilingMs = DEFAULT_CONTROL_CEILING_MS, signal }) {
+export async function readCampaigns({ jobToken, openapiOrigin, siteOrigin = CONTOURS.global.siteOrigin, machineId = '', fetchImpl = globalThis.fetch, ceilingMs = DEFAULT_CONTROL_CEILING_MS, signal }) {
   const payload = await accountCall({
     what: 'the Qoder campaign read',
     url: `${openapiOrigin}${CAMPAIGNS_PATH}`,
@@ -334,7 +323,7 @@ export async function readCampaigns({ jobToken, openapiOrigin, siteOrigin = SITE
  *   nothing new — a repeat, a reward closed to this account, or one it already has
  * @throws {QoderError} `MALFORMED_RESPONSE` when no campaign was named
  */
-export async function claimReward({ jobToken, openapiOrigin, siteOrigin = SITE_ORIGIN, campaignId, machineId = '', fetchImpl = globalThis.fetch, ceilingMs = DEFAULT_CONTROL_CEILING_MS, signal }) {
+export async function claimReward({ jobToken, openapiOrigin, siteOrigin = CONTOURS.global.siteOrigin, campaignId, machineId = '', fetchImpl = globalThis.fetch, ceilingMs = DEFAULT_CONTROL_CEILING_MS, signal }) {
   if (typeof campaignId !== 'string' || campaignId === '') {
     throw new QoderError('the Qoder claim names no campaign', 'MALFORMED_RESPONSE')
   }
@@ -397,7 +386,7 @@ export function createCredits({ transport, fetchImpl = globalThis.fetch, now = (
     const [quota, campaigns, privacy] = await Promise.all([
       readQuota(call),
       readCampaigns(call),
-      transport.dataPolicy({ signal })
+      transport.dataPolicy({ fresh: true, signal })
         .then((policy) => ({ kind: 'read', ...policy }))
         .catch((error) => ({ kind: 'failed', reason: reasonOf(error) })),
     ])

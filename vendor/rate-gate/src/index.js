@@ -24,8 +24,10 @@
  * chunk, and the one thing it adds is a terminal `finish` of the kind the runtime itself produces for a
  * caller's cancellation.
  *
- * The settings are volatile fields, read at every decision and never captured at the mount, and the state a
- * surface reads is this plugin's own route on the connection — read-only, because the values are written
+ * **The numbers are read at every decision and never captured at the mount.** Five of them are volatile
+ * fields the platform's settings service writes; the seven tuning numbers beside them are ordinary config,
+ * so a value the log says was substituted can be read but not repaired from the card. The state a surface
+ * reads is this plugin's own route on the connection — read-only, because the volatile values are written
  * through the platform's own settings service and never through a door of ours.
  *
  * @module @coreness/rate-gate
@@ -161,7 +163,7 @@ export function live(field) {
  * @param {object} ctx the cordis context
  * @param {GateLedger} ledger the windows
  * @param {{settings: object, rows: object[], refused: object[]}} resolved the rows as they stand
- * @param {string} ns the settings namespace of the row
+ * @param {string|null} ns the settings namespace of the row, or null where the row is not addressable
  * @returns {Promise<object>} the picture
  */
 async function pictureOf(ctx, ledger, resolved, ns) {
@@ -251,7 +253,7 @@ async function listingOf(ctx) {
  * @param {AbortSignal} [signal] the caller's signal
  * @returns {object} the chunk
  */
-export function abortedFinish(signal) {
+function abortedFinish(signal) {
   return {
     type: 'finish',
     reason: { kind: 'aborted', failure: { code: 'ABORTED', message: abortReason(signal).slice(0, REASON_MAX) } },
@@ -397,8 +399,7 @@ async function* gatedStream(options, next, { ledger, settings, log }) {
  * Mount the gate.
  *
  * Three things and no more: the listener on the platform's model waterfall, the read-only route a
- * surface reads the state through, and the lines that say what the gate is doing — because this build
- * mounts no console sink and reaches no log file, the route is the only place the behaviour can be
+ * surface reads the state through, and the lines that say what the gate is doing — because the mount reaches neither a console sink nor a log file, the route is the only place the behaviour can be
  * seen, and the log lines reach whoever reads the platform's own ring.
  * @param {object} ctx the cordis context
  * @param {object} config the row's config, resolved by the Loader against {@link Config}
@@ -407,7 +408,7 @@ async function* gatedStream(options, next, { ledger, settings, log }) {
 export function apply(ctx, config) {
   const log = (message) => ctx.logger?.info?.(`${name}: ${message}`)
   const warn = (message) => ctx.logger?.warn?.(`${name}: ${message}`)
-  const settingsNs = ctx.fiber?.entry?.options?.id ?? name
+  const settingsNs = ctx.fiber?.entry?.options?.id ?? null
   const ledger = new GateLedger()
 
   /**
@@ -555,7 +556,7 @@ async function nameUnlisted(ctx, ledger, resolved, say, said) {
  * @param {object} ctx the cordis context
  * @param {GateLedger} ledger the windows
  * @param {() => {settings: object, rows: object[], refused: object[]}} read the rows as they stand
- * @param {string} ns the settings namespace of the row
+ * @param {string|null} ns the settings namespace of the row, or null where the row is not addressable
  * @param {(message: string) => void} warn where a refusal is said
  * @returns {Promise<Response>} the answer
  */

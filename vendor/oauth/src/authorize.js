@@ -1,17 +1,17 @@
 /**
- * One server's authorization, from the discovery to the tokens — three calls a caller makes.
+ * One server's authorization, from the discovery to the tokens — two calls a caller makes.
  *
  * `begin` discovers, registers where the server allows it, keeps a verifier and a state, and answers
- * the address a person opens. `finish` takes the code the browser step came back with and stores the
- * tokens. `refresh` rotates them. Nothing here draws, routes or connects: the browser step leaves as an
- * address, and the row's own reload after a refresh belongs to whoever owns the row.
+ * the address a person opens. `finish` takes the code the browser step came back with and answers the
+ * tokens; the record those tokens are committed as is the platform's commit door's, written by the
+ * step that owns the attempt. Nothing here draws, routes or connects.
  *
  * @module @coreness/oauth/src/authorize
  */
 
 import { randomBytes } from 'node:crypto'
 import { discover } from './discovery.js'
-import { AUTH_METHODS, authorizationUrlFor, exchangeCode, refreshTokens, registerClient } from './flow.js'
+import { AUTH_METHODS, authorizationUrlFor, exchangeCode, registerClient } from './flow.js'
 import { challengeOf, verifier } from './pkce.js'
 import { RecordStores } from './stores.js'
 import { CLIENT_NAME } from './flow.js'
@@ -110,16 +110,20 @@ function namesAnotherAddress(client, redirectUrl) {
 }
 
 /**
- * Finish a browser step: the code back into stored tokens.
+ * Finish a browser step: the code back into the tokens the step commits.
  *
  * The state the answer carries is held against the one this flow stored, because a code arriving with
  * somebody else's state is not this authorization's answer. A code a person pasted carries no state at
  * all: the check is skipped for that door rather than faked, and the door that can carry a state always
  * passes one.
  *
- * The state is taken back here, before the exchange: the answer is in hand, a code is one-use, and a state
- * that outlived its callback is a door left open for an answer nobody will send. An attempt that ends
- * without ever reaching this call takes its own state back where that attempt ends.
+ * The state and the verifier are taken back here, before the tokens leave: the answer is in hand, a code
+ * is one-use, and a state or a verifier that outlived its attempt is a door left open for an answer
+ * nobody will send. An attempt that ends without ever reaching this call takes its own two back where
+ * that attempt ends.
+ *
+ * The tokens are answered, not stored: the grant's one write is the platform's commit door, which the
+ * callers that own an attempt hold. A caller that has no door writes through the stores itself.
  * @param {object} options what this exchange stands on
  * @param {object} options.credentials the platform's credential service
  * @param {string} options.server the server's name
@@ -130,7 +134,7 @@ function namesAnotherAddress(client, redirectUrl) {
  * @param {string | null} [options.pointer] what a `401` pointed at, when one was read
  * @param {string} [options.clientId] a client id to use when none is stored
  * @param {object} [options.fetch] the fetch to ask with
- * @returns {Promise<object>} the tokens as they were stored
+ * @returns {Promise<object>} the token response
  * @throws {Refusal} `state-mismatch`, `no-code-verifier`, or the exchange's own codes
  */
 export async function finish({ credentials, server, resource, code, state, redirectUrl, pointer = null, clientId = '', fetch = globalThis.fetch } = {}) {
@@ -157,48 +161,6 @@ export async function finish({ credentials, server, resource, code, state, redir
     resource,
     fetch,
   })
-  await stores.saveTokens(tokens)
+  await stores.write('verifier', undefined)
   return tokens
-}
-
-/**
- * Rotate the tokens of a stored grant.
- *
- * The answer replaces what the store holds; a refresh the server refuses as an expired grant is
- * reported with its own code and `expired` in the detail, because that is the one refusal a person has
- * to answer by signing in again.
- * @param {object} options what this refresh stands on
- * @param {object} options.credentials the platform's credential service
- * @param {string} options.server the server's name
- * @param {string} options.resource the resource's address
- * @param {string | null} [options.pointer] what a `401` pointed at, when one was read
- * @param {string} [options.clientId] a client id to use when none is stored
- * @param {string} [options.scope] the scopes to ask for
- * @param {object} [options.fetch] the fetch to ask with
- * @returns {Promise<object>} the tokens as they were stored
- * @throws {Refusal} `registration-refused` when no client stands, or the refresh's own codes
- */
-export async function refresh({ credentials, server, resource, pointer = null, clientId = '', scope = '', fetch = globalThis.fetch } = {}) {
-  const stores = new RecordStores(credentials, server)
-  const held = await stores.tokens()
-  if (held === undefined || typeof held.refresh_token !== 'string' || held.refresh_token === '') {
-    throw refuse('refresh-refused', `${server} holds no refresh token to rotate`)
-  }
-  const client = (await stores.clientInformation()) ?? (clientId === '' ? undefined : { client_id: clientId })
-  if (client === undefined || typeof client.client_id !== 'string' || client.client_id === '') {
-    throw refuse('registration-refused', `${server} holds no client registration to refresh with`)
-  }
-
-  const found = await discover(resource, { pointer, fetch })
-  const tokens = await refreshTokens(found.server, {
-    clientId: client.client_id,
-    refreshToken: held.refresh_token,
-    resource,
-    scope,
-    fetch,
-  })
-  const merged = { ...tokens }
-  if (typeof merged.refresh_token !== 'string' || merged.refresh_token === '') merged.refresh_token = held.refresh_token
-  await stores.saveTokens(merged)
-  return merged
 }

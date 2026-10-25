@@ -96,7 +96,7 @@ window.__ModuleLoader__.load({
      *
      * `data-status` names the value and `data-tone` is the entry's own tone; there is no other way to
      * give this element a colour. `title` carries nothing: a tooltip is the face as well, and every
-     * reason this page used to hang there is in the console through `statusDetail`.
+     * reason this page keeps is in the console through `statusDetail`.
      */
     function statusNode({ subject, value, data }) {
       const entry = value === undefined || value === null ? null : STATUS_WORDS[value];
@@ -118,10 +118,8 @@ window.__ModuleLoader__.load({
      * a node — and never in the corner, never on a save, never on a node's answer.
      *
      * Its tone is the mark's own (`MARK_TONES`): none stored — grey, something stored — green, something
-     * wrong — red, which is what the dot beside the Connection card's name says now that `Token is set` and
-     * `Token is not set` left the face on the user's word. Every other value keeps the tone of the
-     * entry its word comes from, so the dot beside a refusal stays red and the dot beside the node's own
-     * answer green.
+     * wrong — red. Every other value keeps the tone of the entry its word comes from, so the dot beside a
+     * refusal stays red and the dot beside the node's own answer green.
      *
      * **A dot a reader cannot see is a state a reader cannot read.** Where no word of the same entry stands
      * beside it — the two states that draw no word at all — the mark carries that entry's own word as its
@@ -195,6 +193,6 @@ window.__ModuleLoader__.load({
 .coreness-status-mark[data-tone='fault']{background:var(--dsw-alias-state-error-primary)}
 `;
 
-    return { statusNode, statusMark, useStatusStyles: useStyles, STATUS_WORDS, statusWord, statusDetail };
+    return { statusNode, statusMark, useStatusStyles: useStyles, STATUS_WORDS, statusDetail };
   },
 });

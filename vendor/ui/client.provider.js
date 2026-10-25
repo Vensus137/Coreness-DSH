@@ -34,7 +34,7 @@
  *
  * **Two vocabularies stand in one row, and they are not interchangeable.** The row's effort carries the
  * **vendor's** level — whatever the model's menu names — because that is what the wire is asked for; the page
- * offers exactly the menu the model publishes, plus our own `Off`. What the platform is told is a vocabulary
+ * offers exactly the menu the model publishes, plus the product's own `Off`. What the platform is told is a vocabulary
  * of its own: the route's own adapter declares its three names plus the level this row holds, because the
  * platform validates every effort it resolves against that declaration before any request leaves. The
  * platform's own model picker reads that declaration, which is why the level a row holds is declared there
@@ -85,20 +85,15 @@ window.__ModuleLoader__.load({
     /**
      * The vendor's own scale, ascending, and the page's only rule about the menu it draws.
      *
-     * It is a copy, and it is named as one: the scale is the route's own body half's (`VENDOR_EFFORTS`, read out of the
-     * vendor's own budget map at byte 19043717). It orders this page's drawing and nothing else — the
-     * effort a row names travels as it stands, and no level is substituted on the wire.
-     * Here it answers a narrower question the catalogue cannot: the page has to *draw* a menu in a
-     * settled order, and the vendor publishes it as an object whose keys carry no order at all —
-     * the route's own `effortsOf` sorts only the default first.
+     * It is a copy, and it is named as one: the scale is the route's own body half's (`VENDOR_EFFORTS`). It
+     * orders this page's drawing and nothing else — the effort a row names travels as it stands, and no level is
+     * substituted on the wire. Here it answers a narrower question the catalogue cannot: the page has to *draw* a
+     * menu in a settled order, and the vendor publishes it as an object whose keys carry no order at all — the
+     * route's own `effortsOf` sorts only the default first.
      */
     const VENDOR_EFFORTS = ['none', 'low', 'medium', 'high', 'xhigh', 'max'];
     /** Where the section's own reads start: the route, its credential and its models. */
     const ORDER = 20;
-    /** The module id the sheet is marked with, as the host marks its own (`data-plugin-css`). */
-    const STYLE_TAG = '@coreness/ui/client.provider.js';
-    const STYLE_ID = 'coreness-ui-qoder-style';
-
     /** The host's announcements that invalidate what this section read. */
     const WATCHED = [
       'credentials/record-updated',
@@ -160,6 +155,17 @@ window.__ModuleLoader__.load({
       'fault.clear': 'The credential store refused to clear the value',
       'fault.notsaved': 'The store took the call but the value is not there: reading it back says nothing is stored, so the save did not stand',
       'fault.notcleared': 'The store took the call but the value is still there: reading it back says a value is stored, so the clear did not stand',
+      /* The row's one press about data sharing, and the states it can stand in: the plan's lock, a vendor
+         that did not change the value, and a state that could not be read. */
+      'privacy.on': 'Data sharing: on',
+      'privacy.locked': 'Data sharing: on — the plan locks it',
+      'privacy.attempted': 'Data sharing: on — the vendor did not change it',
+      'privacy.source': 'source: {source}',
+      'privacy.plan': 'plan: {plan}',
+      'privacy.stop': 'Stop sharing',
+      'privacy.stopping': 'Stopping…',
+      'privacy.unread': 'Data sharing: the state has not been read',
+      'privacy.failed': 'Data sharing: the press did not answer — {reason}',
       'node.map': 'from the node map',
       'node.check': 'Check node',
       'node.checking': 'Checking…',
@@ -167,6 +173,8 @@ window.__ModuleLoader__.load({
       'refused.title': 'Nodes that did not answer',
       'models.label': 'Models',
       'models.none': 'The route offers no model in this profile yet',
+      'models.fallbackWindow': 'the fallback window',
+      'models.rowProblem': 'Row {index}: {message}',
       'models.effortLabel': 'Reasoning effort',
       /* The words of the effort control: our own level as the menu names it, and the trigger's own title for
          each of the two levels it can stand on while the row names none. No sentence stands beside the menu —
@@ -198,7 +206,7 @@ window.__ModuleLoader__.load({
       'models.addedAgain': 'Another row was added',
       'models.pick': 'Choose a model',
       'models.catalogDown': 'live catalog unavailable',
-      /* The one word the donor did not need: its section waited for the catalogue inside the read, so a
+      /* The one word the earlier build did not need: its section waited for the catalogue inside the read, so a
          picker that was locked was locked for as long as the whole section was absent. Here the section
          stands and the picker waits, and a wait that says nothing is a control that looks broken. */
       'models.readingCatalog': 'Reading the live catalog…',
@@ -218,106 +226,6 @@ window.__ModuleLoader__.load({
       'web.noToken': 'The Qoder token is not set, so the standard DeepSeek web search and fetch are used. Fill the Personal access token field above to use Qoder.',
       'web.footnote': 'On replaces the DeepSeek web search and fetch with Qoder. The DeepSeek search URL, API key and result count stay stored but are not used. Off returns the standard DeepSeek search. The platform\'s Web search page is the DeepSeek page; the latest save of the shared web settings wins. Off by default.',
     };
-    /* The host's own settings sheet, copied rule for rule and renamed, carried by its tokens alone. One
-       departure is named: the section's own block is a card with one field, so its actions stand under
-       the field rather than in a row of the editor. */
-    const CSS = `
-.coreness-qoder-title{margin:0;font-size:16px;font-weight:500;line-height:24px;color:var(--dsw-alias-label-primary)}
-.coreness-qoder-intro{color:var(--dsw-alias-label-tertiary);margin:8px 0 0;font-size:14px;line-height:22px}
-/* A hint line — this section's notes, hints and refusals: the page's small role, one pair for it everywhere,
-   12/18 in label-tertiary, which stands once in the page's own sheet as coreness-dim and is worn beside this
-   name. The name stays: this section's own readings select the line by it, and the head's rule below keeps its
-   own room. */
-.coreness-qoder-failed p{margin:0;font-size:14px;line-height:22px}
-.coreness-qoder-card{border:.5px solid var(--dsw-alias-settings-card-stroke);background:var(--dsw-alias-settings-card-fill);border-radius:var(--dsw-radius-xl);flex-direction:column;gap:12px;margin-top:12px;padding:12px 14px;display:flex}
-.coreness-qoder-card+.coreness-qoder-card{margin-top:8px}
-.coreness-qoder-name{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px;flex:none}
-/* The state area of a card: one sentence, to the right of the title, in room the header reserves whether
-   or not anything stands in it. A state written under the controls makes the card grow and moves every
-   block below it. A head never wraps: it is a title line, and the moment a state needs a second line a
-   wrapped head would take one too, leaving the rows of a list at uneven heights and pushing what stands
-   beside the title onto a line of its own — in a card, its own tag. The title, the mark and the tag keep
-   their room; the state takes what is left and wraps inside it.
-   The header reserves nothing and caps nothing: its height is the tallest line standing in it — a name's
-   line is 22 px, a tag's 20, a line of state 18 — so a state of two lines stands 36 px by its own size
-   rather than by a declaration, and a longer sentence wraps where it stands and grows the header, and
-   with it the card. Measured before the ceiling existed: a 200-character catalogue refusal stood over 379×54 px
-   and took its card from 1290 to 1308 and its head from 36 to 54, while the same slot at 25 and 71
-   characters stood over 379×18 and 379×36 px with the card and the head unmoved, and the answer of a
-   sweep stood over 419×18 px inside the node row without moving the card at all. The walk that prints
-   every reading's boxes, run with the store seeded and without it, is what those numbers were read from. */
-/* The header's own words keep their room: a title, a tag, the line that names a node. The status beside
-   them is the one component's and brings its place rule and its own room with it,
-   which is why this sheet has no status rule left: the two rules that stood here — the reserved height
-   the user took off the page, and the wrap that replaced it — are properties of the component now. */
-.coreness-qoder-head > .coreness-qoder-dim{flex:none}
-/* A card's status is the one component's: its words, its tones and its place rule
-   live there, and this sheet carries none of them. What stands here is the header's own furniture — a
-   title, a tag, the line that names a node — while the mark and the sentence that answer for the state
-   are drawn by the one component, on every card of this page alike. */
-.coreness-qoder-tag{border:.5px solid var(--dsw-alias-border-l3);border-radius:var(--dsw-radius-xs);color:var(--dsw-alias-label-tertiary);flex:none;padding:1px 6px;font-size:12px;line-height:18px}
-.coreness-qoder-line{margin:0;font-size:14px;line-height:22px;color:var(--dsw-alias-label-primary);overflow-wrap:anywhere}
-/* In a card's header the line that names the node keeps its own room and no more: a state beside it may
-   not squeeze it into a second line, which would grow the header — and the card — by that line. */
-.coreness-qoder-card > .coreness-qoder-head > .coreness-qoder-line{flex:0 0 auto;max-width:42%}
-.coreness-qoder-fieldLabel{color:var(--dsw-alias-label-secondary);font-size:12px;font-weight:500;line-height:18px}
-/* The exception the fold left standing, and the one rule this section keeps for the shared button: the Qoder's
-   controls carry no ring of the page's. The shared ring would give every button here one, where today a keyboard
-   reader meets the browser's own — a visible change of behaviour, so it is written down and left to the owner's
-   word rather than made silently. The section's own scope is what makes this stand: it outranks the shared rule
-   whatever order the two sheets happen to be read in. */
-.coreness-qoder .coreness-qoder-button:focus-visible,.coreness-qoder .coreness-qoder-add:focus-visible{box-shadow:none;outline:revert}
-.coreness-qoder-actions{justify-content:flex-start;gap:8px;display:flex}
-.coreness-qoder-node{align-items:center;gap:8px;flex-wrap:wrap;display:flex}
-/* The press stands right after the address it belongs to: nothing in this row is pushed to its right end and
-   nothing stands between the two, so no answer arriving can move the press. A place rule here is what carries
-   the press away from the address it belongs to — with margin-left:auto on the button the walk read it at
-   1085,327, the row's own far right. */
-.coreness-qoder-node > .coreness-qoder-line{flex:0 0 auto}
-.coreness-qoder-model{border:.5px solid var(--dsw-alias-settings-card-stroke);border-radius:var(--dsw-radius-lg);flex-direction:column;gap:10px;padding:12px 14px;display:flex}
-/* The form's fields find their own columns and break where the room runs out — the columns are drawn by the grid
-   and not fixed as the MCP's are — so the ten between them is a grid's distance, taken while the fields wrap. */
-.coreness-qoder-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
-/* The row of inputs below a field may break onto lines, and its distance is a line's own: the twelve is wider than
-   a grid's six because a wrapping row is read as it goes, and the room it takes belongs to this chunk. */
-.coreness-qoder-inputs{flex-wrap:wrap;align-items:center;gap:12px;display:flex}
-/* The box and its word stand on one line, and the room between them is the page's own sibling number — the
-   eight a row's parts keep — and not the six a label keeps above the control it names: a check is a part of
-   the row it stands in, beside another part, and not a field's own column. */
-.coreness-qoder-check{gap:8px;font-size:14px;line-height:22px;color:var(--dsw-alias-label-primary)}
-/* The add control, a variant of the page's own add box: its hairline is .5px dashed where that box's is 1px, and that
-   is the one property where the two differ. The radius, the stretch, the distance and the floor come from that box's
-   class, which this control wears beside this one. Its hover, its disabled look, its ring and every other property come
-   from the shared button class, which it wears too, so a change to either class reaches this control. */
-.coreness-qoder-add{border:.5px dashed var(--dsw-alias-border-l3)}
-.coreness-qoder-foot{justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;display:flex}
-.coreness-qoder-button[data-align='start']{margin-right:auto}
-/* The reasons a sweep's nodes gave stand in a block of their own, under every card: the list is as long
-   as the node map, and a list of unknown length inside a card grows the card and moves every block under
-   it. The gate keeps its own refusals the same way, in a block below its cards. */
-.coreness-qoder-refused{flex-direction:column;gap:10px;margin-top:12px;min-width:0;display:flex}
-/* What the refusals list adds to the page's own list: its rows are one-line reasons rather than rows of controls,
-   so its rhythm is tighter — the 2 against the shared 8. */
-.coreness-qoder-refusedList{gap:2px}
-/* The first paint: the read is a round trip, and the section stands in the shape the answer will take
-   before it lands — the three card frames, the sentences the section owns and a bar where the read's
-   own content will land: a value, an address, a control, a row. A bar wears the class of the part it
-   stands for, so its box is that part's own rule and not a second number here; it is never flex:none,
-   so it cannot push the card it waits in. The bars do not pulse. */
-.coreness-qoder-skeleton{background:var(--dsw-alias-bg-skeleton,var(--dsw-alias-interactive-bg-hover));border-color:transparent;border-radius:var(--dsw-radius-xs);color:transparent}
-/* The line a bar stands in for, which is what makes its box the part's box: a box with no content is its
-   padding and its hairline alone, and the walk read that frame at 14 px where the control it wears stands
-   at 36 (the Connection card's actions row and its field: 14 against 36, 38 against 60). So the bar carries
-   one line of its own type and takes the part's box with it, the way the control's own height is derived
-   from its padding and its line — the fixed declarations left this family at 468f7d2, and no number stands
-   for either of them here. The line bar carries a height of its own below and this rule does not move it. */
-.coreness-qoder-skeleton::before{content:'\\00a0'}
-/* The height of the line this stands in for, and nothing else: .coreness-qoder-line is 14/22, so the swap from the
-   skeleton to the words moves nothing. A width is its own business — it says how much text is coming. */
-.coreness-qoder-skeleton.coreness-qoder-line{height:22px;width:220px}
-.coreness-qoder-skeleton.coreness-qoder-button{width:120px}
-`;
-
     /**
      * The parts beside this entry, pulled at materialisation and in hand before the section is seated: the
      * page's picker and hold, the kit's status surface, and the six drawings. A pull that failed is named
@@ -332,40 +240,6 @@ window.__ModuleLoader__.load({
     const CREDENTIAL = require.async('./client.provider.credential.js');
     const NODE = require.async('./client.provider.node.js');
     const WEB = require.async('./client.provider.web.js');
-
-    /**
-     * The section's sheet, held for as long as the section stands: put in here, put back if it is taken.
-     * The platform replaces a plugin in place over the module table it already holds and takes the package's
-     * style tags away in the same act (`removeOwnedStyles`); the one thing it re-runs is the mount, which
-     * covers a section that is left and entered again but not a component that stays mounted while the tags
-     * go. The hold ends with the effect: a sheet that outlived its plugin would be a trace.
-     */
-    function useStyles() {
-      React.useEffect(() => {
-        let stands = true;
-        const put = () => {
-          if (stands) ensureStyles();
-        };
-        put();
-        const watcher = new MutationObserver(put);
-        watcher.observe(document.head, { childList: true });
-        return () => {
-          stands = false;
-          watcher.disconnect();
-        };
-      }, []);
-    }
-
-    /** The section's stylesheet as a tag: put in once, and never removed by this code. */
-    function ensureStyles() {
-      if (document.getElementById(STYLE_ID) !== null) return;
-      const style = document.createElement('style');
-      style.id = STYLE_ID;
-      style.setAttribute('data-plugin', PACKAGE);
-      style.setAttribute('data-plugin-css', STYLE_TAG);
-      style.textContent = CSS;
-      document.head.appendChild(style);
-    }
 
     /** The route's own words for a refusal, drawn as they came and never paraphrased: the message alone,
         because the code beside it is what a caller routes on and not a sentence a reader is given. Where a
@@ -552,7 +426,7 @@ window.__ModuleLoader__.load({
     const shared = {
       SEAT, ID, NS, ROUTE, PROBE_ROUTE, PROBE_ACTION, CATALOGUE_ACTION, VERIFY_ACTION, WRITTEN_PATHS,
       OFF, VENDOR_EFFORTS, ORDER, WATCHED,
-      refused, reasonOf, atPath, readState, saveCredential, clearCredential, writeSettings, useStyles,
+      refused, reasonOf, atPath, readState, saveCredential, clearCredential, writeSettings,
     };
 
     return {

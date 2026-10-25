@@ -39,9 +39,6 @@ window.__ModuleLoader__.load({
     /** The platform's announcements that invalidate what the card read. */
     const WATCHED = ['settings/document-updated'];
 
-    /** The page's beat for a value the host learns at a step: the same 2 s the rate gate lives on. */
-    const BEAT_MS = 2000;
-
     /** The page's own words. One namespace, one dictionary; the rail's label is a thunk so it follows the language. */
     const EN = {
       section: 'General',
@@ -204,114 +201,6 @@ window.__ModuleLoader__.load({
      * always and empty while nothing is said, so a word that comes and goes moves nothing. Its tone is the
      * page's (`done` / `fault`).
      */
-    function answerStrip(note) {
-      return h('span', {
-        key: 'answer',
-        className: 'coreness-answer',
-        'data-note': 'head',
-        'data-tone': note === null ? undefined : note.tone,
-        role: 'status',
-        'aria-live': 'polite',
-        title: note?.detail ?? undefined,
-      }, note === null ? '' : note.text);
-    }
-
-    /** The section as it draws: one picture, one set of acts. Pure, so a check can read every state without a browser. */
-    function draw(state, act, kit) {
-      const head = h('div', { key: 'head', className: 'coreness-sectionHead' }, [
-        h('h4', { key: 'title', className: 'coreness-sectionTitle' }, t('section')),
-      ]);
-      if (state.status === 'failed') {
-        return h('div', { className: 'coreness-still coreness-sectionBody', 'data-state': 'failed' }, [
-          head,
-          h('div', { key: 'fault', className: 'coreness-failed' }, [
-            h('p', { key: 'word', className: 'coreness-dim' }, t('state.error')),
-          ]),
-        ]);
-      }
-      const { value, draft, note, busy, prompt, promptBusy, promptFault, beatFault } = state;
-      const loading = state.status === 'loading';
-      const editable = !loading && value?.editable === true;
-      const writing = busy || promptBusy || state.refreshing === true;
-      /* A fault is the strip's word, never a line of its own: the strip stands in the card head with its room
-         kept, so a read that failed says "Not read" without moving the page; the reason is said in the console,
-         where a reader who has to act on it looks. */
-      const stripNote = note ?? (promptFault || beatFault ? { tone: 'fault', text: t('state.unread') } : null);
-      /* The switch's row stands while the card is read and after a row was found: a composition that addresses
-         no row hides it, but the card does not grow a control it drew no place for. */
-      const switchStands = loading || prompt !== null;
-      return h('div', { className: 'coreness-still coreness-sectionBody', 'data-state': loading ? 'reading' : 'ready' }, [
-        head,
-        h('div', { key: 'card', className: 'coreness-card-box coreness-general-card' }, [
-          h('div', { key: 'cardhead', className: 'coreness-card-head coreness-general-head' }, [
-            h('h4', { key: 'title', className: 'coreness-sectionTitle' }, t('team.title')),
-            answerStrip(stripNote),
-          ]),
-          h('div', { key: 'body', className: 'coreness-card-body' }, [
-            /* A card that is still reading says so: the disabled controls below are places, not claims. */
-            loading ? h('p', { key: 'reading', className: 'coreness-dim' }, t('team.reading')) : null,
-            h('div', { key: 'field', className: 'coreness-field' }, [
-              h('div', { key: 'label', className: 'coreness-fieldLabel coreness-general-label' }, [
-                h('label', { key: 'word', htmlFor: 'general-ceiling' }, t('team.field')),
-              ]),
-              h('div', { key: 'row', className: 'coreness-general-field' }, [
-                h('input', {
-                  key: 'input',
-                  id: 'general-ceiling',
-                  className: 'coreness-general-input',
-                  type: 'number',
-                  min: 1,
-                  step: 1,
-                  value: draft,
-                  disabled: !editable || writing,
-                  'aria-invalid': note !== null && note.tone === 'fault' && note.subject === 'ceiling' ? 'true' : 'false',
-                  onChange: (event) => act.draft(event.target.value),
-                }),
-                h('button', {
-                  key: 'save',
-                  type: 'button',
-                  className: 'coreness-button',
-                  'data-tone': 'primary',
-                  disabled: !editable || writing || draft.trim() === '',
-                  onClick: () => act.save(),
-                }, t('team.save')),
-              ]),
-            ]),
-            /* A refusal is the strip's word ("Not saved"); the platform's sentence — an overridden row, a stale
-               revision, a body the editor would not take — stands in the console, where a reader who has to act
-               on it looks, and never as a line that moves the card. */
-            h('p', { key: 'remark', className: 'coreness-dim' }, t('team.remark')),
-            switchStands ? h('label', { key: 'check', className: 'coreness-check coreness-general-check' }, [
-              h('input', {
-                key: 'box',
-                type: 'checkbox',
-                checked: prompt?.on === true,
-                disabled: loading || writing,
-                onChange: (event) => act.prompt(event.target.checked),
-              }),
-              h('span', { key: 'word' }, t('team.prompt')),
-              prompt?.on === true ? kit.statusMark('set', { key: 'mark', subject: t('team.prompt') }) : null,
-            ]) : null,
-            switchStands ? h('p', { key: 'promptHint', className: 'coreness-dim' }, t('team.promptHint')) : null,
-            switchStands ? h('label', { key: 'reviewCheck', className: 'coreness-check coreness-general-check' }, [
-              h('input', {
-                key: 'box',
-                type: 'checkbox',
-                checked: prompt?.review === true,
-                disabled: loading || writing,
-                onChange: (event) => act.review(event.target.checked),
-              }),
-              h('span', { key: 'word' }, t('team.review')),
-              prompt?.review === true ? kit.statusMark('set', { key: 'mark', subject: t('team.review') }) : null,
-            ]) : null,
-            switchStands ? h('p', { key: 'reviewHint', className: 'coreness-dim' }, t('team.reviewHint')) : null,
-            value?.mounted === false ? h('p', { key: 'unmounted', className: 'coreness-dim' }, t('team.missing')) : null,
-            loading || editable ? null : h('p', { key: 'unavailable', className: 'coreness-dim' }, t('team.unavailable')),
-          ]),
-        ]),
-      ]);
-    }
-
     /**
      * What the last settled read answered: the browser half is materialised once per application session, so a
      * section left and entered again has this beside it, and the mount paints it at once while the read
@@ -325,21 +214,28 @@ window.__ModuleLoader__.load({
     const startState = () => (lastRead === null
       ? {
           status: 'loading', refreshing: true, value: null, draft: '', note: null, busy: false,
-          prompt: null, promptBusy: false, promptFault: false, beatFault: false,
+          prompt: null, promptBusy: false, promptFault: false, beatFault: false, readFault: false,
         }
       : {
           status: 'ready', refreshing: true, value: lastRead.value, draft: draftOf(lastRead.value), note: null, busy: false,
-          prompt: lastRead.prompt, promptBusy: false, promptFault: false, beatFault: false,
+          prompt: lastRead.prompt, promptBusy: false, promptFault: false, beatFault: false, readFault: false,
         });
 
     /** The page as it stands: both reads settle before the card is drawn once, and a press is read back. */
-    function GeneralSection({ kit, ctx, hold }) {
+    function GeneralSection({ kit, ctx, hold, card }) {
       useStyles();
       kit.useStatusStyles();
       const [state, setState] = React.useState(startState);
 
       /** The console's door is the kit's: one subject, one place, said where the answer arrived. */
       const say = React.useCallback((reason) => kit.statusDetail(t('team.title'), reason), [kit]);
+
+      /** Which read is the newest: an answer that is no longer the newest does not publish. */
+      const newestRead = React.useRef(0);
+      const nextRead = React.useCallback(() => {
+        newestRead.current += 1;
+        return newestRead.current;
+      }, []);
 
       /** The answer's lifetime is the page's hold, not the next render: every note — a save and a refusal —
        * goes by itself, and a second note replaces the first without leaving a timer behind. It is armed
@@ -378,24 +274,25 @@ window.__ModuleLoader__.load({
 
       React.useEffect(() => {
         let live = true;
+        const ticket = nextRead();
         readAll().then(
           ({ value, prompt, promptFault }) => {
-            if (!live) return;
-            setState((now) => ({ ...now, status: 'ready', refreshing: false, value, draft: draftOf(value), prompt, promptFault }));
+            if (!live || newestRead.current !== ticket) return;
+            setState((now) => ({ ...now, status: 'ready', refreshing: false, readFault: false, value, draft: draftOf(value), prompt, promptFault }));
           },
           (error) => {
-            if (!live) return;
+            if (!live || newestRead.current !== ticket) return;
             const reason = reasonOf(error);
             setState((now) => (now.status === 'ready'
-              ? { ...now, refreshing: false }
-              : { ...now, status: 'failed', refreshing: false }));
+              ? { ...now, refreshing: false, readFault: true }
+              : { ...now, status: 'failed', refreshing: false, readFault: true }));
             say(reason);
           },
         );
         return () => {
           live = false;
         };
-      }, [readAll, say]);
+      }, [nextRead, readAll, say]);
 
       /* The platform's announcement that the settings document moved — a hand's edit of the profile's
          patch, or another page's write — is the same event for the switch: both reads are taken again, so
@@ -403,22 +300,29 @@ window.__ModuleLoader__.load({
       React.useEffect(() => {
         let live = true;
         const reread = () => {
+          const ticket = nextRead();
           readAll().then(
             ({ value, prompt, promptFault }) => {
-              if (!live) return;
+              if (!live || newestRead.current !== ticket) return;
               setState((now) => ({
                 ...now,
                 /* A first read that failed is not the card's sentence forever: a later answer takes the card
                    back to standing. */
                 status: 'ready',
+                readFault: false,
                 promptFault,
                 value,
                 /* A settings half that could not be read keeps the view the card already holds. */
                 prompt: prompt ?? now.prompt,
-                draft: now.busy ? now.draft : draftOf(value),
+                /* A draft the reader has changed is theirs; an unedited one follows the read. */
+                draft: now.draft !== draftOf(now.value) ? now.draft : draftOf(value),
               }));
             },
-            (error) => say(`${t('reason.unreadable')}: ${reasonOf(error)}`),
+            (error) => {
+              if (!live || newestRead.current !== ticket) return;
+              say(`${t('reason.unreadable')}: ${reasonOf(error)}`);
+              setState((now) => ({ ...now, readFault: true }));
+            },
           );
         };
         const disposers = WATCHED.map((name) => ctx.remote.$on(name, reread));
@@ -428,34 +332,43 @@ window.__ModuleLoader__.load({
           for (const dispose of disposers) dispose();
           offReset();
         };
-      }, [ctx, readAll, say]);
+      }, [ctx, nextRead, readAll, say]);
 
       /* The patch's outcome changes at the next team assembly, and no client announcement follows it: while
          the switch is on, the route is asked on the page's own beat, so "the patch is inactive" appears with
-         the step that left it rather than on the next unrelated event. A hidden tab is not asked, and a
-         failed ask says so on the card instead of freezing the last picture in silence. */
+         the step that left it rather than on the next unrelated event. The same beat asks while a failed read
+         stands over a remembered picture: a card left on what it last read must not keep a failure silent.
+         A hidden tab is not asked, and a failed ask says so on the card instead of freezing the picture. */
       const promptOn = state.prompt?.on === true;
+      const beatOn = promptOn || state.readFault === true;
       React.useEffect(() => {
-        if (!promptOn) return undefined;
+        if (!beatOn) return undefined;
         let live = true;
         const timer = setInterval(() => {
           if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
           read().then(
             (value) => {
-              if (live) setState((now) => ({ ...now, value, beatFault: false }));
+              if (!live) return;
+              setState((now) => ({
+                ...now,
+                value,
+                beatFault: false,
+                readFault: false,
+                draft: now.draft !== draftOf(now.value) ? now.draft : draftOf(value),
+              }));
             },
             (error) => {
               if (!live) return;
               say(`${t('reason.unreadable')}: ${reasonOf(error)}`);
-              setState((now) => ({ ...now, beatFault: true }));
+              setState((now) => ({ ...now, beatFault: true, readFault: true }));
             },
           );
-        }, BEAT_MS);
+        }, hold.BEAT_MS);
         return () => {
           live = false;
           clearInterval(timer);
         };
-      }, [promptOn, say]);
+      }, [beatOn, hold, say]);
 
       /* One write of one switch: both switches live in the same row, and what answers is the platform's view
          of it after the write. The route is read after it for the patch's outcome, which the write does not
@@ -474,9 +387,24 @@ window.__ModuleLoader__.load({
               note: { tone: 'done', text: t('state.saved'), subject: field },
             }));
             armHold();
+            const ticket = nextRead();
             void readAll().then(
-              ({ value, prompt, promptFault }) => setState((now) => ({ ...now, value, prompt: prompt ?? now.prompt, promptFault })),
-              (error) => say(`${t('reason.unreadable')}: ${reasonOf(error)}`),
+              ({ value, prompt, promptFault }) => {
+                if (newestRead.current !== ticket) return;
+                setState((now) => ({
+                  ...now,
+                  value,
+                  readFault: false,
+                  prompt: prompt ?? now.prompt,
+                  promptFault,
+                  draft: now.draft !== draftOf(now.value) ? now.draft : draftOf(value),
+                }));
+              },
+              (error) => {
+                if (newestRead.current !== ticket) return;
+                say(`${t('reason.unreadable')}: ${reasonOf(error)}`);
+                setState((now) => ({ ...now, readFault: true }));
+              },
             );
           },
           (error) => {
@@ -490,7 +418,10 @@ window.__ModuleLoader__.load({
             armHold();
             void readSwitch(ctx.remote, row.ns).then(
               (next) => setState((now) => ({ ...now, prompt: next, promptFault: false })),
-              () => {},
+              (error) => {
+                say(`${t('reason.unreadable')}: ${reasonOf(error)}`);
+                setState((now) => ({ ...now, promptFault: true }));
+              },
             );
           },
         );
@@ -534,11 +465,24 @@ window.__ModuleLoader__.load({
                 note: { tone: 'fault', text: t('state.refused'), subject: 'ceiling', detail: reason },
               }));
               armHold();
+              const ticket = nextRead();
               void readAll().then(
-                ({ value: picture, prompt, promptFault }) => setState((now) => ({
-                  ...now, value: picture, draft: draftOf(picture), prompt: prompt ?? now.prompt, promptFault,
-                })),
-                () => {},
+                ({ value: picture, prompt, promptFault }) => {
+                  if (newestRead.current !== ticket) return;
+                  setState((now) => ({
+                    ...now,
+                    value: picture,
+                    readFault: false,
+                    prompt: prompt ?? now.prompt,
+                    promptFault,
+                    draft: now.draft !== draftOf(now.value) ? now.draft : draftOf(picture),
+                  }));
+                },
+                (error) => {
+                  if (newestRead.current !== ticket) return;
+                  say(`${t('reason.unreadable')}: ${reasonOf(error)}`);
+                  setState((now) => ({ ...now, readFault: true }));
+                },
               );
             },
           );
@@ -546,13 +490,15 @@ window.__ModuleLoader__.load({
         prompt: (on) => flip('prompt', on),
         review: (on) => flip('review', on),
       };
-      return draw(state, act, kit);
+      return card.draw(state, act, kit);
     }
 
     /** The kit's status dot and its sheet, pulled before the section stands: the switch's state stands with it. */
     const KIT = require.async('./client.kit.js');
     /** The page's shared lifetime of a temporary answer. */
     const HOLD = require.async('./client.hold.js');
+    /** The card's own drawing. */
+    const CARD = require.async('./client.general.card.js');
 
     return {
       /** Register the page into the seat the entry declares. */
@@ -567,8 +513,8 @@ window.__ModuleLoader__.load({
         pluginCtx.effect(() => {
           let live = true;
           let armed = null;
-          Promise.all([KIT, HOLD]).then(
-            ([kit, hold]) => {
+          Promise.all([KIT, HOLD, CARD]).then(
+            ([kit, hold, card]) => {
               if (!live) return;
               armed = pluginCtx.slots.inject(SEAT, () => pluginCtx.slots.register({
                 name: SEAT,
@@ -576,7 +522,7 @@ window.__ModuleLoader__.load({
                 order: 0,
                 label: () => t('section'),
                 locale: NS,
-              }, () => h(GeneralSection, { kit, hold, ctx: pluginCtx })));
+              }, () => h(GeneralSection, { kit, hold, card, ctx: pluginCtx })));
             },
             (error) => {
               console.error(`${PACKAGE}: a chunk for the General section did not arrive: ${error?.message ?? error}`);

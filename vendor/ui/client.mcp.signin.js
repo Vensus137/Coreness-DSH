@@ -148,6 +148,22 @@ window.__ModuleLoader__.load({
       const SIGNIN_LINK_WORDS = 'sign in';
 
       /**
+       * The address a link may carry: `http:`/`https:` and nothing else.
+       *
+       * The address is the authorization server's own, read from its metadata, and nothing in the flow refuses
+       * another scheme: an anchor that drew `javascript:` or `data:` would hand the server a control over the
+       * page's document. The words of the sentence stay; the link does not.
+       */
+      function linkAddress(url) {
+        try {
+          const parsed = new URL(url);
+          return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? url : null;
+        } catch {
+          return null;
+        }
+      }
+
+      /**
        * The sentence a person reads, with the flow's address carried by the words `sign in` inside it.
        *
        * The words are the flow's own and are drawn as they came; what this page settles is which of them carry
@@ -196,7 +212,7 @@ window.__ModuleLoader__.load({
       function signinBlock(row, signin, view, act) {
         if (signin === null || signin.state === null || signin.state === 'authorized') return null;
         const server = row.server ?? row.id;
-        const url = typeof signin.url === 'string' && signin.url !== '' ? signin.url : null;
+        const url = typeof signin.url === 'string' && signin.url !== '' ? linkAddress(signin.url) : null;
         const parts = [];
         if (signin.state === 'waiting') {
           const sentence = typeof signin.message === 'string' && signin.message !== '' ? signin.message : t('signin.waiting');
@@ -237,10 +253,9 @@ window.__ModuleLoader__.load({
         if (signin.state === 'refused' || signin.state === 'cancelled') {
           const code = typeof signin.code === 'string' && signin.code !== '' ? signin.code : 'signin-failed';
           /* One short sentence and the code, on the one line the person reads: the page's own words for that
-             code — never a generic "the sign-in failed" — and the flow's own sentence after it, because the
-             server's answer ("Required parameter: client_secret", "invalid_grant") is the one fact a person can
-             act on, and it used to reach only the console. The server's words are the endpoint's message; they
-             carry no secret. The code stands last, as the word a person repeats when asking about it. */
+             code — never a generic "the sign-in failed" — and the flow's own sentence after it, because the server's
+             answer is the one fact a person can act on. The server's words are the endpoint's message; they carry no
+             secret. The code stands last, as the word a person repeats when asking about it. */
           const lines = shared.faultLines(code, signin.message);
           parts.push(h('span', { key: 'words', className: 'coreness-mcp-signinWords' }, [
             lines.join(' — '),

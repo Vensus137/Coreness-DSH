@@ -8,24 +8,12 @@
  */
 
 import crypto from 'node:crypto'
+import { DEFAULT_MODEL_MAX_TOKENS } from './models.js'
 
 export const QODER_ALPHABET = '_doRTgHZBKcGVjlvpC,@aFSx#DPuNJme&i*MzLOEn)sUrthbf%Y^w.(kIQyXqWA!'
 
 /** The standard alphabet the substitution table is built from. */
 export const STANDARD_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-
-/** The default output budget when neither the call nor the model declares one. */
-export const DEFAULT_MAX_TOKENS = 32_768
-
-/**
- * The vendor's own effort vocabulary, ascending: their budget-to-name map reads
- * `<=0 none, <=1024 low, <=8192 medium, <=24576 high, <=49152 xhigh, else max`. It is the only order
- * these names have — a catalogue entry publishes its menu as an object, and this route's own menu
- * declares three of the names — and it is the order the shipped rows were read against and the one the
- * product's page ranks a model's menu with (`rankOf`). Nothing on the wire is substituted by it: the
- * effort a row names travels as it stands.
- */
-export const VENDOR_EFFORTS = Object.freeze(['none', 'low', 'medium', 'high', 'xhigh', 'max'])
 
 /**
  * The substitution table: base64 character to contour character, `=` to `$`, everything
@@ -64,7 +52,7 @@ export function encodeBody(plaintext) {
  * The blank line the wire's own joined strings are set apart by.
  *
  * Two places join with it: the top-level `system` string, where every system-role message is flattened
- * into one prompt (the shape the donor's serializer used — `serializeMessages` returns
+ * into one prompt (the shape the platform's serializer uses — `serializeMessages` returns
  * `systemParts.join('\n\n')` and `buildRequestBody` prefixes the caller's own prompt with the same
  * blank line) and one assistant turn's `reasoning_content`, where the field is a single string and the
  * pieces of a thought that arrived as several blocks are set apart rather than run together.
@@ -157,7 +145,7 @@ function imageUrlOf(block) {
  * attachment store mapped through the filesystem service. So the sentence is written here: it names the
  * attachment that stood there and the recovery the host's own text names too, and claims nothing else.
  *
- * What this cannot cost today: this route never answers `IMAGE_OFFLOAD_REQUIRED` — it declares no image
+ * What this cannot cost: this route never answers `IMAGE_OFFLOAD_REQUIRED` — it declares no image
  * budget — so the mark cannot be written on its behalf, and the placeholder is a reading of a state
  * reached only by a session that another route offloaded. The divergence is named here rather than
  * carried silently, and it is the lead's to weigh against a declared dependency.
@@ -222,6 +210,12 @@ function contentParts(blocks, where) {
  * @returns {string} the prompt text of that message
  */
 function systemTextOf(message) {
+  // Every other role's reader accepts a string; the system role is the one shape the platform builds
+  // from text blocks. Reading a bare string here would substitute a shape this route has never met, and
+  // dropping it hides a prompt — so it is refused in words, with the role named.
+  if (typeof message.content === 'string') {
+    throw wireRefusal('a system message carries its content as a plain string; this route reads the platform\'s text blocks (the string is refused rather than dropped or read as a prompt)')
+  }
   const blocks = Array.isArray(message.content) ? message.content : []
   let text = ''
   for (const block of blocks) {
@@ -241,7 +235,7 @@ function systemTextOf(message) {
  * message** in their order — the platform hands the prompt that way and asserts that no separate field
  * exists, a loop-built request carrying `options.system === undefined`, while both of the platform's
  * own providers read the prompt out of the messages — and a caller that does provide `options.system`
- * has it as the prefix, the shape the donor's own `buildRequestBody` used. That flattened string is
+ * has it as the prefix, the shape the platform's own `buildRequestBody` uses. That flattened string is
  * also the **leading message** of `messages` when it is not empty, which is the shape the vendor's own
  * client builds: the gateway does not read the top-level field, so the message is the half that carries
  * the prompt. A tool result is a `tool` message
@@ -486,7 +480,7 @@ export function sessionIdOf({ userID, model }) {
  * @returns {object} the body
  */
 export function buildChatBody(input) {
-  const maxTokens = Number.isFinite(input.maxTokens) && input.maxTokens > 0 ? input.maxTokens : DEFAULT_MAX_TOKENS
+  const maxTokens = Number.isFinite(input.maxTokens) && input.maxTokens > 0 ? input.maxTokens : DEFAULT_MODEL_MAX_TOKENS
   // What the user asked for: a named effort other than `off` means reasoning on. `off` overrides the
   // catalogue too — their own guard forces the flag down wherever thinking is off, because a request
   // that turned thinking off must not claim to reason.

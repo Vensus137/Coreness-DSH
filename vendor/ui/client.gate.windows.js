@@ -57,8 +57,6 @@ window.__ModuleLoader__.load({
       }
 
       /** The picture's own words for the outcome of a decision, so the ring is drawn in the page's language. */
-      const OUTCOMES = ['sent', 'watching', 'forced', 'cancelled'];
-
       /**
        * One card per model under a limit: its head carries the pair and the row's own answer, and its body the
        * pair's two pickers, the ceiling and the two controls, so the card is what the row is and nothing else.
@@ -72,27 +70,27 @@ window.__ModuleLoader__.load({
         const problem = shared.ceilingProblem(held.tokensPerMinute);
         /* A row that states no ceiling has a status of its own, and the page keeps one strip per card: the guard's
            voice is this strip — the same surface, the same tone word, top-right as every other card's — and not a
-           sentence under the box, which moved everything below it by its own height the moment a digit was typed (the
-           user's own reading of it). The derived status outranks a pressed answer, because the strip is about the row
-           as it now stands; and the strip's room is reserved either way, so the word arrives without moving a pixel.
-           The reason keeps its road out through `statusDetail`, said where the value is patched. */
+           sentence under the box, which would move everything below it by its own height the moment a digit was typed.
+           The derived status outranks a pressed answer, because the strip is about the row as it now stands; the
+           strip's room is reserved either way, so the word arrives without moving a pixel. The reason keeps its road
+           out through `statusDetail`, said where the value is patched. */
         const note = problem === null ? (view.note?.at === index ? view.note : null) : { tone: 'fault', text: t('state.refused') };
 
         const pairs = pairsOf(catalog);
         return h('li', { key: `row${index}`, className: 'coreness-gate-row coreness-gate-rowCard' }, [
           h('div', { key: 'card', className: 'coreness-gate-card coreness-card-box' }, [
-            /* The card is fixed by the user's own word: it is small — a head and one row of fields — and a fold in
-               front of four fields costs a press and hides what the section is about. Its head therefore says what
-               the row is and presses nothing, and the fields stand under it always. */
+            /* The card is small by decision — a head and one row of fields — and a fold in front of four fields
+               costs a press and hides what the section is about. Its head says what the row is and presses nothing,
+               and the fields stand under it always. */
             h('div', { key: 'head', className: 'coreness-gate-cardHead coreness-card-head' }, [
               h('span', { key: 'title', className: 'coreness-gate-headButton' }, [
                 h('span', { key: 'name', className: 'coreness-gate-name' }, pairOf(held)),
                 ]),
               /* The row's own answer, in the same reserved box as every other strip on the page: the word is this
                  row's or it is empty, but the room stands always — a strip the page reserves nowhere is a word
-                 painted where nobody can read it, which the walk measured as a 0×0 box before this. The reason a
-                 refusal came with does not stand beside the word as a tooltip: it leaves the face through
-                 `statusDetail` where the answer arrives, and the face keeps the word. */
+                 painted where nobody can read it. The reason a refusal came with does not stand beside the word as a
+                 tooltip: it leaves the face through `statusDetail` where the answer arrives, and the face keeps the
+                 word. */
               h('span', {
                 key: 'rowAnswer',
                 /* The same class, the same tone word and the same rules as the section's own strip: only the place
@@ -163,7 +161,9 @@ window.__ModuleLoader__.load({
                     type: 'button',
                     className: 'coreness-gate-button coreness-button',
                     'data-tone': 'primary',
-                    disabled: busy || problem !== null,
+                    /* A press with no draft has nothing to write and would close nothing: the card's own rule,
+                       the same condition the limit card's Apply carries. */
+                    disabled: busy || problem !== null || view.draft === null,
                     /* The row's own press carries its place, so the word it earns stands in this row's card. */
                     onClick: () => act.apply({ at: index }),
                   }, t('control.apply')),

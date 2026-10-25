@@ -315,10 +315,9 @@ export class GateLedger {
   /**
    * Close a pair the provider has refused, to the end of its own window.
    *
-   * A refusal is a fact about the provider's window and not about ours, and it is the one fact our own
-   * count cannot reach: it arrives while our window may stand nearly empty — twenty refusals were measured
-   * at a hundred spent tokens — so the requests of that pair would keep going out to a closed door until
-   * our own estimate climbed to the ceiling. One window is the whole of the closure, and it is exact: the
+   * A refusal is a fact about the provider's window and not about this package's, and it is the one fact the
+   * count cannot reach: it arrives while the window may stand nearly empty, so the requests of that pair
+   * would keep going out to a closed door until the estimate climbed to the ceiling. One window is the whole of the closure, and it is exact: the
    * entry the refusal met was admitted a breath earlier, so it leaves the window at the same moment the
    * closure ends, and nothing enters while the pair is closed. A refusal that arrives while the pair is
    * already closed — a request sent before the closure — extends it rather than shortening it; the moment

@@ -9,18 +9,13 @@
  * The visible channel goes through the shutter wherever a turn is read: the model
  * sometimes writes its reasoning, a call or a whole retelling into that channel as tags, and a tag
  * that reached the answer as text would be stored, folded back up on the next turn and never
- * recognised as our own mistake.
+ * recognised as this package's mistake.
  *
  * @module @coreness/qoder/src/frames
  */
 
-import { createShutter } from './markup.js'
-
 /** The terminal sentinel of the feed. */
 export const DONE = '[DONE]'
-
-/** The chunk kinds the harness assembles from; the reader names them, it does not build them. */
-export const CHANNELS = ['reasoning', 'text', 'tool-call', 'usage', 'finish']
 
 /** The channel a frame with no `choices` carries: telemetry, and nothing else. */
 export const TELEMETRY = 'telemetry'
@@ -294,119 +289,4 @@ export function terminalOf({ sawDone, sawFinishReason }) {
   if (sawDone) return { ended: true, signal: 'sentinel' }
   if (sawFinishReason) return { ended: true, signal: 'finish-reason' }
   return { ended: false, signal: 'none' }
-}
-
-/**
- * Read a whole response body, line by line, into a tally.
- *
- * The reader is deliberately one pass that never holds the feed: it counts what came,
- * remembers the channels seen, and reports the terminal. Frames that carry no chunk are
- * counted too — telemetry is the only sign of life a silent turn has.
- *
- * The visible channel is counted **as the answer it would become**: it passes through the shutter, so a
- * tag's body never stands in `textChars` — a retelling in the summary family leaves it at zero, and the
- * counters below say what was met and what was done with it. That is the whole point of the tally:
- * without a name for it, a dropped retelling and a silent turn read alike.
- * A delta key this reader did not act on is counted the same way, by name (`unknownKeys`): a field the
- * vendor added after this reader was written shows up in every instrument that reads a feed back.
- * @param {string} text the whole body
- * @param {object} [options] the read
- * @param {'drop' | 'keep'} [options.summary] `keep` for the auxiliary compaction call, whose body the
- *   harness itself asked for; every ordinary turn drops a summary block
- * @returns {{frames: number, chunks: number, telemetry: number, refusals: object[], reasoning: number,
- *   text: number, calls: number, textChars: number, reasoningChars: number, markupReasoningChars: number,
- *   markupCalls: number, usage?: object, vendor?: object, finishReasons: string[], done: boolean,
- *   signal: string, ended: boolean, summaryBlocks: number, summaryChars: number, summaryHead: string,
- *   unknownKeys: object, markupSeen: object, tagsNeutral: object, tagsQuoted: object,
- *   markupUnclosed: object}}
- *   the tally
- * @throws {FrameError} when a frame cannot be read
- */
-export function tallyBody(text, options = {}) {
-  const shutter = createShutter(options)
-  const tally = {
-    frames: 0,
-    chunks: 0,
-    telemetry: 0,
-    refusals: [],
-    reasoning: 0,
-    text: 0,
-    calls: 0,
-    textChars: 0,
-    reasoningChars: 0,
-    markupReasoningChars: 0,
-    markupCalls: 0,
-    finishReasons: [],
-    unknownKeys: {},
-    done: false,
-    ended: false,
-    signal: 'none',
-  }
-  /** What the shutter decided about a stretch of the visible channel, wherever it came from. */
-  const decidedByShutter = (decided) => {
-    tally.textChars += decided.text.length
-    if (decided.reasoning !== '') {
-      tally.markupReasoningChars += decided.reasoning.length
-      tally.reasoningChars += decided.reasoning.length
-    }
-    for (const call of decided.calls) {
-      tally.calls += 1
-      tally.markupCalls += 1
-    }
-  }
-  let sawFinishReason = false
-  for (const line of String(text).split('\n')) {
-    const read = readLine(line)
-    if (read.kind === 'skip') {
-      // A `data:` line that carries no chunk is a shape of its own, not nothing: the vendor writes its
-      // own timings this way once per turn (`data:{"firstTokenDuration":…,"totalDuration":…}`, measured
-      // in all ten captured feeds), so it is counted as telemetry — the same
-      // bucket as the frames that carry neither a channel nor a choice. A line that is not `data:` at
-      // all (an `event:` line, a banner) is the framing of the stream and is counted nowhere.
-      if (line.trim().startsWith('data:')) {
-        tally.frames += 1
-        tally.telemetry += 1
-      }
-      continue
-    }
-    tally.frames += 1
-    if (read.kind === 'done') {
-      tally.done = true
-      continue
-    }
-    if (read.kind === 'refusal') {
-      tally.refusals.push({ status: read.status, detail: read.text })
-      continue
-    }
-    const frame = channelsOf(read.body)
-    // Counted before the channel is judged: a frame that carries no channel at all can still be the one
-    // that names a field this reader has never acted on, and that fact must not fall with the frame.
-    for (const key of frame.unknownKeys) tally.unknownKeys[key] = (tally.unknownKeys[key] ?? 0) + 1
-    if (frame.channel === TELEMETRY) {
-      tally.telemetry += 1
-      continue
-    }
-    tally.chunks += 1
-    if (frame.reasoning !== undefined) {
-      tally.reasoning += 1
-      tally.reasoningChars += frame.reasoning.length
-    }
-    if (frame.text !== undefined) {
-      tally.text += 1
-      decidedByShutter(shutter.feed(frame.text))
-    }
-    if (frame.calls !== undefined) tally.calls += frame.calls.length
-    if (frame.usage !== undefined) tally.usage = usageOf(frame.usage)
-    if (frame.usage !== undefined) tally.vendor = vendorUsageOf(frame.usage)
-    if (frame.finishReason !== undefined) {
-      tally.finishReasons.push(frame.finishReason)
-      sawFinishReason = true
-    }
-  }
-  decidedByShutter(shutter.flush())
-  Object.assign(tally, shutter.counters())
-  const terminal = terminalOf({ sawDone: tally.done, sawFinishReason })
-  tally.ended = terminal.ended
-  tally.signal = terminal.signal
-  return tally
 }

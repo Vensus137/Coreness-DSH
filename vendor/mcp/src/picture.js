@@ -1,6 +1,6 @@
 /**
  * The picture of the servers file: the rows as they stand, what each one is, and which tools the
- * tools service currently carries under its prefix.
+ * tools service carries under its prefix.
  *
  * The picture is assembled from sources that are each owned elsewhere: the rows come from the
  * servers file through the Loader's own tree, the fiber phase and the platform's `readOnlyReason`

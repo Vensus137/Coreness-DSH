@@ -25,6 +25,10 @@
 
 import { z } from 'zod'
 import { defineDomain, domainTable } from '@deepseek-ai/dsh-storage-domain'
+import { addressOf } from './address.js'
+
+/** The address rule has one home; the domain re-exports it for the modules that already read it here. */
+export { addressOf }
 
 /** Kinds the environment records by itself: what happens without being told. */
 export const ENVIRONMENT_KINDS = ['состав', 'настройки', 'жизненный цикл', 'оборот', 'сбой']
@@ -180,17 +184,14 @@ export const answerSchema = recordVariants(z.object, profileMaybe)
 export const journalDomain = defineDomain({
   name: 'coreness_journal',
   version: 1,
+  /* One record this vocabulary cannot read must not take the whole journal down where the medium can move a
+     document aside: the facility backs the record up, says so its own way, and opens the domain with the rest.
+     The profile's single-file JSON medium cannot move a record out of its one document, so on that medium the
+     platform still refuses to open — a limit of the medium, not a policy of this domain. The vocabulary is
+     closed and the version stays 1 while no migration exists, so a future kind is exactly this case. */
+  invalidRecords: 'backup-and-skip',
   tables: { records: domainTable(recordSchema) },
 })
-
-/**
- * The address of a record: time, kind, area and name — it is also the table key.
- * @param {object} record a record
- * @returns {string} the address
- */
-export function addressOf(record) {
-  return [record.time, record.kind, record.area, record.id].join('|')
-}
 
 /**
  * The reason of a refusal in words: the schema has its own message per violation.

@@ -167,7 +167,7 @@ export function keptOf(config) {
  * The page draws this list: a row whose drawn field stands as a `!!js` expression is not a row the
  * form may shape, and saying so before a save is cheaper than a refused save. The reading is taken
  * over both branches rather than over the row's own, because a save may switch the branch and draw
- * a key the row carries today.
+ * a key the row carries.
  * @param {object} config the row's config
  * @returns {string[]} the field names
  */
@@ -211,13 +211,22 @@ function formPairs(rows, key) {
  * the form shows is carried exactly as the file holds it, so a save made here never costs a value
  * somebody put there by hand. A field the form draws follows the form, in three states: **absent**
  * from the request it keeps what the row holds — a page that does not draw a field yet must not wipe
- * it — **empty** it takes the key off the row, and **filled** it is the person's word.
+ * it — **empty** it takes the key off the row, and **filled** it is the person's word. `args` is the
+ * same three states as the rest: a list is the person's word, an empty one takes the key off, and a
+ * body that does not carry the field keeps the arguments the file holds.
+ *
+ * A literal credential is refused where the flow can serve the row: a header value that names its
+ * scheme — `Bearer …`, `Basic …` — is what a person pastes when the reference exists, and the file it
+ * would be written into is the platform's, readable at rest. The refusal names the safe paths; a
+ * composition without the flow keeps the file's own freedom.
  * @param {object} form the form's fields
  * @param {object} current the row's config as it stands
+ * @param {object} [options] what the save stands on
+ * @param {boolean} [options.offerSignIn] whether a sign-in can serve this row, so a literal secret is refused
  * @returns {{ config?: object, error?: string, detail?: string }} the config to store, or the refusal
  *          with the words that name what it refused
  */
-export function buildConfig(form, current = {}) {
+export function buildConfig(form, current = {}, options = {}) {
   const server = String(form?.serverName ?? '').trim()
   if (!NAME.test(server)) return { error: 'bad-name' }
 
@@ -245,6 +254,13 @@ export function buildConfig(form, current = {}) {
     if (sent(form, 'headers')) {
       const built = mergePairs(form.headers, current?.headers, 'headers')
       if (built.error !== undefined) return { error: built.error }
+      const literal = literalSecretOf(built.map)
+      if (literal !== null && options.offerSignIn === true) {
+        return {
+          error: 'bad-value',
+          detail: `the Authorization header carries a literal ${literal} credential; a literal secret stands in the servers file at rest — use Sign in and let the reference read the stored grant, or write an expression such as !!js process.env.NAME`,
+        }
+      }
       if (Object.keys(built.map).length > 0) config.headers = built.map
       else delete config.headers
     }
@@ -256,9 +272,11 @@ export function buildConfig(form, current = {}) {
     if (command === '') return { error: 'bad-command' }
     config.command = command
 
-    const args = parseArgs(form?.args)
-    if (args.length > 0) config.args = args
-    else delete config.args
+    if (sent(form, 'args')) {
+      const args = parseArgs(form.args)
+      if (args.length > 0) config.args = args
+      else delete config.args
+    }
 
     if (sent(form, 'env')) {
       const built = mergePairs(form.env, current?.env, 'env')
@@ -281,6 +299,26 @@ export function buildConfig(form, current = {}) {
   }
 
   return withTimeout(config, form)
+}
+
+/**
+ * The scheme of a literal Authorization credential in a header map, or null when none stands.
+ *
+ * A value that names its scheme and carries something after it is a credential a person pasted, not a
+ * header the wire composes: the reference exists for that value, and the servers file is the platform's
+ * own and readable at rest. The value itself is never repeated in a refusal — the scheme is all the
+ * words name.
+ * @param {object} map the headers a save built
+ * @returns {string | null} `Bearer`, `Basic`, or null
+ */
+function literalSecretOf(map) {
+  for (const [name, value] of Object.entries(map ?? {})) {
+    if (name.trim().toLowerCase() !== 'authorization') continue
+    if (typeof value !== 'string') continue
+    const found = /^(bearer|basic)\s+\S/iu.exec(value.trim())
+    if (found !== null) return found[1]
+  }
+  return null
 }
 
 /**

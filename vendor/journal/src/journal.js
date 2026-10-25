@@ -32,9 +32,10 @@
  */
 
 import { DEFAULT_RECORD_ID, addressOf, answerSchema, refusalOf, strictRecordSchema } from './domain.js'
+import { freeAddressOf } from './address.js'
 import { PROFILE_FILES, compositionDiff, compositionOf, compositionPrint, kindOfChange, packComposition, profilePrint } from './fingerprint.js'
 import { breakdownOf, planRotation } from './rotation.js'
-import { buildSummary, selectRecords } from './summary.js'
+import { buildSummary, selectRecords, takeLast } from './summary.js'
 
 /** The plugin's name: it signs the records about the lifecycle and about rotation. */
 export const PLUGIN_NAME = 'coreness-journal'
@@ -73,6 +74,7 @@ export function createJournal(deps) {
   const now = deps.now ?? (() => new Date().toISOString())
   const faults = []
   let table
+  let domain
   let opening
   let baseline
   let chain = Promise.resolve()
@@ -88,14 +90,36 @@ export function createJournal(deps) {
   function open() {
     if (opening === undefined) {
       opening = (async () => {
-        const handle = await openDomain()
-        table = handle.table('records')
+        domain = await openDomain()
+        table = domain.table('records')
         const records = recordList()
         baseline = compositionOf([...records].reverse().find(record => record.composition !== undefined))
         return table
       })()
     }
     return opening
+  }
+
+  /**
+   * Close the domain the journal opened.
+   *
+   * The storage facility hands the handle to its caller and frees the domain's name only on close; the plugin
+   * is disposed before a re-applied row would open a second domain, so the close must be the disposer's own
+   * act. `close()` waits for the domain's write chain, so the stop record queued before it settles first.
+   * @returns {Promise<void>} nothing
+   */
+  async function close() {
+    const handle = domain
+    if (handle === undefined) return
+    try {
+      await handle.close()
+    } catch (error) {
+      fault(`the journal's domain was not closed — ${reasonOf(error)}`)
+      return
+    }
+    domain = undefined
+    table = undefined
+    opening = undefined
   }
 
   /** The journal's records as pairs of key and record: the key is the address, which rotation needs too. */
@@ -131,8 +155,13 @@ export function createJournal(deps) {
     if (parsed.success === false) {
       throw new Error(`the record was refused by the schema — ${refusalOf(parsed.error)}`)
     }
-    await table.put(addressOf(parsed.data), parsed.data)
-    return parsed.data
+    /* Two records of one millisecond would share an address, and the table's write is an upsert: the
+       address steps by a millisecond until it is free, so a collision is named by the record's time rather
+       than resolved by replacing the record already stored. */
+    const { time, key } = freeAddressOf(candidate => table.get(candidate), parsed.data)
+    const stored = time === parsed.data.time ? parsed.data : { ...parsed.data, time }
+    await table.put(key, stored)
+    return stored
   }
 
   /** The print of the composition now: the profile's files and the live composition. */
@@ -145,30 +174,54 @@ export function createJournal(deps) {
 
   /**
    * Rotation: sweep by age and size and say so with a record of its own.
+   *
+   * The rollup is written before the deletes: it is the account of what the sweep takes, and an account
+   * written after the deletes is lost when the deletes stand and the write fails. A sweep whose bound cannot
+   * be met — the baseline print and the rollups are never dropped — says so in a `сбой` record naming the size
+   * that stays over the limit, rather than leaving a bound that stopped holding to be inferred from a file
+   * that keeps growing. The key the caller just wrote is protected: the sweep must not delete the record it
+   * was told to keep.
+   * @param {string[]} [protect] the keys the sweep must not drop
    * @returns {Promise<object | undefined>} the record of the rotation, when there was one
    */
-  async function rotate() {
-    const plan = planRotation(entryList(), {
+  async function rotate(protect = []) {
+    const entries = entryList()
+    const plan = planRotation(entries, {
       now: now(),
       days: config.rotationDays,
       bytes: config.rotationBytes,
+      protect,
     })
-    if (plan.drop.length === 0) return undefined
-    const breakdown = breakdownOf(entryList(), plan.drop)
-    for (const key of plan.drop) await table.delete(key)
-    return await write({
-      time: now(),
-      kind: 'оборот',
-      area: PLUGIN_NAME,
-      id: 'вычищено',
-      author: 'среда',
-      dropped: plan.drop.length,
-      kept: plan.kept,
-      reason: plan.reason,
-      droppedKinds: breakdown.kinds,
-      droppedBytes: breakdown.bytes,
-      droppedUsd: breakdown.usd,
-    })
+    if (plan.drop.length === 0 && plan.overBytes === undefined) return undefined
+    let written
+    if (plan.drop.length > 0) {
+      const breakdown = breakdownOf(entries, plan.drop)
+      written = await write({
+        time: now(),
+        kind: 'оборот',
+        area: PLUGIN_NAME,
+        id: 'вычищено',
+        author: 'среда',
+        dropped: plan.drop.length,
+        kept: plan.kept,
+        reason: plan.reason,
+        droppedKinds: breakdown.kinds,
+        droppedBytes: breakdown.bytes,
+        droppedUsd: breakdown.usd,
+      })
+      for (const key of plan.drop) await table.delete(key)
+    }
+    if (plan.overBytes !== undefined) {
+      written = await write({
+        time: now(),
+        kind: 'сбой',
+        area: PLUGIN_NAME,
+        id: 'размер',
+        author: 'среда',
+        text: `the journal is over its byte bound: ${plan.overBytes} bytes of records kept over a limit of ${config.rotationBytes}, after a sweep that kept ${plan.kept} record(s); the baseline print and the rollups are never dropped`,
+      })
+    }
+    return written
   }
 
   /** Compare the composition against the baseline and write a record when it changed. */
@@ -192,7 +245,7 @@ export function createJournal(deps) {
           composition: packComposition(print),
         })
         baseline = print
-        await rotate()
+        await rotate([addressOf(record)])
         return record
       } catch (error) {
         fault(`${cause}: the composition was not compared — ${reasonOf(error)}`)
@@ -208,10 +261,9 @@ export function createJournal(deps) {
       throw new Error(`the note was refused — a note carries the fields of its kind, and the journal adds the address and the author itself: ${unknown.join(', ')}`)
     }
     await open()
-    const time = now()
     return enqueue(async () => {
       const record = {
-        time,
+        time: now(),
         kind: input.kind,
         area: input.area,
         id: input.id ?? DEFAULT_RECORD_ID[input.kind],
@@ -225,7 +277,13 @@ export function createJournal(deps) {
         ...named('cost', input.cost),
       }
       const written = await write(record)
-      await rotate()
+      /* The note is stored before the sweep runs: a sweep that fails is the journal's fault, not a refusal of
+         the record, and the answer must say what happened to the record rather than what happened after it. */
+      try {
+        await rotate([addressOf(written)])
+      } catch (error) {
+        fault(`the sweep after a note failed — ${reasonOf(error)}`)
+      }
       return written
     })
   }
@@ -265,7 +323,7 @@ export function createJournal(deps) {
           author: 'среда',
           text: words,
         })
-        await rotate()
+        await rotate([addressOf(record)])
         return record
       })
     } catch (error) {
@@ -294,13 +352,14 @@ export function createJournal(deps) {
     const window = { since: filter.since ?? null, until }
     if (named) {
       const limit = input.limit ?? config.recordsLimit
+      const records = takeLast(selected, limit).map(record => answerSchema.parse(withComposition(record)))
       return {
         window,
         total: selected.length,
-        truncated: selected.length > limit,
+        truncated: selected.length > records.length,
         // A record leaves as the fields of a record: what the journal does not know stays in
         // the store, where it was stored, and is not handed to a reader as if it were ours.
-        records: selected.slice(-limit).map(record => answerSchema.parse(withComposition(record))),
+        records,
         faults: [...faults],
       }
     }
@@ -352,7 +411,7 @@ export function createJournal(deps) {
     }
   }
 
-  return { start, stop, observe, note, swallowed, query, faults: () => [...faults] }
+  return { start, stop, close, observe, note, swallowed, query, faults: () => [...faults] }
 }
 
 /**

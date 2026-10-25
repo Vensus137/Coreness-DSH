@@ -31,6 +31,16 @@ export const PROBE_MS = 4000
 export const PROBE_HOLD_MS = 60_000
 
 /**
+ * How long a forgotten attempt may take to settle before its records are dropped anyway.
+ *
+ * The wait is what keeps a grant written by a commit already in flight from landing after the records
+ * were dropped; the bound is what keeps a row's removal from hanging on a server that will not answer.
+ * An attempt still running at the bound cannot write afterwards — its own signal is aborted, and the
+ * commit door checks the signal before it writes — so the bound costs no correctness, only patience.
+ */
+const SETTLE_MS = 5_000
+
+/**
  * The refusals of this door, each with the words the page draws.
  *
  * The flow's own codes are not listed here: they arrive from the attempt as they are, and the page draws
@@ -148,13 +158,15 @@ export class SignInDesk {
       prompt: null,
       settle: null,
       abandon: null,
+      settled: null,
       controller: new AbortController(),
     }
     this.#attempts.set(name, attempt)
 
     /* The attempt is not awaited here: the person's browser step outlives this request, and the page
-       follows the record. Its outcome is what the record keeps — nothing else observes it. */
-    void this.#registry().begin({
+       follows the record. Its outcome is what the record keeps — nothing else observes it; a removal of
+       the row does, which is why the platform's own promise is kept on the attempt. */
+    const settled = this.#registry().begin({
       key: registered.key,
       signal: attempt.controller.signal,
       interaction: {
@@ -164,7 +176,9 @@ export class SignInDesk {
         },
         prompt: (question) => this.#asked(attempt, question),
       },
-    }).then(
+    })
+    attempt.settled = settled
+    void settled.then(
       (outcome) => {
         if (outcome?.status === 'authorized') {
           attempt.state = 'authorized'
@@ -230,6 +244,7 @@ export class SignInDesk {
     }
     const registry = this.#registry()
     if (registry !== undefined && typeof registry.cancel === 'function') registry.cancel(attempt.key)
+    attempt.controller.abort()
     return this.#stateOf({ entryId: attempt.entryId, server: name, resource: attempt.resource })
   }
 
@@ -254,14 +269,24 @@ export class SignInDesk {
   async forget({ server } = {}) {
     const name = String(server ?? '')
     if (name === '') throw new Refused('signin-body', 'a grant is dropped for a named server, and this request names none')
+    const attempt = this.#attempts.get(name)
+    if (attempt !== undefined) {
+      /* The attempt ends before its records do: a commit already in flight is the platform's to finish,
+         and a grant written after the drop would be a grant nobody can see. The withdrawal is the
+         platform's own door, and the wait below is bounded. */
+      if (attempt.state === 'waiting') {
+        attempt.state = 'cancelled'
+        attempt.code = 'cancelled'
+        attempt.message = this.#flow()?.words?.cancelled ?? null
+        this.#abandon(attempt, new Refused('cancelled', `the row of ${name} is gone, so nothing is waiting for this sign-in any more`))
+      }
+      this.#abort(attempt)
+      await this.#settleAttempt(attempt)
+      this.#attempts.delete(name)
+    }
     const flow = this.#flow()
     const drop = typeof flow?.forget === 'function' ? flow.forget.bind(flow) : null
     const answer = drop === null ? { server: name, dropped: [] } : await drop(name)
-    const attempt = this.#attempts.get(name)
-    if (attempt !== undefined) {
-      this.#abandon(attempt, new Refused('cancelled', `the row of ${name} is gone, so nothing is waiting for this sign-in any more`))
-      this.#attempts.delete(name)
-    }
     for (const key of [...this.#probes.keys()]) {
       if (key.startsWith(`${name}\u0000`)) this.#probes.delete(key)
     }
@@ -280,6 +305,32 @@ export class SignInDesk {
     }
     this.#attempts.clear()
     this.#probes.clear()
+  }
+
+  /**
+   * Withdraw one attempt through the platform's own door, and through its own signal.
+   * @param {object} attempt the attempt
+   * @returns {void}
+   */
+  #abort(attempt) {
+    const registry = this.#registry()
+    if (registry !== undefined && typeof registry.cancel === 'function') registry.cancel(attempt.key)
+    attempt.controller.abort()
+  }
+
+  /**
+   * Wait for one attempt to settle, bounded: the platform's own promise is what says a commit that was
+   * already in flight has finished, and the bound says a row's removal does not wait for ever on it.
+   * @param {object} attempt the attempt
+   * @returns {Promise<void>} when the attempt settled or the bound passed
+   */
+  async #settleAttempt(attempt) {
+    if (attempt.settled === null || attempt.settled === undefined) return
+    const bound = new Promise((resolve) => {
+      const handle = setTimeout(resolve, SETTLE_MS)
+      handle.unref?.()
+    })
+    await Promise.race([attempt.settled.then(() => undefined, () => undefined), bound])
   }
 
   /**

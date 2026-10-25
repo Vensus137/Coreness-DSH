@@ -27,6 +27,18 @@ export const SECTION = 'team:policy'
 export const ANCHOR = 'The Lead must wait for required teammates before giving the final answer.'
 
 /**
+ * The platform's identity line for a teammate: the one role-aware piece of an assembly, and the seam this
+ * patch depends on. The platform writes it into a teammate's prompt as `You are teammate "<name>".`; the
+ * Lead gets a different line, and an assembly that carries neither is a role this product cannot decide —
+ * the platform's text is then left alone and the outcome says so, because guessing "Lead" is how every
+ * teammate would read the Lead's duties as its own.
+ */
+export const IDENTITY = 'You are teammate'
+
+/** The platform's identity line for the Lead: the other half of the role decision. */
+export const LEAD_IDENTITY = 'You are the Team Lead named'
+
+/**
  * The approved text: the owner's own wording, shipped only after his word. The Lead's work is to lead —
  * the plan, the shared tasks and the answer to the user are its own, a task a member can carry is a shared
  * task — and it takes none of the members' work over, though a one-file repair confirmed by one run of its
@@ -51,10 +63,11 @@ export const REVIEW =
 
 /**
  * What the last team assembly left: `off` (the switch is off), `active` (the text stands in place of the
- * anchor) or `missing` (the section stands without the anchor). An assembly without the section is not
- * team's — a subagent carries none — and leaves this value alone, so `absent` is a patch result the
- * listener does not store. The page reads it; the value is written by the listener, so it describes the
- * last assembly that carried the team's section, never a guess.
+ * anchor), `missing` (the section stands without the anchor) or `unknown` (the section stands and the
+ * identity says neither the Lead nor a teammate, so the patch was not made). An assembly without the
+ * section is not team's — a subagent carries none — and leaves this value alone, so `absent` is a patch
+ * result the listener does not store. The page reads it; the value is written by the listener, so it
+ * describes the last assembly that carried the team's section, never a guess.
  */
 let outcome = 'off'
 
@@ -79,15 +92,15 @@ export function noteOutcome(next) {
 }
 
 /**
- * Whether a missing anchor is news this assembly. A section that left as the platform wrote it is news
- * once, not once per step — and an assembly without the section says nothing at all, because it is not
- * about the team.
+ * Whether a missing anchor or an undecidable role is news this assembly. A section that left as the platform
+ * wrote it is news once, not once per step — and an assembly without the section says nothing at all,
+ * because it is not about the team.
  * @param {string} previous the outcome the last assembly carried
  * @param {string} next the outcome this one carries
  * @returns {boolean} true when the line is owed
  */
 export function shouldWarn(previous, next) {
-  return next === 'missing' && previous !== 'missing'
+  return (next === 'missing' || next === 'unknown') && previous !== next
 }
 
 /**
@@ -122,20 +135,25 @@ export function patchPolicy(assembly, enabled, review) {
 }
 
 /**
- * Whether this assembly belongs to a teammate rather than to the Lead.
+ * The role one assembly belongs to: `member`, `lead`, or `unknown` when the identity line is neither.
  *
- * The platform installs one policy section per team agent, so a member reads the same section text as
- * the Lead — byte for byte, which the night logs confirmed. The identity context is the one role-aware
- * piece of an assembly: the platform writes "You are the Team Lead named …" for the Lead and
- * "You are teammate …" for everyone else. With the switch on, the Lead's paragraph belongs in the Lead's
- * prompt; a member keeps the platform's text untouched, so nobody reads the Lead's duties as their own.
+ * The platform installs one policy section per team agent, so a member reads the same section text as the
+ * Lead — byte for byte, which the night logs confirmed. The identity context is the one role-aware piece of
+ * an assembly: the platform writes "You are the Team Lead named …" for the Lead and "You are teammate …" for
+ * everyone else. `unknown` is not a refusal but a fact about the platform: a release that rewords either
+ * line makes the role undecidable, and the caller leaves the section as the platform wrote it rather than
+ * deciding the role by the absence of the word "teammate".
  * @param {{contexts?: Array<{text?: unknown}>}} assembly the presentation the platform assembled
- * @returns {boolean} true when the identity context says teammate
+ * @returns {'member'|'lead'|'unknown'} the role the identity names
  */
-export function isTeammate(assembly) {
-  return (assembly.contexts ?? []).some(
-    (context) => typeof context.text === 'string' && context.text.trimStart().startsWith('You are teammate'),
-  )
+export function roleOf(assembly) {
+  for (const context of assembly.contexts ?? []) {
+    if (typeof context.text !== 'string') continue
+    const text = context.text.trimStart()
+    if (text.startsWith(IDENTITY)) return 'member'
+    if (text.startsWith(LEAD_IDENTITY)) return 'lead'
+  }
+  return 'unknown'
 }
 
 /**
@@ -143,13 +161,21 @@ export function isTeammate(assembly) {
  *
  * The role is decided here rather than in the listener, so the branch the page depends on — a member's
  * assembly never carries the Lead's paragraph and never overwrites the Lead's outcome — is one function a
- * fixture can exercise; a listener that forgot it would otherwise keep every other check green.
+ * fixture can exercise; a listener that forgot it would otherwise keep every other check green. The section
+ * is looked up first: an assembly without it is not the team's, whatever its identity says. With the switch
+ * off the section is found and reported off; the role is read only when a patch would be made, because a
+ * role this product cannot decide must not stop a switched-off patch from saying it is off.
  * @param {{sections: Array<{name: string, text: string}>, contexts?: Array<{text?: unknown}>}} assembly the presentation the platform assembled
  * @param {boolean} enabled whether the first switch is on
  * @param {boolean} review whether the review paragraph is appended
  * @returns {{assembly: object, outcome: string}} the assembly to return, and what the patch left
  */
 export function patchFor(assembly, enabled, review) {
-  if (isTeammate(assembly)) return { assembly, outcome: 'member' }
+  const index = assembly.sections.findIndex((section) => section.name === SECTION)
+  if (index < 0) return { assembly, outcome: 'absent' }
+  if (!enabled) return { assembly, outcome: 'off' }
+  const role = roleOf(assembly)
+  if (role === 'member') return { assembly, outcome: 'member' }
+  if (role === 'unknown') return { assembly, outcome: 'unknown' }
   return patchPolicy(assembly, enabled, review)
 }

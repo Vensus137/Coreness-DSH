@@ -7,9 +7,9 @@
  * what a person's surface talks to. The callback's address is computed from the web server's own
  * listening port and never written down, because a profile may bind any port and the OS may assign one.
  *
- * Nothing of the token passes through this file: the code comes back from the platform's own route, the
- * core exchanges it and writes the record, and the record is handed to the platform's commit door as it
- * stands. What is logged is a server's name and a refusal's code — never a code, a token or a secret.
+ * The tokens the exchange returns pass through this file only to the platform's commit door: the core
+ * exchanges the code, the step builds the record the stores own, and one commit writes it. What is
+ * logged is a server's name and a refusal's code — never a code, a token or a secret.
  *
  * The answer a browser lands on is one sentence a person can act on; what the authorization server said
  * and which link of the flow was missing are a reader's business, and they stand on the console's door
@@ -19,7 +19,7 @@
  */
 
 import { CODES, Refusal, refuse } from './refusals.js'
-import { keyOf, slugOf } from './stores.js'
+import { keyOf } from './stores.js'
 
 /** The route prefix every callback of this plugin stands under. */
 export const CALLBACK_PATH = '/oauth/callback'
@@ -36,8 +36,7 @@ export const WIRE_MS = 20_000
  * The wire's deadline is a request's measure and a person is not a server, so the browser step takes a
  * person's own. Ten minutes is longer than any sign-in this product asks for — an account made at the
  * provider, a second factor — and short enough that a step nobody finished ends while the person is still
- * in front of the page. Without it the attempt waits for ever: measured on a live leg, a sign-in started
- * at 00:48 was still waiting fifty-eight minutes later, with the state it kept standing and no tokens.
+ * in front of the page. Without it the attempt waits for ever: a sign-in nobody finishes keeps the state standing and no tokens.
  */
 export const CALLBACK_MS = 600_000
 
@@ -57,18 +56,23 @@ export function wireFetch(ms = WIRE_MS, base = globalThis.fetch) {
   return (address, options = {}) => base(address, options.signal === undefined ? { ...options, signal: AbortSignal.timeout(ms) } : options)
 }
 
-/** The path one server's callback stands at, the folded name as its tail. */
-export const callbackPathOf = (server) => `${CALLBACK_PATH}/${slugOf(server)}`
+/** The path one server's callback stands at: the name as written, encoded for a path. */
+export const callbackPathOf = (server) => `${CALLBACK_PATH}/${encodeURIComponent(String(server ?? ''))}`
 
 /**
  * The server a callback's path names.
  * @param {string} pathname the request's path
- * @returns {string | undefined} the folded name, or undefined when the path is not this plugin's
+ * @returns {string | undefined} the name, or undefined when the path is not this plugin's
  */
 export function serverOf(pathname) {
   if (typeof pathname !== 'string' || !pathname.startsWith(`${CALLBACK_PATH}/`)) return undefined
   const tail = pathname.slice(CALLBACK_PATH.length + 1).replace(/\/+$/u, '')
-  return tail === '' ? undefined : tail
+  if (tail === '') return undefined
+  try {
+    return decodeURIComponent(tail)
+  } catch {
+    return undefined
+  }
 }
 
 /**
@@ -84,11 +88,12 @@ export function browserHost(host) {
 }
 
 /**
- * The address a browser comes back to, computed from the web server's own port.
+ * The address a browser comes back to, computed from the web server's own port and scheme.
  *
  * The port read here is the one the carrier is listening on, which is the port the OS assigned when the
- * configuration asked for none. A carrier that is absent or not yet listening is refused in words rather
- * than answered with a guessed port.
+ * configuration asked for none; the scheme is the carrier's own, because a carrier serving TLS answers
+ * no plain address. A carrier that is absent or not yet listening is refused in words rather than
+ * answered with a guessed port.
  * @param {object} webServer the platform's browser carrier
  * @param {string} server the server's name
  * @returns {string} the redirect address
@@ -99,7 +104,8 @@ export function redirectUrlFor(webServer, server) {
   if (typeof port !== 'number' || !Number.isInteger(port) || port <= 0) {
     throw refuse('no-web-server', `the carrier reports ${port === undefined ? 'no listening port' : String(port)}`)
   }
-  return `http://${browserHost(webServer.host)}:${port}${callbackPathOf(server)}`
+  const protocol = webServer?.protocol === 'https:' ? 'https:' : 'http:'
+  return `${protocol}//${browserHost(webServer.host)}:${port}${callbackPathOf(server)}`
 }
 
 /**
@@ -193,8 +199,6 @@ p{margin:0}
 export class PersonStep {
   /** @type {object} the flow's own calls, the core this step drives */
   #flow
-  /** @type {object} the platform's credential service */
-  #credentials
   /** @type {object} the platform's browser carrier */
   #webServer
   /** @type {object} the platform's authorization registry */
@@ -214,17 +218,15 @@ export class PersonStep {
 
   /**
    * @param {object} options what this step stands on
-   * @param {object} options.flow the core's calls (`begin`, `finish`)
-   * @param {object} options.credentials the platform's credential service
+   * @param {object} options.flow the core's calls (`begin`, `finish`, `stores`)
    * @param {object} options.webServer the platform's browser carrier
    * @param {object} options.registry the platform's authorization registry
    * @param {object} [options.logger] where a step's own lines go
    * @param {object} [options.fetch] the fetch the flow asks with, with a deadline on every request by default
    * @param {number} [options.callbackMs] how long one browser step waits for its answer
    */
-  constructor({ flow, credentials, webServer, registry, logger = null, fetch = wireFetch(), callbackMs = CALLBACK_MS }) {
+  constructor({ flow, webServer, registry, logger = null, fetch = wireFetch(), callbackMs = CALLBACK_MS }) {
     this.#flow = flow
-    this.#credentials = credentials
     this.#webServer = webServer
     this.#registry = registry
     this.#logger = logger
@@ -278,7 +280,7 @@ export class PersonStep {
    * browser reloads lands on a sign-in that has already finished, and that is a fact about the attempt and
    * not about the state the answer carries.
    * @param {object} answer what the callback carried
-   * @param {string} answer.server the folded name the path named
+   * @param {string} answer.server the name the path named
    * @param {string} [answer.code] the code
    * @param {string} [answer.state] the state the answer carries
    * @param {string} [answer.error] the refusal's own name, when the server sent one
@@ -315,8 +317,7 @@ export class PersonStep {
    * @returns {Promise<boolean>} true when it is the stored one
    */
   async #stateMatches(server, state) {
-    const record = await this.#credentials.readRecord(keyOf(server, 'state'))
-    const kept = record?.payload?.state
+    const kept = await this.#flow.stores(server).state()
     return typeof kept === 'string' && kept === String(state)
   }
 
@@ -372,13 +373,18 @@ export class PersonStep {
 
   /**
    * One attempt: discover and keep what the exchange needs, hand the link out, wait for the answer from
-   * either door, finish the flow, and hand the record that stands to the platform's own commit door.
+   * either door, finish the flow, and commit the record through the platform's own door — the only write
+   * of the grant.
+   *
+   * The fetch the attempt asks with carries the attempt's own signal, so a withdrawal ends a request
+   * that is on the wire instead of leaving it to answer into nothing.
    * @param {object} session the platform's own session for this attempt
    * @param {object} request what the sign-in asked for
    * @returns {Promise<void>} when the attempt is settled
    */
   async #run(session, request) {
     const { server, resource, redirectUrl } = request
+    const fetch = this.#bounded(session.signal)
     try {
       const started = await this.#flow.begin({
         server,
@@ -387,7 +393,7 @@ export class PersonStep {
         pointer: request.pointer ?? null,
         scope: request.scope ?? '',
         clientId: request.clientId ?? '',
-        fetch: this.#fetch,
+        fetch,
       })
       this.#logger?.info?.(`oauth: sign-in for ${server} is waiting for an answer at ${redirectUrl}`)
       session.notify({ message: `${server} asks you to sign in`, url: started.url })
@@ -401,36 +407,61 @@ export class PersonStep {
         state: answer.state,
         pointer: request.pointer ?? null,
         clientId: request.clientId ?? '',
-        fetch: this.#fetch,
+        fetch,
       })
-      void tokens
 
-      const record = await this.#credentials.readRecord(keyOf(server, 'tokens'))
-      if (record === undefined) throw refuse('no-attempt', `${server} committed no record to hand over`)
+      const record = this.#flow.stores(server).record('tokens', tokens)
       await session.commit(record)
       this.#logger?.info?.(`oauth: sign-in for ${server} finished`)
     } catch (failure) {
-      /* The attempt is over and no answer of its own can come any more. The core takes the state back when
-         it has the answer in hand; every other end of an attempt — a deadline that ran out, a withdrawal, a
-         wire that refused, a registration refused before the browser was ever sent — is this one. */
+      /* The attempt is over and no answer of its own can come any more. The core takes the state and the
+         verifier back when it has the answer in hand; every other end of an attempt — a deadline that ran
+         out, a withdrawal, a wire that refused, a registration refused before the browser was ever sent —
+         is this one. */
       await this.#abandonState(server)
       throw failure
     }
   }
 
   /**
-   * Take back the state an attempt kept, because that attempt is over.
+   * The fetch one attempt asks with: the step's own, with the attempt's withdrawal and the wire's
+   * deadline on every request.
    *
-   * A store that will not give it back is a line on the console's door rather than the failure the person
-   * reads: the attempt's own end is the fact a caller branches on, and it is not replaced by the seam's.
+   * A withdrawal that only stopped the wait would leave a request on the wire to answer into nothing, and
+   * the row's removal would still meet its write; the attempt's signal is therefore part of every request
+   * it makes. The deadline is the step's own measure and is kept beside it: a caller that brought a
+   * signal keeps it, and the first of the two to fire ends the request.
+   * @param {AbortSignal} signal the attempt's own signal
+   * @returns {object} the fetch
+   */
+  #bounded(signal) {
+    const base = this.#fetch
+    return (address, options = {}) => {
+      const deadline = AbortSignal.timeout(WIRE_MS)
+      const merged = options.signal === undefined
+        ? AbortSignal.any([signal, deadline])
+        : AbortSignal.any([signal, options.signal, deadline])
+      return base(address, { ...options, signal: merged })
+    }
+  }
+
+  /**
+   * Take back what an attempt kept, because that attempt is over: its state and its verifier.
+   *
+   * A store that will not give them back is a line on the console's door rather than the failure the
+   * person reads: the attempt's own end is the fact a caller branches on, and it is not replaced by the
+   * seam's. The verifier is a secret that has served its one exchange whether or not the exchange
+   * answered, so it does not outlive the attempt that made it.
    * @param {string} server the server whose attempt ended
-   * @returns {Promise<void>} when the record has been asked back
+   * @returns {Promise<void>} when the records have been asked back
    */
   async #abandonState(server) {
     try {
-      await this.#flow.stores(server).write('state', undefined)
+      const stores = this.#flow.stores(server)
+      await stores.write('state', undefined)
+      await stores.write('verifier', undefined)
     } catch (beside) {
-      this.#logger?.warn?.(`oauth: the state of ${server} was not taken back — ${beside instanceof Error ? beside.message : String(beside)}`)
+      this.#logger?.warn?.(`oauth: the state or the verifier of ${server} was not taken back — ${beside instanceof Error ? beside.message : String(beside)}`)
     }
   }
 
@@ -450,7 +481,7 @@ export class PersonStep {
       fail = reject
     })
     const waiting = { promise, settle, fail }
-    this.#waiting.set(slugOf(server), waiting)
+    this.#waiting.set(String(server), waiting)
     const deadline = this.#deadline(redirectUrl)
     try {
       const pasted = this.#prompt(session, server)
@@ -460,7 +491,7 @@ export class PersonStep {
       return answer
     } finally {
       deadline.stop()
-      this.#waiting.delete(slugOf(server))
+      this.#waiting.delete(String(server))
     }
   }
 

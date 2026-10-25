@@ -98,18 +98,19 @@ window.__ModuleLoader__.load({
                each, where the growing does not push a one-line field down the form. */
           http ? null : pairsField('env', t('field.env'), draft, view, act),
           /* Both maps a row carries stand in the form: the headers a request goes out with, and the environment a
-             child process gets. The headers block was taken off the page on a misreading of the user's word (he
-             asked that the **row's meta line** stop printing `authorization`, not that the setting go) and he asked
-             for it back: "Их теперь не заполнять, не удалять нельзя… Надо вернуть, как было в настройках в MCP". */
+             child process gets. The row's meta line stops printing `authorization`; the setting itself is written
+             here. */
           http ? pairsField('headers', t('field.headers'), draft, view, act) : null,
+          /* The headers field writes a value into the servers file at rest, and the warning stands under the field
+             it is about, where the person typing it reads it. */
+          http ? h('p', { key: 'headersHelp', className: 'coreness-mcp-dim coreness-dim' }, t('help.headers')) : null,
         ].filter((field) => field !== null);
 
         /* The form's own pair, in the one order every card of this page keeps and the harness itself keeps: `Cancel`
-           on the left, `Apply` on the right. This editor stood the other way round and called the right one `Save`,
-           which the user read as two different conventions on one page ("где-то написано save cancel, где-то cancel
-           apply"). `Save` is not the form's word here: the press sends the draft, and the **answer** is what says
-           `Saved`. The actions that do not send a form keep their own words (`Save token`, `Check token`, `Reset`,
-           `Remove`, `Enable`/`Disable`) — renaming them `Apply` would say they submit a draft they do not submit. */
+           on the left, `Apply` on the right. `Save` is not the form's word here: the press sends the draft, and the
+           **answer** is what says `Saved`. The actions that do not send a form keep their own words (`Save token`,
+           `Check token`, `Reset`, `Remove`, `Enable`/`Disable`) — renaming them `Apply` would say they submit a draft
+           they do not submit. */
         const actions = [
           h('button', {
             key: 'cancel',
@@ -239,13 +240,63 @@ window.__ModuleLoader__.load({
 
       /** The confirmation of a removal: the host's own dialog over its own mask. */
       function dialogOf(row, view, act) {
+        return h(ConfirmDialog, { key: 'confirm', row, view, act });
+      }
+
+      /**
+       * The dialog itself: a modal is a room the keyboard is inside.
+       *
+       * The focus moves to the cancel button on mount, Tab stays within the two actions, Escape closes the
+       * dialog, and the focus goes back to the row's menu trigger. The title names the dialog; the press that
+       * asks for the removal is made here, so a refusal of it is said here too — behind the mask the reader
+       * cannot see the card's own room, and the answer belongs where the hand is.
+       */
+      function ConfirmDialog({ row, view, act }) {
+        const mask = React.useRef(null);
+        const cancel = React.useRef(null);
+        const back = React.useRef(null);
+        React.useEffect(() => {
+          back.current = [...document.querySelectorAll('.coreness-mcp-menuTrigger')]
+            .find((node) => node.getAttribute('data-entry') === String(row.entryId)) ?? null;
+          if (cancel.current !== null) cancel.current.focus();
+          const key = (event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              act.cancelRemove();
+              return;
+            }
+            if (event.key !== 'Tab' || mask.current === null) return;
+            const items = [...mask.current.querySelectorAll('button:not([disabled])')];
+            if (items.length === 0) return;
+            const first = items[0];
+            const last = items[items.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+              event.preventDefault();
+              last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+              event.preventDefault();
+              first.focus();
+            }
+          };
+          document.addEventListener('keydown', key);
+          return () => {
+            document.removeEventListener('keydown', key);
+            if (back.current !== null && back.current.isConnected) back.current.focus();
+          };
+        }, []);
         const busy = act.isBusy(row.entryId);
-        /* The press that asks for a removal is made here, so a refusal of it is said here too: behind the
-           mask the reader cannot see the card's own room, and the answer belongs where the hand is. */
         const note = shared.noteNames(view.note ?? null, row) ? view.note : null;
-        return h('div', { key: 'confirm', className: 'coreness-mcp-mask', role: 'dialog', 'aria-modal': 'true' }, [
+        const titleId = `mcp-confirm-title-${String(row.entryId).replace(/[^A-Za-z0-9_-]+/gu, '-')}`;
+        return h('div', {
+          key: 'confirm',
+          ref: mask,
+          className: 'coreness-mcp-mask',
+          role: 'dialog',
+          'aria-modal': 'true',
+          'aria-labelledby': titleId,
+        }, [
           h('div', { key: 'dialog', className: 'coreness-mcp-dialog' }, [
-            h('h4', { key: 'title', className: 'coreness-mcp-dialogTitle' }, t('confirm.title', { server: row.server ?? row.id })),
+            h('h4', { key: 'title', id: titleId, className: 'coreness-mcp-dialogTitle' }, t('confirm.title', { server: row.server ?? row.id })),
             h('p', { key: 'body', className: 'coreness-mcp-dialogBody' }, t('confirm.body')),
             note === null ? null : h('p', {
               key: 'note',
@@ -257,6 +308,7 @@ window.__ModuleLoader__.load({
             h('div', { key: 'actions', className: 'coreness-mcp-editorActions' }, [
               h('button', {
                 key: 'no',
+                ref: cancel,
                 type: 'button',
                 className: 'coreness-mcp-button coreness-button',
                 disabled: busy,
@@ -289,8 +341,6 @@ window.__ModuleLoader__.load({
              marking, no hiding, no word instead of a value. An expression stands here as it is written. */
           headers: (row.headers ?? []).map((pair, index) => ({ key: `header.${index}`, name: pair.name, value: String(pair.value ?? '') })),
           env: (row.env ?? []).map((pair, index) => ({ key: `env.${index}`, name: pair.name, value: String(pair.value ?? '') })),
-          values: {},
-          ticks: {},
         };
       }
 
@@ -306,8 +356,6 @@ window.__ModuleLoader__.load({
           timeout: '',
           headers: [],
           env: [],
-          values: {},
-          ticks: {},
         };
       }
 
@@ -322,7 +370,7 @@ window.__ModuleLoader__.load({
       function formOf(draft) {
         const common = {
           /* A row this form creates or saves comes up loud: the product offers no way to be silent about a server
-             that never started, and the control that used to offer it is gone. */
+             that never started. */
           loud: true,
           serverName: draft.server,
           transport: draft.transport,

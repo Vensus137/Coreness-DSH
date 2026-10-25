@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Coreness",
-    "description": "The Coreness product for a DeepSeek Harness profile: the page, its sections and the journal behind them. Built and checked against DeepSeek Harness 0.2.1-rc.2; it asks for 0.2.1-rc.2 or later."
+    "description": "The Coreness product for a DeepSeek Harness profile: the page, its sections and the journal behind them."
   }
 }

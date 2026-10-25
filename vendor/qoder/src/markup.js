@@ -5,7 +5,7 @@
  * The rule the module exists for is the user's own caution: **nothing that arrives from the wire is
  * handled silently.** Every tag token meets exactly one of four treatments — assembled into a call,
  * routed to the reasoning channel, dropped with its body, or refused — and every one of them is
- * counted under a stable name, so that "we moved it" is legible afterwards instead of surfacing as
+ * counted under a stable name, so that a move is legible afterwards instead of surfacing as
  * the model behaving strangely weeks later.
  *
  * Measured ground, not a preference: no markup of ours stands in the body that goes out, no tag of the
@@ -38,7 +38,7 @@ export const TURN_TAGS = Object.freeze(['assistant'])
 /** The echo family: the model echoing a tool frame back into its turn. */
 export const ECHO_TAGS = Object.freeze(['tool_result'])
 
-/** How much of a dropped retelling's head is kept, in characters — the donor's own `SUMMARY_HEAD_CHARS`. */
+/** How much of a dropped retelling's head is kept, in characters — the summariser's own `SUMMARY_HEAD_CHARS`. */
 export const SUMMARY_HEAD_CHARS = 160
 
 /**
@@ -47,9 +47,9 @@ export const SUMMARY_HEAD_CHARS = 160
  * | family | treatment | why |
  * | --- | --- | --- |
  * | `summary` | **drop** — not answer text, not reasoning, never sent back up | the user's decision: the retelling is the model's own retelling of the dialogue, and the harness is the one trusted to compact; a retelling travelling back up would return to the model doubled |
- * | `call` | **assemble** — a call where the block names a function, the reasoning channel otherwise | a call written as markup is a call; losing it is the donor's own defect |
+ * | `call` | **assemble** — a call where the block names a function, the reasoning channel otherwise | a call written as markup is a call; losing it is a known defect |
  * | `reasoning`, `note` | **reason** — the reasoning channel | the model's own thinking is not the answer |
- * | `turn`, `echo` | **reason** | we cannot honestly claim a wrapper's body is the answer; doubtful goes to reasoning, and it is counted |
+ * | `turn`, `echo` | **reason** | a wrapper's body cannot honestly be claimed as the answer; doubtful goes to reasoning, and it is counted |
  * | `unknown` | **reason**, counted under the name the model wrote | the same treatment, extended to the names no rule claims |
  */
 export const TREATMENTS = Object.freeze({
@@ -142,7 +142,7 @@ export function familyOf(name) {
 /**
  * Whether a tag token is markup or a word of the answer.
  *
- * A name no rule claims is judged **by place**, the way the donor's instrument judged it
+ * A name no rule claims is judged **by place**, the way the parser's own instrument judged it
  * (`#isForeignTag`): in the wrapper position — nothing visible before it on its line — it is the
  * gateway's own wrapping that this plugin has not learned yet, while in prose it is an ordinary
  * angle-bracketed word
@@ -247,7 +247,7 @@ export function createShutter(options = {}) {
     block = null
     if (of.treatment === 'assemble') {
       // A call is assembled only from a block the model closed itself: half a call is not a call, and
-      // executing one we cannot claim to have read whole would be worse than refusing the turn.
+      // executing one not claimed to have been read whole would be worse than refusing the turn.
       const call = whole ? assembled(of) : undefined
       if (call !== undefined) piece.calls.push(call)
       else piece.reasoning += of.raw
@@ -303,7 +303,7 @@ export function createShutter(options = {}) {
     count(counters.tagsNeutral, found.name)
     block.raw += found.raw
     if (found.name === PARAMETER_TAG) {
-      // A parameter's value is not quoted in this markup: the next token is what ends it (the donor's
+      // A parameter's value is not quoted in this markup: the next token is what ends it (the serializer's
       // own reading of the form).
       endParam(block)
       if (found.closing) return

@@ -35,7 +35,7 @@ export const DEFAULT_CONTEXT_WINDOW = 200_000
 
 /**
  * The size at which a swallowed retelling is a compaction request in disguise rather than an empty
- * turn (the donor's own `SUMMARY_ARTIFACT_CHARS`). Under it the turn is
+ * turn (the summariser's own `SUMMARY_ARTIFACT_CHARS`). Under it the turn is
  * an empty response; at or above it the harness compacts and re-runs the step, which is the treatment
  * the user decided for a retelling.
  */
@@ -50,7 +50,7 @@ export const SUMMARY_ARTIFACT_CHARS = 2_000
  *
  * They are the declaration's base and not the whole of it: a model whose row names a level the vendor
  * publishes declares that level beside them ({@link declaredEfforts}), because the platform validates
- * every effort it resolves against this list and refuses one it does not find, before any provider I/O.
+ * every effort it resolves against this list and refuses one it does not find, before any provider call.
  */
 export const REASONING_EFFORTS = Object.freeze([
   Object.freeze({ id: 'off', name: 'Off', description: 'No reasoning: the answer only.' }),
@@ -93,7 +93,7 @@ export function declaredEfforts(effort) {
  * The vendor serves pictures on every model its catalogue carried when the catalogue was read — the
  * flag it publishes is `is_vl`, and all fifteen entries of the live node's `chat` category carry it
  * true, `dfmodel`, `efficient`, `qmodel_38max` and `qfmodel` among them, which the transport already
- * reads as `vision` — and the donor declared `vision: true` for every one of them. So the row's
+ * reads as `vision` — and the vendor's catalogue declares `vision: true` for every one of them. So the row's
  * `vision` decides, and it defaults to what the catalogue says for this vendor: pictures are carried
  * unless the row marks the model text-only.
  * @param {boolean | undefined} vision the row's own flag for this model

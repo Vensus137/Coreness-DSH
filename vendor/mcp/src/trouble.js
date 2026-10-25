@@ -3,7 +3,7 @@
  *
  * The harness's MCP client says exactly what is wrong with a row — `connection failed; retrying in
  * 4000ms (attempt 5/10)`, `giving up after 10 consecutive failed reconnect attempts`, `reconnected and
- * re-synced tools (attempt 2/10)` — and writes it through `ctx.logger`. This build mounts no console
+ * re-synced tools (attempt 2/10)` — and writes it through `ctx.logger`. No console sink is mounted
  * sink for that service, and the one sink it has, the service's own in-memory ring, names no severity
  * and is therefore handed errors and info only: the client's warnings are dropped before any sink sees
  * them, and nothing reaches the page, the launcher's stdout or the host's own log files either. The

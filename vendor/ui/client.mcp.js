@@ -8,8 +8,8 @@
  * (`client.mcp.signin.js`, `.card.js`, `.form.js`, `.draw.js`, `.section.js`), all created over one
  * `shared` object and seated only once the picker, the hold and the kit are in hand.
  *
- * A save's outcome is the route's answer, which is the servers file read back: every save here shows
- * what the file now holds, and a disagreement is said in words.
+ * A save's outcome is the route's answer: every save here shows what the tree now holds, and a disagreement
+ * is said in words (the servers file's own write is the include's and is not observed here).
  */
 window.__ModuleLoader__.load({
   id: '@coreness/ui/client.mcp.js',
@@ -21,8 +21,6 @@ window.__ModuleLoader__.load({
     const ROUTE = '/api/coreness.mcp';
     /** The sign-in door: the precondition of a row, the press, the answer and the withdrawal. */
     const PAGE_ROUTE = '/api/coreness.signin';
-    /** How often a sign-in that waits for a person is read again; the person's own act ends it. */
-    const SIGNIN_POLL_MS = 2000;
     /** The seat the page declares for the sections of the plugins that come later. */
     const SEAT = 'coreness.section';
     /** The rail row's own id inside that seat. */
@@ -171,6 +169,7 @@ window.__ModuleLoader__.load({
       'field.args': 'Arguments, one per line',
       'help.command': 'Any command or a full path to a script.',
       'help.args': 'One line is one argument, taken whole — a space inside it does not split it.',
+      'help.headers': 'A Bearer or Basic value typed here is a secret written into the servers file at rest; where the row can sign in, use Sign in and let the reference read the stored grant, or write an expression such as !!js process.env.NAME.',
       'field.timeout': 'Call timeout, ms',
       'field.headers': 'Headers',
       'row.tools': 'Tools ({count}):',
@@ -192,10 +191,10 @@ window.__ModuleLoader__.load({
       'confirm.body': 'The row leaves the servers file and the harness drops the tools of that server. Nothing else about the profile changes.',
       'confirm.yes': 'Remove',
       'confirm.no': 'Cancel',
-      'done.created': 'Saved',
-      'done.updated': 'Saved',
+      'done.created': 'Saved to the tree',
+      'done.updated': 'Saved to the tree',
       'done.nothing': 'Nothing changed',
-      'done.removed': 'Saved',
+      'done.removed': 'Removed from the tree',
       'fault.bad-action': 'The page asked for a save the plugin does not take',
       'fault.bad-name': 'A server name is 1 to 32 letters, digits, underscores or hyphens',
       'fault.name-taken': 'Another row of this file already takes that name',
@@ -214,7 +213,7 @@ window.__ModuleLoader__.load({
       'fault.config-ref': 'A setting of this row stands as an expression in the file: the form does not write over it',
       'fault.disabled-ref': 'The enablement of this row stands as an expression in the file: the toggle does not write over it',
       'state.refused': 'Not saved',
-      'fault.not-saved': 'The save did not stand: the file does not hold what was written',
+      'fault.not-saved': 'The save did not stand: the tree does not hold what was written; the servers file\'s own write is not observed here',
       'fault.write-failed': 'The Loader refused the write',
       'fault.unreadable': 'The servers file could not be read',
       'signin': 'Sign in',
@@ -259,16 +258,12 @@ window.__ModuleLoader__.load({
       'reason.unknown': 'The row did not start, and the record the platform kept names no reason this page can read',
     };
 
-    /* The host's own sheets, copied rule for rule and renamed, carried by its tokens alone: the
-       management card (`.section`, `.rowCard`,
-       `.rowHead`, `.rowTag`, `.rowActions`, `.editor`, `.field`, `.input`, the buttons), the
-       confirmation and its modal chrome, the
-       credential dot, and the nested map of the donor's own form — a four-column grid, each entity
-       a card with a `.5px` border. Two departures, both named: a pair
-       row of that map carries no box of its own — the page's grid stands on the editor's axis, where the
-       donor gives every entity a bordered card (the rule below carries the measurement) — and the modal
-       in this page sits under the section instead of the app root, which changes nothing of what it
-       covers. */
+    /* The host's own sheets, copied rule for rule and renamed, carried by its tokens alone: the management card
+       (`.section`, `.rowCard`, `.rowHead`, `.rowTag`, `.rowActions`, `.editor`, `.field`, `.input`, the buttons), the
+       confirmation and its modal chrome, the credential dot, and the nested map's form — a four-column grid, each
+       entity a card with a `.5px` border. Two departures, both named: a pair row of that map carries no box of its
+       own — the page's grid stands on the editor's axis — and the modal in this page sits under the section instead
+       of the app root, which changes nothing of what it covers. */
     const CSS = `
 /* The section's own heading, worn from the page's own head rather than declared again here: the head, its title
    and its count are the page's own classes, and the arrangement and the type stand once, in the page's own sheet. */
@@ -283,8 +278,8 @@ window.__ModuleLoader__.load({
 .coreness-mcp-warn{color:var(--dsw-alias-state-warn-label);margin:0;font-size:12px;line-height:18px}
 /* The tone of a room, read off the attribute the instruments read rather than off a class only the drawing
    knew: the colour and the reading are one fact, and the page keeps one description of each fact. */
-[data-note][data-tone='fault']{color:var(--dsw-alias-state-error-primary);margin:0;font-size:12px;line-height:18px}
-[data-note][data-tone='done']{color:var(--dsw-alias-state-success-primary);margin:0;font-size:12px;line-height:18px}
+.coreness-mcp [data-note][data-tone='fault']{color:var(--dsw-alias-state-error-primary);margin:0;font-size:12px;line-height:18px}
+.coreness-mcp [data-note][data-tone='done']{color:var(--dsw-alias-state-success-primary);margin:0;font-size:12px;line-height:18px}
 /* The tones this line carries stand once in the entry's sheet — coreness-tone-done and coreness-tone-fault,
    worn beside this class — because the state's sentence is painted there. */
 .coreness-mcp-signin code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
@@ -314,13 +309,12 @@ window.__ModuleLoader__.load({
    left over (flex:1 1 auto, below) and cuts a long sentence with an ellipsis rather than pushing the
    actions or the marker — the whole sentence stands in the title, and a refusal's reason also stands in
    the row's or the section's own state. */
-/* The answer stands on the **name's own line**, at the right of the row but not at the card's edge — the
-   actions and the marker after it are what keep that edge — and not in the middle of the head:
-   the head centres its children (align-items:center), and the strip — 18 px tall in a 60 px head — was
-   therefore sitting on the buttons' line. align-self:flex-start lifts it to the head's top, which is the line
-   the name stands on, and it changes nothing else: the box is still reserved (flex:0 0 160px), the head still
-   does not wrap, the chip stays where it stands, and the head's 60 px come from the room under the name, not
-   from the strip. The user's own reading: "справа — да; «вверху» — по центру шапки". */
+/* The answer stands on the **name's own line**, at the right of the row but not at the card's edge — the actions
+   and the marker after it are what keep that edge — and not in the middle of the head: the head centres its
+   children (align-items:center), so a strip shorter than the head sits on the buttons' line. align-self:flex-start
+   lifts it to the head's top, which is the line the name stands on, and it changes nothing else: the box is still
+   reserved (flex:0 0 160px), the head still does not wrap, the chip stays where it stands, and the head's height
+   comes from the room under the name, not from the strip. */
 /* The strip is a constant 160 px box that never shrinks and never grows, in this card as in the
    others: the head is a row, the strip stands in its middle and the controls keep the card's right edge, so a word
    that comes and goes changes no box — the row's height comes from the name and the buttons, not from the answer.
@@ -379,15 +373,10 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
 /* A form row's controls stand six apart in a grid of three fixed columns: the columns are the form's own, so the
    row never wraps and the distance is a grid's, not a line's — the Qoder's row, which may break, carries its own. */
 .coreness-mcp-grid{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:6px;display:grid}
-/* A pair row carries no box of its own. The donor's own per-row editing gives every entity of a nested map
-   a bordered card, and this page copied that rule
-   until the reader named the frame under the map's label as the redundant one: the row's own controls
-   already stand in a grid of their own. Measured on one editor, the header map of a row: with the box, the
-   row's first control stood at x 554 and its Remove ended at 1165, while every field of the editor stands
-   at x 547 and ends at 1172 — seven pixels off each side, the frame's own border and the room it needed.
-   Without it the rows stand on the fields' axis, and the block is read by the label above it and by the
-   pitch of the pairs list (coreness-mcp-pairs). The class stays on the row as its own name; no rule carries
-   it. */
+/* A pair row carries no box of its own: a bordered card per entity of a nested map frames what the row's own
+   controls already stand as, and the frame under the map's label is redundant. The rows stand on the fields' axis,
+   and the block is read by the label above it and by the pitch of the pairs list (coreness-mcp-pairs). The class
+   stays on the row as its own name; no rule carries it. */
 .coreness-mcp-editorActions{justify-content:flex-end;gap:8px;display:flex}
 /* The mask keeps the platform's own distance from the frame's top — the host's token, floored at 24 — and 24 at
    the sides: the page declares no number of its own for a room the platform already owns. */
@@ -398,25 +387,20 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
 .coreness-mcp-dialog{box-sizing:border-box;position:relative;z-index:1;display:flex;flex-direction:column;gap:20px;width:min(440px,100%);padding:22px 24px 24px;border:0;border-radius:var(--dsw-radius-panel);background:var(--dsw-alias-bg-layer-2);box-shadow:var(--dsw-elevation-prominent)}
 .coreness-mcp-dialogTitle{margin:0;font-size:16px;line-height:24px;font-weight:500;color:var(--dsw-alias-label-primary)}
 .coreness-mcp-dialogBody{margin:0;font-size:14px;line-height:22px;color:var(--dsw-alias-label-secondary)}
-/* The card's head is its disclosure: the name and the subtitle in a button, the actions and the toggle
-   beside it, the marker at the side, and the body only while it is open — the donor's own Card. */
+/* The card's head is its disclosure: the name and the subtitle in a button, the actions and the toggle beside it,
+   the marker at the side, and the body only while it is open. */
 .coreness-mcp-card{flex-direction:column;gap:12px;display:flex}
 .coreness-mcp-headButton{box-sizing:border-box;border:none;background:0 0;color:inherit;font:inherit;text-align:left;padding:0;cursor:pointer;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto;display:flex}
 .coreness-mcp-headButton:focus-visible{box-shadow:0 0 0 2px var(--dsw-alias-state-business-primary);outline:none;border-radius:var(--dsw-radius-md)}
 .coreness-mcp-name{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px}
-/* The subtitle carries the row's target and its state, so it is the one line of this card a long
-   sentence could grow — and the card with it. Two lines are the reserved room, the same reservation the
-   Qoder section's state area keeps; the rest of the sentence scrolls inside it and the words stay whole
-   in the DOM. The room is reserved both ways: a maximum alone leaves a short subtitle a 43 px head where
-   a long one takes 98, so the floor is the reservation and the ceiling its limit. Measured before that
-   ceiling existed, in the Qoder section: 200 characters over 379x54 px took the card from 1290 to 1308
-   and its head from 36 to 54. Measured in the gate's walk before the floor existed: the same room read
-   36 px in one state and 18 px in the next, and the cards under it moved eighteen pixels. */
-/* The room under the name is reserved (36 px, the head's own two lines) and a value longer than it scrolls — but
-   the engine draws a scrollbar for that, and a bar at the room's right edge reads as a rule nobody drew: in the
-   walk's own picture each MCP row carried a ~15 px bar at x 878 with a thumb the height of one line. The bar is
-   hidden here (the wheel and the keyboard still scroll the room); the reserved height, the user's own decision,
-   stays where it was. */
+/* The subtitle carries the row's target and its state, so it is the one line of this card a long sentence could
+   grow — and the card with it. Two lines are the reserved room, the same reservation the Qoder section's state area
+   keeps; the rest of the sentence scrolls inside it and the words stay whole in the DOM. The room is reserved both
+   ways: a maximum alone leaves a short subtitle a short head where a long one takes a tall one, so the floor is the
+   reservation and the ceiling its limit. */
+/* The room under the name is reserved (the head's own two lines) and a value longer than it scrolls — but the
+   engine draws a scrollbar for that, and a bar at the room's right edge reads as a rule nobody drew. The bar is
+   hidden here (the wheel and the keyboard still scroll the room); the reserved height stays where it was. */
 .coreness-mcp-subtitle{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .coreness-mcp-subtitle::-webkit-scrollbar{width:0;height:0}
 .coreness-mcp-marker{box-sizing:border-box;border:none;background:0 0;color:var(--dsw-alias-label-secondary);flex:none;width:24px;height:24px;cursor:pointer;justify-content:center;align-items:center;display:inline-flex}
@@ -432,9 +416,8 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
 .coreness-mcp-menuList{position:absolute;z-index:30;top:calc(100% + 4px);right:0;width:max-content;background:var(--dsw-alias-bg-layer-3,#fff);border:.5px solid var(--dsw-alias-border-l2,#0000001f);border-radius:var(--dsw-radius-md);box-shadow:var(--coreness-elevation);padding:4px;flex-direction:column;display:flex}
 /* The item is the page's shared button beside its own differences: no hairline of its own, the list's own padding
    and the row's own axis. The axis is justify-content and not text-align: the shared body centres its content, and
-   no text-align moves a flex container's content, so a left alignment written that way draws nothing. It used to
-   state the shared rule's own values beside them — the box, the radius, the transparent ground, the ink, the font,
-   the pointer — and those hold a shared value still while the shared rule moves. */
+   no text-align moves a flex container's content, so a left alignment written that way draws nothing. Repeating the
+   shared rule's own values here would hold them still while the shared rule moves. */
 /* An item is a line the pointer takes whole: its own padding is the room between its word and the list's edge,
    and two items touch, because a menu is read by moving from one row to the next and not by the air between them. */
 .coreness-mcp-menuList .coreness-mcp-menuItem{border:none;box-shadow:none;background:0 0;border-radius:var(--dsw-radius-sm);padding:6px 10px;justify-content:flex-start;width:100%;text-align:left}
@@ -549,7 +532,7 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
 
     /** The one object the parts reach each other through; the entry puts its own half in before any is made. */
     const shared = {
-      ROUTE, PAGE_ROUTE, SIGNIN_POLL_MS, SEAT, ID, NS, KINDS, KIND_LABELS, reasonKey, MENU,
+      ROUTE, PAGE_ROUTE, SEAT, ID, NS, KINDS, KIND_LABELS, reasonKey, MENU,
       SETTLE, unsettled, reasonOf, faultLines, tellTroubles, useStyles,
     };
 
@@ -569,6 +552,8 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
             ([pickerModule, holdModule, kitModule, signinModule, cardModule, formModule, drawModule, sectionModule]) => {
               if (!live) return;
               kit = kitModule;
+              /* The page has one beat, in the hold: the sign-in wait reads it there. */
+              shared.SIGNIN_POLL_MS = holdModule.BEAT_MS;
               const parts = { t, kit, picker: pickerModule, hold: holdModule, ctx, shared };
               Object.assign(shared, signinModule.create(parts));
               Object.assign(shared, cardModule.create(parts));
