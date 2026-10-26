@@ -86,11 +86,13 @@ window.__ModuleLoader__.load({
       const writing = busy || promptBusy;
       /* A fault is the strip's word, never a line of its own: the strip stands in the card head with its room
          kept, so a read that failed says "Not read" without moving the page; the reason is said in the console,
-         where a reader who has to act on it looks. The card's own conditions take the same room — one word, no
-         line that appears at the read — so the card keeps its shape whether the team service is mounted or the
-         profile's editor can address the row. */
+         where a reader who has to act on it looks. The card's own conditions take the same room — one phrase,
+         no line that appears at the read — so the card keeps its shape either way. The team's condition names
+         the act that ends it rather than the platform's state: a profile without the team service has nothing
+         to write here, and a reader learns what to do where the word stands. The profile's editor being unable
+         to address the row is a different condition and keeps its own word. */
       const condition = value?.mounted === false
-        ? words('team.missing')
+        ? words('team.off')
         : value !== null && value?.editable !== true ? words('team.unwritable') : null;
       const stripNote = note ?? (promptFault || beatFault || readFault
         ? { tone: 'fault', text: words('state.unread') }

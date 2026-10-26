@@ -38,7 +38,9 @@ export const MAX_SWEEP_MS = 24 * 60 * 60 * 1000
  * The list is the row's and not the vendor's, deliberately: the model picker and the platform's own
  * settings page ask for it while a surface is being built, and a list that waited for a token, a node map
  * and a catalogue call would show an empty picker instead of a route that declares what it serves. The
- * vendor's live catalogue stays a read of its own, and its live menus never enter this declaration.
+ * vendor's live catalogue stays a read of its own; its menus enter this declaration only through the cache
+ * the transport keeps, which adds levels and removes none — the declaration never waits on the vendor and
+ * never takes back a level a session may have chosen.
  *
  * The windows, though, are the vendor's numbers: `auto` publishes `200000` on the Chinese node and
  * `400000` on the international one, the tiered models publish `200000 / 400000 / 1000000` with
@@ -104,8 +106,11 @@ export const Config = z.object({
    * `effort` is this model's own reasoning effort, in the vocabulary of the model itself: the page draws each
    * row's choices from the vendor's live catalogue and writes the chosen name here. Two dictionaries live
    * beside each other by design: **this field is the vendor's own vocabulary**, and the declaration the
-   * platform reads is its own — the three names plus whatever this row holds (`declaredEfforts`) — because the
-   * platform refuses a value its declaration does not carry before any request leaves.
+   * platform reads is its own — the switch-off, the levels the catalogue has published for this model (or
+   * the platform's own three where it publishes none), and the effort in force (this row's name, or the
+   * row's {@link reasoningEffort} when the row names none) when the menu lacks it (`declaredEfforts`) —
+   * because the platform refuses a value its
+   * declaration does not carry before any request leaves, and the model list is never waited on.
    *
    * A model's setting wins over the row's {@link reasoningEffort}, which stays as the answer for a model that
    * names none, and an empty string means exactly that. What the wire carries is this value itself: a name a

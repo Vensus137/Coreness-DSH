@@ -246,6 +246,9 @@ export function createAdapter(options) {
       retryPolicy: resolveRetryPolicy(raw.retryPolicy),
     }
   }
+  /* The vendor's menus, as the transport's cache last heard them: the declaration answers at once, and the
+     transport always carries the read — an empty map where no path was given it. */
+  const menusOf = (model) => transport.menusOf(model)
 
   return {
     providerInfo: (provider) => ({ id: provider, name: displayName }),
@@ -302,10 +305,10 @@ export function createAdapter(options) {
         ...model.maxTokens === undefined ? {} : { maxTokens: model.maxTokens },
       }))
     },
-    resolveModel: (provider, model) => Promise.resolve(modelInfo(snapshot(), provider, model)),
+    resolveModel: (provider, model) => Promise.resolve(modelInfo(snapshot(), provider, model, menusOf(model))),
     prepareCall: (provider, model) => {
       const bound = snapshot()
-      return Promise.resolve({ model: modelInfo(bound, provider, model), stream: (call) => stream(call, bound) })
+      return Promise.resolve({ model: modelInfo(bound, provider, model, menusOf(model)), stream: (call) => stream(call, bound) })
     },
     stream: (call) => stream(call, snapshot()),
   }

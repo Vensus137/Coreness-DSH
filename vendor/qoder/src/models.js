@@ -42,15 +42,17 @@ export const DEFAULT_CONTEXT_WINDOW = 200_000
 export const SUMMARY_ARTIFACT_CHARS = 2_000
 
 /**
- * The platform's own three names, and the base of the vocabulary this route declares.
+ * The platform's own three names: `off`, which this route always declares, and `high` and `max`, which it
+ * declares where the vendor's catalogue published no menu for the model.
  *
  * `off` is why they stay: no vendor menu publishes it (their client expresses a switch-off as a budget
  * of zero), and the other two are the platform's words for the request this route sends — what travels
  * is the effort the row names, exactly as it stands there.
  *
- * They are the declaration's base and not the whole of it: a model whose row names a level the vendor
- * publishes declares that level beside them ({@link declaredEfforts}), because the platform validates
- * every effort it resolves against this list and refuses one it does not find, before any provider call.
+ * They are the whole vocabulary only where the vendor has published none: a model with a menu is offered
+ * that menu beside `off`, and `high`/`max` stand for it only if the vendor publishes them
+ * ({@link declaredEfforts}). The platform validates every effort it resolves against this list and refuses
+ * one it does not find, before any provider call.
  */
 export const REASONING_EFFORTS = Object.freeze([
   Object.freeze({ id: 'off', name: 'Off', description: 'No reasoning: the answer only.' }),
@@ -59,8 +61,33 @@ export const REASONING_EFFORTS = Object.freeze([
 ])
 
 /**
- * What this route declares one model supports: the platform's three, and the level the row names when
- * it is not one of them.
+ * Where a level stands on the ladder a person reads, from a switch-off up to the hardest work.
+ *
+ * The declaration mixes two vocabularies — the platform's three words and the vendor's own names — and a
+ * picker that listed them in the order they were assembled read `Off, High, Max, low, medium, xhigh`: the
+ * three first because they are the base, then the vendor's levels in the vendor's order, which puts a level
+ * weaker than `high` after `max`. The ladder is one reading for both vocabularies, and a level it does not
+ * know stands after every level it does, in the order it arrived: an unknown word is shown, never ranked
+ * by guesswork.
+ */
+export const EFFORT_RANK = Object.freeze({
+  off: 0,
+  minimal: 1,
+  low: 2,
+  medium: 3,
+  high: 4,
+  xhigh: 5,
+  max: 6,
+})
+
+/** A level's place on the ladder; a word the ladder does not know ranks after every known one. */
+function rankOf(id) {
+  return Object.hasOwn(EFFORT_RANK, id) ? EFFORT_RANK[id] : Number.POSITIVE_INFINITY
+}
+
+/**
+ * What this route declares one model supports: the platform's switch-off, the levels the vendor's menu
+ * publishes (or the platform's three where the vendor publishes none), and the effort in force.
  *
  * The row carries the **vendor's own** name — the page draws every model's menu from the vendor's live
  * catalogue and writes the chosen name into the row — so the declaration must admit it, or the
@@ -68,23 +95,55 @@ export const REASONING_EFFORTS = Object.freeze([
  * member of `efforts`, and any effort a call resolves to has to be one too, with no clamping and no
  * aliasing.
  *
- * The platform's three stay in every case, not only where no vendor name stands: a session that chose
- * `high` at the platform's own picker would otherwise meet `UNSUPPORTED_REASONING_EFFORT` in the middle
- * of a conversation the moment a row moved. The order is the platform's, and the row's level is
- * appended once, the vendor's spelling serving as both its id and its label.
+ * **The vendor's menu decides the list.** A model whose catalogue publishes levels is offered those and
+ * nothing else, beside `off`; the platform's `high` and `max` are this route's earlier words and are
+ * offered only where the vendor publishes no menu at all — a picker that carried both vocabularies on
+ * every model grew to six entries where the vendor serves three. The list is read as one ladder, from
+ * `off` up to the hardest level the model publishes, so the picker never puts a weaker level after a
+ * stronger one — one rank table orders both vocabularies ({@link EFFORT_RANK}), and a word it does not
+ * know stands last, its spelling serving as both id and label.
  *
- * The model's **live menu** is deliberately not part of this: it is what the product's own page offers
- * a reader, read over the page's route, while this list is the platform's vocabulary of what may be
- * asked of the route. Reading the catalogue here would make the platform's own model catalogue wait on
- * the vendor — against the decision that the model list is never waited on — or, if it were read
- * lazily, would let a session's admissible vocabulary move with the vendor's listing and refuse a
- * level already chosen.
+ * **The effort in force is always declared**, even where the vendor's menu does not publish it: a row
+ * naming `high` on a model whose menu is `low|medium|xhigh` must keep a valid `defaultEffort`, and the
+ * platform refuses a default that is not a member of `efforts`.
+ *
+ * The **vendor's menu** is the levels the catalogue has published for this model, read from the cache the
+ * transport keeps rather than from the vendor at this call: the model list is never waited on, and a
+ * declaration that awaited the network would hang the picker on a node that is down. The cache only grows —
+ * it adds what a listing publishes and removes nothing — because a level it published once may be the level
+ * a session holds, and a declaration that dropped it would be refused by the platform before any request
+ * leaves. The price of the growth is a level the vendor stopped publishing staying offered until the cache
+ * is cleared; the vendor's answer, not this list, decides whether a picked level works.
+ *
+ * The price of letting the vendor's menu decide the list is the same gate seen from the other side: a
+ * session that chose `high` or `max` on a model whose menu does not publish them holds a level the finished
+ * declaration no longer carries, and its next turn is refused before any request leaves — the stored choice
+ * is not visible here, so nothing can be added back for it. The recovery is one pick from the menu.
  * @param {string} effort the effort the row names, or the route's answer where the row names none
+ * @param {readonly string[]} [menu] the vendor's levels for this model, as the catalogue has published them
  * @returns {readonly object[]} the efforts the platform may ask this model for
  */
-export function declaredEfforts(effort) {
-  if (effort === '' || REASONING_EFFORTS.some((one) => one.id === effort)) return REASONING_EFFORTS
-  return Object.freeze([...REASONING_EFFORTS, Object.freeze({ id: effort, name: effort })])
+export function declaredEfforts(effort, menu = []) {
+  const known = new Set()
+  const efforts = []
+  const add = (spec) => {
+    if (known.has(spec.id)) return
+    known.add(spec.id)
+    efforts.push(spec)
+  }
+  /* The switch-off is this route's own: no vendor menu publishes it, and it is the one level that turns
+     reasoning off rather than asking for less of it. */
+  add(REASONING_EFFORTS[0])
+  const published = menu.filter((level) => typeof level === 'string' && level !== '')
+  if (published.length === 0) {
+    for (const spec of REASONING_EFFORTS.slice(1)) add(spec)
+  } else {
+    for (const level of published) add(Object.freeze({ id: level, name: level }))
+  }
+  if (effort !== '' && !known.has(effort)) add(Object.freeze({ id: effort, name: effort }))
+  /* The sort is stable, so two levels the ladder does not know keep the order they arrived in. */
+  efforts.sort((left, right) => rankOf(left.id) - rankOf(right.id))
+  return Object.freeze(efforts)
 }
 
 /**
@@ -138,8 +197,13 @@ export function declaredModels(models, provider) {
  * message into the top-level prompt in their order, so the newest update is read as part of the prompt and
  * nothing is dropped. A route that declared nothing would be told to replace the leading prompt in place,
  * and the earlier text would be lost.
+ * @param {object} settings the generation's settings
+ * @param {string} provider the route
+ * @param {string} model the requested id
+ * @param {readonly string[]} [menu] the vendor's levels for this model, as the catalogue last published them
+ * @returns {object} the model metadata
  */
-export function modelInfo(settings, provider, model) {
+export function modelInfo(settings, provider, model, menu = []) {
   const declared = (settings.models ?? []).find((entry) => entry.id === model)
   const effort = effortOf(settings, model)
   return {
@@ -154,7 +218,7 @@ export function modelInfo(settings, provider, model) {
     // `defaultEffort` is published only where a level is named: the platform refuses a default that is
     // not a member of `efforts`, and an empty string means "nothing is named" — left out, the platform
     // shows its own provider default and the request carries no effort.
-    reasoning: effort === '' ? { efforts: declaredEfforts(effort) } : { efforts: declaredEfforts(effort), defaultEffort: effort },
+    reasoning: { efforts: declaredEfforts(effort, menu), ...effort === '' ? {} : { defaultEffort: effort } },
   }
 }
 

@@ -32,6 +32,7 @@ import { DISPLAY_NAME, ROUTE, createAdapter, liveValue } from './adapter.js'
 import { sweepMsOf } from './config.js'
 import { CATALOGUE_ACTION, VERIFY_ACTION, WEB_SEARCH_ACTION, answerOf, answerOfRoute } from './routes.js'
 import { createImageReader } from './images.js'
+import { menusPath } from './menus.js'
 import { createCredits } from './credits.js'
 import { createAccount } from './account.js'
 import { createSpendJournal } from './spend.js'
@@ -146,6 +147,9 @@ export function apply(ctx, config) {
        call). */
     inferBase: () => liveValue(config.inferBase) ?? '',
     machineIdStoreDir: storeDir,
+    /* The vendor's effort menus, kept beside the machine id: the model picker's declaration answers from
+       this cache, so a level the catalogue published survives the launch it was read in. */
+    menusPath: menusPath(home),
     controlCeilingMs: config.controlCeilingMs,
     firstByteCeilingMs: config.firstByteCeilingMs,
     idleCeilingMs: config.idleCeilingMs,
@@ -167,6 +171,12 @@ export function apply(ctx, config) {
     journal,
   })
   ctx.llm.registerAdapter([ROUTE], adapter)
+  /* The declaration answers from the cache; one read at start keeps the menus as fresh as the vendor's own
+     listing. It is deliberately not awaited: the model list is never waited on, so a node that is slow or
+     down costs this line a log entry while the picker keeps the levels the last read left. */
+  ctx.effect(() => {
+    void transport.catalogue({}).catch((error) => warn(`the catalogue did not answer at start (${error?.message ?? String(error)}); the declared menus stay as the last read left them`))
+  }, `${name}: the catalogue at start`)
   /* The ledger's reader: the money one window holds, by day and model. It reads the file the adapter
      writes, through the one place the path is resolved — a second join of the two halves would drift the
      first time the ledger moves. */

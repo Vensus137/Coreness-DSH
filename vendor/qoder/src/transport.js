@@ -17,6 +17,7 @@ import { CHAT_PATH, DEFAULT_CONTROL_CEILING_MS, DEFAULT_FIRST_BYTE_CEILING_MS, D
 import { CONTOURS, chosenContour, createTokenCalls, detectContour } from './contour.js'
 import { readDataPolicy, writeDataPolicy } from './privacy.js'
 import { abortOf, bodyFrom, firstByteRefusal, normalizeNode, readEndpointMap, readFrames } from './read.js'
+import { mergeMenus, readMenus, writeMenus } from './menus.js'
 import { CLIENT_TYPE, WEB_COSY_VERSION, WEB_MACHINE_OS, cosyHeaders, machineIdOf } from './sign.js'
 
 /**
@@ -34,6 +35,8 @@ import { CLIENT_TYPE, WEB_COSY_VERSION, WEB_MACHINE_OS, cosyHeaders, machineIdOf
  * @param {string | (() => string)} [options.inferBase] a configured inference node, instead of the map's
  *   first; a function is read per call, because the row's field is live (`resolvedEndpoints`)
  * @param {string} [options.machineIdStoreDir] where the plugin keeps its own machine id
+ * @param {string} [options.menusPath] where the vendor's effort menus are kept between launches; without it
+ *   the read is remembered for this process only
  * @param {number} [options.controlCeilingMs] how long a control call may take
  * @param {number} [options.firstByteCeilingMs] how long the answer may take to start speaking
  * @param {number} [options.idleCeilingMs] how long a started answer may stay silent
@@ -46,6 +49,10 @@ export function createTransport(options) {
   const fetchImpl = options.fetchImpl ?? globalThis.fetch
   const now = options.now ?? (() => Date.now())
   const warn = options.warn ?? (() => {})
+  /* The vendor's effort menus between launches: the declaration must answer without the network, so the
+     levels a catalogue last published are read here and refreshed by every read of the account's own node.
+     A listing of some other node under check says nothing about what this route asks for and is not kept. */
+  const menuCache = options.menusPath === undefined ? new Map() : readMenus(options.menusPath, warn)
   const controlCeilingMs = clampTimeout(options.controlCeilingMs, DEFAULT_CONTROL_CEILING_MS, MAX_TIMER_DELAY_MS, 'controlCeilingMs')
   const firstByteCeilingMs = clampTimeout(options.firstByteCeilingMs, DEFAULT_FIRST_BYTE_CEILING_MS, MAX_TIMER_DELAY_MS, 'firstByteCeilingMs')
   const idleCeilingMs = clampTimeout(options.idleCeilingMs, DEFAULT_IDLE_CEILING_MS, MAX_TIMER_DELAY_MS, 'idleCeilingMs')
@@ -199,17 +206,39 @@ export function createTransport(options) {
    * @returns {Promise<object[]>} the enabled models, in the node's order
    */
   async function catalogue({ signal, node } = {}) {
-    const { inferBase } = node === undefined || node === ''
-      ? await resolvedEndpoints(signal)
-      : { inferBase: normalizeNode(node, 'the node under check') }
+    const { inferBase: ownBase } = await resolvedEndpoints(signal)
+    const inferBase = node === undefined || node === '' ? ownBase : normalizeNode(node, 'the node under check')
     const url = `${inferBase}${MODEL_LIST_PATH}`
     return ceiling('the Qoder model listing', signal, async (inner) => {
       const headers = { Accept: 'application/json', ...await signedHeaders({ url, body: null, signal: inner }) }
       const response = await fetchImpl(url, { headers, signal: inner })
       if (!response.ok) throw await refusalOf(response, 'the Qoder model listing', warn)
       const payload = await jsonOf(response, 'the Qoder model listing')
-      return modelsOf(payload)
+      const models = modelsOf(payload)
+      /* Only the account's own node refreshes the menus: another node under check may publish different
+         levels for the same id, and the sweep asks every node by its address like any other reader. */
+      if (inferBase === ownBase) rememberMenus(models)
+      return models
     })
+  }
+
+  /** Whether the cache's file is stale from a write that failed; the next own-node listing retries it. */
+  let menusPending = false
+
+  /**
+   * Merges one listing into the menus and writes the file when it changed.
+   *
+   * A failed write is said and retried by the next listing rather than waiting for a menu to change: the
+   * memory keeps the levels either way, so the route is never poorer than the file, and a file that could
+   * not be written once is not left stale for the life of the process.
+   * @param {object[]} models the listing, as the wire read it
+   * @returns {void}
+   */
+  function rememberMenus(models) {
+    const changed = mergeMenus(menuCache, models)
+    if (options.menusPath === undefined) return
+    if (!changed && !menusPending) return
+    menusPending = !writeMenus(options.menusPath, menuCache, warn)
   }
 
   /**
@@ -550,6 +579,7 @@ export function createTransport(options) {
     },
     identity: identityOf,
     catalogue,
+    menusOf: (model) => menuCache.get(model) ?? [],
     search: (request, signal) => search(request, signal),
     chat,
     frames,
