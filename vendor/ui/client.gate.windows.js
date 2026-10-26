@@ -83,7 +83,7 @@ window.__ModuleLoader__.load({
                and the fields stand under it always. */
             h('div', { key: 'head', className: 'coreness-card-head' }, [
               h('span', { key: 'title', className: 'coreness-gate-headButton' }, [
-                h('span', { key: 'name', className: 'coreness-gate-name' }, pairOf(held)),
+                h('span', { key: 'name', className: 'coreness-sectionTitle' }, pairOf(held)),
                 ]),
               /* The row's own answer, in the same reserved box as every other strip on the page: the word is this
                  row's or it is empty, but the room stands always — a strip the page reserves nowhere is a word

@@ -92,7 +92,9 @@ window.__ModuleLoader__.load({
     const CSS = `
 .coreness-credits-seat{box-sizing:border-box;flex:0 0 auto;width:100%;min-width:0;font:inherit;color:var(--dsw-alias-label-secondary);text-align:left;cursor:pointer;background:0 0;border:1px solid transparent;border-radius:var(--dsw-radius-md);align-items:center;gap:8px;margin:0 0 4px;padding:8px;display:flex}
 .coreness-credits-seat:hover{border-color:var(--dsw-alias-border-l2,#0000001f)}
-.coreness-credits-seatName{flex:none;white-space:nowrap;color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px}
+/* The seat's name takes no shrinking and no second line; its pair and ink are the page's name line, worn
+   beside this class. */
+.coreness-credits-seatName{flex:none;white-space:nowrap}
 .coreness-credits-seatNote{flex:0 1 auto;margin-left:auto;color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
 /* The lines a seat stacks stand four apart: a seat is read as one statement, so its own lines stay tighter than
    the rewards below it. */
@@ -301,7 +303,7 @@ window.__ModuleLoader__.load({
         onClick: (event) => act.toggle?.(event),
       }, wide ? [
         h(shared.Ring, { key: 'ring', percent: picture?.share, size: 16 }),
-        h('span', { key: 'name', className: 'coreness-credits-seatName' }, t('seat')),
+        h('span', { key: 'name', className: 'coreness-credits-seatName coreness-name' }, t('seat')),
         /* The note draws the state; its tone is what tells a failed reading from one not yet made — a face
            carries a bounded state, and the host's sentence stands in the popover. */
         h('span', {

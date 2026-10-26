@@ -120,8 +120,6 @@ window.__ModuleLoader__.load({
 .coreness-gate-state{overflow-wrap:anywhere}
 /* The card's name takes the growing room, so the answer strip stands at the head's right edge. */
 .coreness-gate-headButton{flex-direction:column;min-width:0;flex:1 1 auto;display:flex}
-/* The row card's name — the pair it is about; the limit card's title is the page's section title. */
-.coreness-gate-name{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px}
 /* The **row cards** — and only they — stand their three fields on one line, so these rules are scoped to the row
    card's own class; the limit card keeps its fields one to a line. The line takes the card's whole inner width
    and the fields share it equally, so there is no empty space at either edge. The pairs dissolve with

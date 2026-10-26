@@ -148,7 +148,7 @@ window.__ModuleLoader__.load({
 
         return h('div', { key: 'editor', className: 'coreness-mcp-editor' }, [
           h('div', { key: 'titleRow', className: 'coreness-mcp-editorHead' }, [
-            h('span', { key: 'title', className: 'coreness-mcp-editorTitle' },
+            h('span', { key: 'title', className: 'coreness-name' },
               draft.entryId === null ? t('add.title') : t('edit.title', { server: draft.server })),
             h('span', { key: 'beside', className: 'coreness-mcp-editorBeside' }, [
               signHere

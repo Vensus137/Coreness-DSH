@@ -99,7 +99,7 @@ window.__ModuleLoader__.load({
           'data-skeleton': part,
         });
         const frame = (label, subject) => h('div', { key: 'head', className: 'coreness-card-head' }, [
-          h('span', { key: 'name', className: 'coreness-qoder-name' }, label),
+          h('span', { key: 'name', className: 'coreness-qoder-name coreness-sectionTitle' }, label),
           subject === null || subject === undefined ? null : kit.statusNode({ subject, value: 'loading' }),
           answerStrip(null),
         ]);
@@ -274,7 +274,7 @@ window.__ModuleLoader__.load({
            and these conditions have no value there — and the sentences in the card's body. */
         const conditionCard = (key, label, word, body) => h('ul', { key: 'cards', className: 'coreness-list coreness-card-list' }, [
           cardOf(key, h('div', { key: 'head', className: 'coreness-card-head', 'data-state': key }, [
-            h('span', { key: 'name', className: 'coreness-qoder-name' }, label),
+            h('span', { key: 'name', className: 'coreness-qoder-name coreness-sectionTitle' }, label),
             answerStrip({ text: word, tone: 'plain' }),
           ]), body),
         ]);
@@ -388,7 +388,7 @@ window.__ModuleLoader__.load({
              thing it is about — outside the name it would be pushed to the middle by the space the name
              takes. The strip keeps the head's last place at the right edge. */
           return h('div', { key: 'head', className: 'coreness-card-head', 'data-state': key }, [
-            h('span', { key: 'name', className: 'coreness-qoder-name' }, mark === null ? label : [label, mark]),
+            h('span', { key: 'name', className: 'coreness-qoder-name coreness-sectionTitle' }, mark === null ? label : [label, mark]),
             ...extras,
             word,
             answerStrip(answerOf(key)),

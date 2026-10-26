@@ -253,8 +253,9 @@ window.__ModuleLoader__.load({
 /* The card's name, and the room that keeps the strip at the head's right edge: the name takes the growing
    space, so the status word and the strip stand at the card's right whatever the head carries. The name is
    a row of its own, because the connection's dot stands inside it: grown on its own, the name would push a
-   dot drawn after it to the middle of the head, and the mark belongs beside the name at the card's left. */
-.coreness-qoder-name{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px;flex:1 1 auto;display:flex;align-items:center;gap:10px}
+   dot drawn after it to the middle of the head, and the mark belongs beside the name at the card's left.
+   Its pair and ink are the set's card title, worn beside this class where the name is drawn. */
+.coreness-qoder-name{flex:1 1 auto;display:flex;align-items:center;gap:10px}
 /* The strip stands last in the head, after the page's status word: the word carries the one auto margin the
    row needs, and a second auto on the strip split the free space between the two — the word landed at the
    card's middle while the strip took the right edge. The strip keeps its own reserved room there, empty as

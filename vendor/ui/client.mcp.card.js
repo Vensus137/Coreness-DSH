@@ -203,7 +203,7 @@ window.__ModuleLoader__.load({
               'aria-expanded': open,
               onClick: () => act.row(row.entryId, !open),
             }, [
-              h('span', { key: 'name', className: 'coreness-mcp-name' }, row.server ?? row.id),
+              h('span', { key: 'name', className: 'coreness-sectionTitle' }, row.server ?? row.id),
               subtitleNode,
             ]),
             /* The answer stands on the name's own line, in the middle of the row, where the protocol chip

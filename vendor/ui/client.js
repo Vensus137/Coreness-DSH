@@ -91,6 +91,9 @@ window.__ModuleLoader__.load({
 /* A section's heading: its parts on one baseline, and the article's own line inside it. */
 .coreness-sectionHead{align-items:baseline;gap:10px;display:flex}
 .coreness-sectionTitle{margin:0;font-size:16px;font-weight:500;line-height:24px}
+/* The name line for a thing that is not a card: a panel's title or a popup's name, at the page's name pair and
+   ink. A card's title wears the section title class instead; a section adds no second cut of this. */
+.coreness-name{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px}
 /* The sentence under a section's heading, in every section that carries one: the same size, ink and
    distance from the heading, declared once so a section cannot stand a few pixels tighter than its
    neighbours — the rate limiter stood at zero margin while the MCP and the Qoder sections had 8px. */

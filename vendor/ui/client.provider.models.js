@@ -250,7 +250,7 @@ window.__ModuleLoader__.load({
             /* The row reads as the option does: the name the vendor published, the host's separator and the
                multiplier that came with the same answer (`optionWords` carries the list's own reading). A row
                the listing does not carry has no rate to show and is named without one. */
-            h('span', { key: 'name', className: 'coreness-qoder-name' },
+            h('span', { key: 'name', className: 'coreness-qoder-name coreness-sectionTitle' },
               `${draft.name.trim() !== ''
                 ? draft.name
                 : typeof entry?.name === 'string' && entry.name !== '' ? entry.name : id === '' ? t('models.pick') : id}${rateWords(entry?.priceFactor) === null ? '' : ` · ${rateWords(entry.priceFactor)}`}`),

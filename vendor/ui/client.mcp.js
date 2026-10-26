@@ -313,7 +313,6 @@ window.__ModuleLoader__.load({
    the row's name on and not among the form's own acts — a press that never touches the draft must not read as one
    that saves it. */
 .coreness-mcp-editorBeside{align-items:center;gap:8px;display:inline-flex}
-.coreness-mcp-editorTitle{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px}
 /* The answer a press makes before its row exists: a draft has no card, so the editor is the one room that press's
    word can stand in. Its colour is the set's tone class beside this one; this rule carries only the line's own size
    and place. */
@@ -338,7 +337,6 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
    the marker at the side, and the body only while it is open. */
 .coreness-mcp-headButton{box-sizing:border-box;border:none;background:0 0;color:inherit;font:inherit;text-align:left;padding:0;cursor:pointer;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto;display:flex}
 .coreness-mcp-headButton:focus-visible{box-shadow:0 0 0 2px var(--dsw-alias-state-business-primary);outline:none;border-radius:var(--dsw-radius-md)}
-.coreness-mcp-name{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px}
 /* The subtitle carries the row's target and its state, in the section's own ink and pair; the one line and its
    cut are the page's cut line, worn beside this class. */
 .coreness-mcp-subtitle{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;min-width:0}
