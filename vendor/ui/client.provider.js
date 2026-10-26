@@ -5,9 +5,9 @@
  * A package-local chunk beside the page's entry, pulled with the entry's `require.async`, registering into
  * the seat the page declares under an id and a locale namespace of its own. This file carries the section's
  * words and sheet, the platform's read and its writes (the row, the store, the settings), the catalogue's
- * action, and its seat; the drawing and the section's own lifetime are the five parts beside it
- * (`client.provider.section.js`, `.draw.js`, `.models.js`, `.credential.js`, `.node.js`), all created over
- * one `shared` and seated only once the kit, the picker and the hold are in hand.
+ * action, and its seat; the drawing and the section's own lifetime are the six parts beside it
+ * (`client.provider.section.js`, `.draw.js`, `.models.js`, `.credential.js`, `.node.js`, `.web.js`), all
+ * created over one `shared` and seated only once the kit, the picker and the hold are in hand.
  *
  * One value, two doors. Nothing here names the credential: the reference is read from the row the platform
  * already carries — the declared provider directory joined with the settings mirror's own value at that
@@ -47,6 +47,9 @@ window.__ModuleLoader__.load({
     const h = React.createElement;
 
     const PACKAGE = '@coreness/ui';
+    /** The section's sheet: its own id and the module id it is marked with, as the host marks its own. */
+    const STYLE_ID = 'coreness-ui-qoder-style';
+    const STYLE_TAG = '@coreness/ui/client.provider.js';
     /** The seat the page declares for the sections of the plugins that come later. */
     const SEAT = 'coreness.section';
     /** This section's own id inside that seat, and the rail row the user clicks. */
@@ -130,6 +133,22 @@ window.__ModuleLoader__.load({
       'detail.noplace': 'This profile names no credential reference, so this section read no store',
       'detail.external': 'The value is supplied from outside this profile and cannot be changed here',
       'detail.node': 'The sweep pinned {node}, which offers {count} models',
+      /* The press's one word in a card's strip: the vendor's verdict on the value, the node's answer, the
+         clear that stood, and the check that settled nothing. The kit's map names a verdict as a sentence
+         about the card's subject, and the strip's fixed room holds one word — so the section writes the
+         short form here and the reason behind each stands in the console. */
+      'verdict.accepted': 'Accepted',
+      'verdict.refused': 'Refused',
+      'verdict.answered': 'Answered',
+      'verdict.unanswered': 'No answer',
+      'verdict.none': 'No verdict',
+      'verdict.cleared': 'Cleared',
+      /* The conditions the kit's map has no value for — the property that a profile declares no route, that
+         its settings section is not mounted, that it names no credential reference. The corner speaks the
+         map's vocabulary alone, so a condition with no value there stands in the strip's one word. */
+      'condition.undeclared': 'Not declared',
+      'condition.unmounted': 'Not mounted',
+      'condition.noplace': 'No reference',
       /* The route's own answer in this page's words: the path the page asks through is a door of its own
          and no reader's fact, so a refusal is said with what the route answered and nothing of the calling
          convention. `route.answered` is the one sentence for every door of this section. */
@@ -200,8 +219,8 @@ window.__ModuleLoader__.load({
          `Apply` writes the list, and a profile may hold the same model twice — so a second press leaves the first
          row standing beside the new one, which is the two windows the user read as a bug. The page explains the
          press and does not forbid it; what was missing was the page saying what it did, and these are the words it
-         says it in. The corner keeps the map's own word for a value that is not written (`unsaved`), so the sentence
-         names the act alone — the ground for the two windows stands beside the press that makes them. */
+         says it in. The sentence stands in the models card's strip while the press's hold lasts, and the corner
+         states the card's own condition; the reason a save failed is the console's. */
       'models.added': 'A row was added',
       'models.addedAgain': 'Another row was added',
       'models.pick': 'Choose a model',
@@ -223,12 +242,103 @@ window.__ModuleLoader__.load({
       'web.title': 'Web access',
       'web.label': 'Use Qoder for web search and fetch',
       'web.unread': 'The web settings could not be read',
-      'web.noToken': 'The Qoder token is not set, so the standard DeepSeek web search and fetch are used. Fill the Personal access token field above to use Qoder.',
       'web.footnote': 'On replaces the DeepSeek web search and fetch with Qoder. The DeepSeek search URL, API key and result count stay stored but are not used. Off returns the standard DeepSeek search. The platform\'s Web search page is the DeepSeek page; the latest save of the shared web settings wins. Off by default.',
     };
+    /* The section's own sheet: the rules this section draws with. The card frame, the card head, the section
+       head, the field, the check, the button, the hint line, the tag and the answer strip are the page's and
+       stand in the entry's sheet or the kit; what stands here is the section's own furniture — the card's
+       name, its line, its tag's border, its grid and its foot, the node row, the refusal block, the first
+       paint's bars and the place rule the page's strip takes in this section's heads. */
+    const CSS = `
+/* The card's name, and the room that keeps the strip at the head's right edge: the name takes the growing
+   space, so the status word and the strip stand at the card's right whatever the head carries. The name is
+   a row of its own, because the connection's dot stands inside it: grown on its own, the name would push a
+   dot drawn after it to the middle of the head, and the mark belongs beside the name at the card's left. */
+.coreness-qoder-name{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px;flex:1 1 auto;display:flex;align-items:center;gap:10px}
+/* The strip stands last in the head, after the page's status word: the word carries the one auto margin the
+   row needs, and a second auto on the strip split the free space between the two — the word landed at the
+   card's middle while the strip took the right edge. The strip keeps its own reserved room there, empty as
+   it stands before the word arrives. */
+.coreness-qoder .coreness-card-head > .coreness-answer{order:2}
+/* The shared tag's radius, padding, pair and ink are the page's; the section adds its own border and keeps the
+   tag from growing with the head. */
+.coreness-qoder-tag{border:.5px solid var(--dsw-alias-border-l3);flex:none}
+.coreness-qoder-line{margin:0;font-size:14px;line-height:22px;color:var(--dsw-alias-label-primary);overflow-wrap:anywhere}
+.coreness-qoder-actions{justify-content:flex-start;gap:8px;display:flex}
+.coreness-qoder-node{align-items:center;gap:8px;flex-wrap:wrap;display:flex}
+/* The press stands right after the address it belongs to: nothing in this row is pushed to its right end and
+   nothing stands between the two, so no answer arriving can move the press. A place rule here would carry the press
+   away from the address it belongs to. */
+.coreness-qoder-node > .coreness-qoder-line{flex:0 0 auto}
+.coreness-qoder-model{border:.5px solid var(--dsw-alias-settings-card-stroke);border-radius:var(--dsw-radius-lg);flex-direction:column;gap:10px;padding:12px 14px;display:flex}
+/* The form's fields find their own columns and break where the room runs out — the columns are drawn by the grid
+   and not fixed as the MCP's are — so the ten between them is a grid's distance, taken while the fields wrap. */
+.coreness-qoder-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+/* The row of inputs below a field may break onto lines, and its distance is a line's own: the twelve is wider than
+   a grid's six because a wrapping row is read as it goes, and the room it takes belongs to this chunk. */
+.coreness-qoder-inputs{flex-wrap:wrap;align-items:center;gap:12px;display:flex}
+.coreness-qoder-foot{justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;display:flex}
+/* The reasons a sweep's nodes gave stand in a block of their own, under every card: the list is as long
+   as the node map, and a list of unknown length inside a card grows the card and moves every block under
+   it. The gate keeps its own refusals the same way, in a block below its cards. */
+.coreness-qoder-refused{flex-direction:column;gap:10px;margin-top:12px;min-width:0;display:flex}
+/* What the refusals list adds to the page's own list: its rows are one-line reasons rather than rows of controls,
+   so its rhythm is tighter — the 2 against the shared 8. */
+.coreness-qoder-refusedList{gap:2px}
+/* The first paint: the read is a round trip, and the section stands in the shape the answer will take
+   before it lands — the three card frames, the sentences the section owns and a bar where the read's
+   own content will land: a value, an address, a control, a row. A bar wears the class of the part it
+   stands for, so its box is that part's own rule and not a second number here; it is never flex:none,
+   so it cannot push the card it waits in. The bars do not pulse. */
+.coreness-qoder-skeleton{background:var(--dsw-alias-bg-skeleton,var(--dsw-alias-interactive-bg-hover));border-color:transparent;border-radius:var(--dsw-radius-xs);color:transparent}
+/* The line a bar stands in for, which is what makes its box the part's box: a box with no content is its padding
+   and its hairline alone, so the bar carries one line of its own type and takes the part's box with it, the way the
+   control's own height is derived from its padding and its line. No number stands for either of them here; the line
+   bar carries a height of its own below and this rule does not move it. */
+.coreness-qoder-skeleton::before{content:'\\00a0'}
+/* The height of the line this stands in for, and nothing else: .coreness-qoder-line is 14/22, so the swap from the
+   skeleton to the words moves nothing. A width is its own business — it says how much text is coming. */
+.coreness-qoder-skeleton.coreness-qoder-line{height:22px;width:220px}
+.coreness-qoder-skeleton.coreness-button{width:120px}
+`;
+
+    /**
+     * The section's sheet, held for as long as the section stands: put in here, put back if it is taken.
+     * The platform replaces a plugin in place over the module table it already holds and takes the package's
+     * style tags away in the same act (`removeOwnedStyles`); the one thing it re-runs is the mount, which
+     * covers a section that is left and entered again but not a component that stays mounted while the tags
+     * go. The hold ends with the effect: a sheet that outlived its plugin would be a trace.
+     */
+    function useStyles() {
+      React.useEffect(() => {
+        let stands = true;
+        const put = () => {
+          if (stands) ensureStyles();
+        };
+        put();
+        const watcher = new MutationObserver(put);
+        watcher.observe(document.head, { childList: true });
+        return () => {
+          stands = false;
+          watcher.disconnect();
+        };
+      }, []);
+    }
+
+    /** The section's stylesheet as a tag: put in once, and never removed by this code. */
+    function ensureStyles() {
+      if (document.getElementById(STYLE_ID) !== null) return;
+      const style = document.createElement('style');
+      style.id = STYLE_ID;
+      style.setAttribute('data-plugin', PACKAGE);
+      style.setAttribute('data-plugin-css', STYLE_TAG);
+      style.textContent = CSS;
+      document.head.appendChild(style);
+    }
+
     /**
      * The parts beside this entry, pulled at materialisation and in hand before the section is seated: the
-     * page's picker and hold, the kit's status surface, and the six drawings. A pull that failed is named
+     * page's picker and hold, the kit's status surface, and the six parts. A pull that failed is named
      * on the console and seats nothing.
      */
     const PICKER = require.async('./client.picker.js');
@@ -376,7 +486,7 @@ window.__ModuleLoader__.load({
 
     /**
      * The write through the store's own door, and nothing else: what stands after it is the section's
-     * own read (`read`), and that **one** answer is what both the strip and the line beside the field
+     * own read (`read`), and that **one** answer is what the card's state and the press's word in its strip
      * are drawn from. A second read here would be a second answer about one value — the store's silence
      * about a value it does not hold is how a save that never stood looks, and two reads of the same
      * door can say that and its opposite at the same time, which is what the reader saw.
@@ -390,7 +500,7 @@ window.__ModuleLoader__.load({
     /**
      * The clear through the store's own door. `credentials/unset` is the door that takes a value away,
      * the one the platform's own Models page writes through, and the section's own read is
-     * what says the value is gone — one read, the same one the strip is drawn from. A store that
+     * what says the value is gone — one read, the same one the card's state is drawn from. A store that
      * answered without an error and still holds the value is exactly how a clear that never stood looks.
      */
     async function clearCredential(remote, ref) {
@@ -422,11 +532,13 @@ window.__ModuleLoader__.load({
       return template.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match));
     };
 
-    /** The one object the parts reach this half through; the entry fills it before any part is made. */
+    /** The one object the parts reach this half through; the entry fills it before any part is made. The
+        section's sheet is held here, in the entry, beside the words it draws with: a part wears it by calling
+        `useStyles` where the section is drawn, the way every section of the page does. */
     const shared = {
       SEAT, ID, NS, ROUTE, PROBE_ROUTE, PROBE_ACTION, CATALOGUE_ACTION, VERIFY_ACTION, WRITTEN_PATHS,
       OFF, VENDOR_EFFORTS, ORDER, WATCHED,
-      refused, reasonOf, atPath, readState, saveCredential, clearCredential, writeSettings,
+      refused, reasonOf, atPath, readState, saveCredential, clearCredential, writeSettings, useStyles,
     };
 
     return {
@@ -435,7 +547,7 @@ window.__ModuleLoader__.load({
         t = pluginCtx.locale.bind(NS);
         pluginCtx.effect(() => pluginCtx.locale.register(NS, 'en', EN), `${PACKAGE}: the Qoder dictionary`);
         /* The seat is filled when the picker the section draws, the page's own lifetime of an answer, the
-           kit's status surface and the five parts are in hand: every pull began when this chunk was
+           kit's status surface and the six parts are in hand: every pull began when this chunk was
            materialised, and nothing stands in the rail before there is a section to draw. */
         pluginCtx.effect(() => {
           let live = true;

@@ -15,8 +15,8 @@
  *
  * A section chunk of the product's page, pulled by the entry with `require.async` and registered into the
  * seat the page declares. It draws with the page's own set — the card frame, the section title, the
- * answer strip, the field label, the check, the status dot, the button and the hint lines — adding only
- * the classes its own card owns.
+ * answer strip, the field label, the field box, the check, the button and the hint lines — adding only
+ * the classes its own cards own.
  */
 window.__ModuleLoader__.load({
   id: '@coreness/ui/client.general.js',
@@ -53,7 +53,7 @@ window.__ModuleLoader__.load({
       'team.review': 'Review pass',
       'team.reviewHint': 'On, the paragraph about reviews follows the team text in the Lead\'s prompt: a reviewer is a fresh agent with a clean eye, called on every circle of work and not on small tasks; it holds the work against the spec and the traces, asks where it is weak, where it is extra and what is missing, and every finding carries a path and a quote; it does not edit and does not accept, and the review does not replace the acceptance that closes the task. The paragraph stands inside the text the Team prompt switch supplies, so it changes nothing while that switch is off.',
       'team.missing': 'Not mounted',
-      'state.error': 'The team could not be read',
+      'team.unwritable': 'Not writable',
       'state.unread': 'Not read',
       'state.saved': 'Saved',
       'state.refused': 'Not saved',
@@ -71,16 +71,14 @@ window.__ModuleLoader__.load({
       'studio.missing': 'Page Studio is not mounted in this composition.',
     };
 
-    /* The card's own look: the frame, the strip's room, the field's box and the check are the page's; a
-       section keeps only what is its own. */
+    /* The card's own look: the frame, its head, the strip's room, the field's box, its label and the check
+       are the page's; a section keeps only what is its own — the title that takes the growing space, the row
+       the field shares with its button, and the field's share of that row. */
     const CSS = `
-.coreness-general-head{display:flex;align-items:center;gap:10px}
 .coreness-general-head .coreness-sectionTitle{flex:1 1 auto}
 .coreness-general-field{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.coreness-general-label{color:var(--dsw-alias-label-secondary);font-size:12px;font-weight:500;line-height:18px}
-.coreness-general-input{box-sizing:border-box;flex:1 1 0;min-width:0;padding:6px 8px;border:.5px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-sm);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:inherit;font-size:14px;line-height:22px}
+.coreness-general-input{flex:1 1 0;min-width:0}
 .coreness-general-input:disabled{opacity:.5}
-.coreness-general-check{display:flex;align-items:center;gap:8px;font-size:14px;line-height:22px}
 `;
 
     /** Put the page's sheet back where a re-mount of the plugin may have taken it. */
@@ -272,10 +270,9 @@ window.__ModuleLoader__.load({
       return { studio, studioFault: false, studioMissing: false };
     }
 
-    /** The page as it stands: both reads settle before the card is drawn once, and a press is read back. */
+    /** The page as it stands: each card reads on its own path, and a press is read back. */
     function GeneralSection({ kit, ctx, hold, card }) {
       useStyles();
-      kit.useStatusStyles();
       /** The card is a module with a factory: the drawing it hands back closes over the section's words. */
       const draw = React.useMemo(() => card.create({ t }).draw, [card]);
       const [state, setState] = React.useState(startState);
@@ -285,11 +282,16 @@ window.__ModuleLoader__.load({
       /** The same door for the Page Studio card, under its own subject. */
       const sayStudio = React.useCallback((reason) => kit.statusDetail(t('studio.title'), reason), [kit]);
 
-      /** Which read is the newest: an answer that is no longer the newest does not publish. */
-      const newestRead = React.useRef(0);
-      const nextRead = React.useCallback(() => {
-        newestRead.current += 1;
-        return newestRead.current;
+      /** Which read of a card is the newest: an answer that is no longer the newest does not publish. The two
+       * cards count apart, so one card's slow read never discards the other's answer. */
+      const newestRead = React.useRef({ team: 0, studio: 0 });
+      const nextTeamRead = React.useCallback(() => {
+        newestRead.current.team += 1;
+        return newestRead.current.team;
+      }, []);
+      const nextStudioRead = React.useCallback(() => {
+        newestRead.current.studio += 1;
+        return newestRead.current.studio;
       }, []);
 
       /** The answer's lifetime is the page's hold, not the next render: every note — a save and a refusal —
@@ -298,7 +300,7 @@ window.__ModuleLoader__.load({
       const noteTimer = React.useRef(null);
       const armHold = React.useCallback(() => {
         if (noteTimer.current !== null) clearTimeout(noteTimer.current);
-        noteTimer.current = setTimeout(() => setState((now) => ({ ...now, note: null, studioNote: null })), hold.holdOf());
+        noteTimer.current = setTimeout(() => setState((now) => ({ ...now, note: null, studioNote: null })), hold.NOTE_HOLD_MS);
       }, [hold]);
       React.useEffect(() => () => {
         if (noteTimer.current !== null) clearTimeout(noteTimer.current);
@@ -311,10 +313,10 @@ window.__ModuleLoader__.load({
         lastRead = { value: state.value, prompt: state.prompt, studio: state.studio };
       }, [state.status, state.value, state.prompt, state.studio]);
 
-      /** Both reads of one moment: the route's picture, and the switch's row in the namespace it names. The
+      /** The team card's read: the route's picture, and the switch's row in the namespace it names. The
        * settings row failing is said on the console and costs only the switch: the ceiling was read, and a card
        * that failed whole there would hide a value the route carries. */
-      const readAll = React.useCallback(async () => {
+      const readTeam = React.useCallback(async () => {
         const value = await read();
         let prompt = null;
         let promptFault = false;
@@ -324,52 +326,62 @@ window.__ModuleLoader__.load({
           promptFault = true;
           say(`${t('reason.unreadable')}: ${reasonOf(error)}`);
         }
-        /* The Page Studio card's own read: a composition that mounts no studio Host half answers no
-           route, which is the card's own condition and costs nothing else — the team's picture stands. */
-        let studio = null;
-        let studioFault = false;
-        let studioMissing = false;
+        return { value, prompt, promptFault };
+      }, [ctx, say]);
+
+      /** The Page Studio card's read: its own route, never taken through the team's. A composition that mounts
+       * no studio Host half answers no route, which is the card's own condition and costs nothing else; a read
+       * that failed keeps the last picture the card holds, and the reason goes to the console. */
+      const readStudioCard = React.useCallback(async () => {
         try {
-          studio = await readStudio();
+          return { studio: await readStudio(), studioFault: false, studioMissing: false };
         } catch (error) {
-          studioFault = true;
-          studioMissing = error?.status === 404;
           sayStudio(reasonOf(error));
+          return { studioFault: true, studioMissing: error?.status === 404 };
         }
-        return { value, prompt, promptFault, studio, studioFault, studioMissing };
-      }, [ctx, say, sayStudio]);
+      }, [sayStudio]);
 
       React.useEffect(() => {
         let live = true;
-        const ticket = nextRead();
-        readAll().then(
-          ({ value, prompt, promptFault, studio, studioFault, studioMissing }) => {
-            if (!live || newestRead.current !== ticket) return;
+        const teamTicket = nextTeamRead();
+        const studioTicket = nextStudioRead();
+        /* Each card's answer is applied where it arrived, never after the other's: a team route that fails or
+           hangs withholds nothing the Page Studio route has already said. */
+        readTeam().then(
+          (answer) => {
+            if (!live || newestRead.current.team !== teamTicket) return;
             setState((now) => ({
               ...now,
               status: 'ready',
               refreshing: false,
               readFault: false,
-              value,
-              draft: draftOf(value),
-              prompt,
-              promptFault,
-              ...studioFields(now, { studio, studioFault, studioMissing }),
+              value: answer.value,
+              draft: draftOf(answer.value),
+              prompt: answer.prompt,
+              promptFault: answer.promptFault,
             }));
           },
           (error) => {
-            if (!live || newestRead.current !== ticket) return;
-            const reason = reasonOf(error);
-            setState((now) => (now.status === 'ready'
-              ? { ...now, refreshing: false, readFault: true }
-              : { ...now, status: 'failed', refreshing: false, readFault: true }));
-            say(reason);
+            if (!live || newestRead.current.team !== teamTicket) return;
+            /* The team card's failure is its own strip's word: the card stands with the rows it drew, and the
+               Page Studio card keeps its own answer instead of going with it. */
+            say(reasonOf(error));
+            setState((now) => ({
+              ...now,
+              status: now.status === 'ready' ? 'ready' : 'failed',
+              refreshing: false,
+              readFault: true,
+            }));
           },
         );
+        readStudioCard().then((answer) => {
+          if (!live || newestRead.current.studio !== studioTicket) return;
+          setState((now) => ({ ...now, ...studioFields(now, answer) }));
+        });
         return () => {
           live = false;
         };
-      }, [nextRead, readAll, say]);
+      }, [nextStudioRead, nextTeamRead, readStudioCard, readTeam, say]);
 
       /* The platform's announcement that the settings document moved — a hand's edit of the profile's
          patch, or another page's write — is the same event for the switch: both reads are taken again, so
@@ -377,32 +389,36 @@ window.__ModuleLoader__.load({
       React.useEffect(() => {
         let live = true;
         const reread = () => {
-          const ticket = nextRead();
-          readAll().then(
-            ({ value, prompt, promptFault, studio, studioFault, studioMissing }) => {
-              if (!live || newestRead.current !== ticket) return;
+          const teamTicket = nextTeamRead();
+          const studioTicket = nextStudioRead();
+          readTeam().then(
+            (answer) => {
+              if (!live || newestRead.current.team !== teamTicket) return;
               setState((now) => ({
                 ...now,
                 /* A first read that failed is not the card's sentence forever: a later answer takes the card
                    back to standing. */
                 status: 'ready',
                 readFault: false,
-                promptFault,
-                value,
+                promptFault: answer.promptFault,
+                value: answer.value,
                 /* A settings half that could not be read keeps the view the card already holds. */
-                prompt: prompt ?? now.prompt,
-                /* The Page Studio card follows its own read the same way. */
-                ...studioFields(now, { studio, studioFault, studioMissing }),
+                prompt: answer.prompt ?? now.prompt,
                 /* A draft the reader has changed is theirs; an unedited one follows the read. */
-                draft: now.draft !== draftOf(now.value) ? now.draft : draftOf(value),
+                draft: now.draft !== draftOf(now.value) ? now.draft : draftOf(answer.value),
               }));
             },
             (error) => {
-              if (!live || newestRead.current !== ticket) return;
+              if (!live || newestRead.current.team !== teamTicket) return;
               say(`${t('reason.unreadable')}: ${reasonOf(error)}`);
               setState((now) => ({ ...now, readFault: true }));
             },
           );
+          readStudioCard().then((answer) => {
+            if (!live || newestRead.current.studio !== studioTicket) return;
+            /* The Page Studio card follows its own read the same way. */
+            setState((now) => ({ ...now, ...studioFields(now, answer) }));
+          });
         };
         const disposers = WATCHED.map((name) => ctx.remote.$on(name, reread));
         const offReset = ctx.on('connection/reset', reread);
@@ -411,30 +427,47 @@ window.__ModuleLoader__.load({
           for (const dispose of disposers) dispose();
           offReset();
         };
-      }, [ctx, nextRead, readAll, say]);
+      }, [ctx, nextStudioRead, nextTeamRead, readStudioCard, readTeam, say]);
 
       /* The patch's outcome changes at the next team assembly, and no client announcement follows it: while
          the switch is on, the route is asked on the page's own beat, so "the patch is inactive" appears with
          the step that left it rather than on the next unrelated event. The same beat asks while a failed read
-         stands over a remembered picture: a card left on what it last read must not keep a failure silent.
-         A hidden tab is not asked, and a failed ask says so on the card instead of freezing the picture. */
+         stands: a card left on what it last read must not keep a failure silent, and a card whose switch row
+         was never read is asked whole — the route and the switch together — so it recovers with the rows it
+         drew instead of standing half-read. A hidden tab is not asked, and a failed ask says so on the card
+         instead of freezing the picture. */
       const promptOn = state.prompt?.on === true;
       const beatOn = promptOn || state.readFault === true;
+      /** The switch's row was never read: the beat then re-asks the team card whole. */
+      const wholeCard = state.prompt === null;
       React.useEffect(() => {
         if (!beatOn) return undefined;
         let live = true;
         const timer = setInterval(() => {
           if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
-          read().then(
-            (value) => {
+          const ask = wholeCard ? readTeam() : read();
+          ask.then(
+            (answer) => {
               if (!live) return;
-              setState((now) => ({
-                ...now,
-                value,
-                beatFault: false,
-                readFault: false,
-                draft: now.draft !== draftOf(now.value) ? now.draft : draftOf(value),
-              }));
+              setState((now) => (wholeCard
+                ? {
+                    ...now,
+                    status: 'ready',
+                    value: answer.value,
+                    prompt: answer.prompt,
+                    promptFault: answer.promptFault,
+                    beatFault: false,
+                    readFault: false,
+                    draft: now.draft !== draftOf(now.value) ? now.draft : draftOf(answer.value),
+                  }
+                : {
+                    ...now,
+                    value: answer,
+                    beatFault: false,
+                    readFault: false,
+                    status: 'ready',
+                    draft: now.draft !== draftOf(now.value) ? now.draft : draftOf(answer),
+                  }));
             },
             (error) => {
               if (!live) return;
@@ -447,7 +480,7 @@ window.__ModuleLoader__.load({
           live = false;
           clearInterval(timer);
         };
-      }, [beatOn, hold, say]);
+      }, [beatOn, wholeCard, hold, say, readTeam]);
 
       /* One write of one switch: both switches live in the same row, and what answers is the platform's view
          of it after the write. The route is read after it for the patch's outcome, which the write does not
@@ -466,10 +499,10 @@ window.__ModuleLoader__.load({
               note: { tone: 'done', text: t('state.saved'), subject: field },
             }));
             armHold();
-            const ticket = nextRead();
-            void readAll().then(
+            const ticket = nextTeamRead();
+            void readTeam().then(
               ({ value, prompt, promptFault }) => {
-                if (newestRead.current !== ticket) return;
+                if (newestRead.current.team !== ticket) return;
                 setState((now) => ({
                   ...now,
                   value,
@@ -480,7 +513,7 @@ window.__ModuleLoader__.load({
                 }));
               },
               (error) => {
-                if (newestRead.current !== ticket) return;
+                if (newestRead.current.team !== ticket) return;
                 say(`${t('reason.unreadable')}: ${reasonOf(error)}`);
                 setState((now) => ({ ...now, readFault: true }));
               },
@@ -492,7 +525,7 @@ window.__ModuleLoader__.load({
             setState((now) => ({
               ...now,
               promptBusy: false,
-              note: { tone: 'fault', text: t('state.refused'), subject: field, detail: reason },
+              note: { tone: 'fault', text: t('state.refused'), subject: field },
             }));
             armHold();
             void readSwitch(ctx.remote, row.ns).then(
@@ -516,7 +549,7 @@ window.__ModuleLoader__.load({
             say(t('reason.invalid'));
             setState((now) => ({
               ...now,
-              note: { tone: 'fault', text: t('state.refused'), subject: 'ceiling', detail: t('reason.invalid') },
+              note: { tone: 'fault', text: t('state.refused'), subject: 'ceiling' },
             }));
             armHold();
             return;
@@ -534,20 +567,20 @@ window.__ModuleLoader__.load({
               armHold();
             },
             (error) => {
-              /* The platform's words stand on the card and in the console: the word alone would leave the
-                 reader without the cause, as an overridden row proved. */
+              /* The platform's words stand in the console: the word alone would leave the reader without the
+                 cause, as an overridden row proved. */
               const reason = reasonOf(error);
               say(reason);
               setState((now) => ({
                 ...now,
                 busy: false,
-                note: { tone: 'fault', text: t('state.refused'), subject: 'ceiling', detail: reason },
+                note: { tone: 'fault', text: t('state.refused'), subject: 'ceiling' },
               }));
               armHold();
-              const ticket = nextRead();
-              void readAll().then(
+              const ticket = nextTeamRead();
+              void readTeam().then(
                 ({ value: picture, prompt, promptFault }) => {
-                  if (newestRead.current !== ticket) return;
+                  if (newestRead.current.team !== ticket) return;
                   setState((now) => ({
                     ...now,
                     value: picture,
@@ -558,7 +591,7 @@ window.__ModuleLoader__.load({
                   }));
                 },
                 (error) => {
-                  if (newestRead.current !== ticket) return;
+                  if (newestRead.current.team !== ticket) return;
                   say(`${t('reason.unreadable')}: ${reasonOf(error)}`);
                   setState((now) => ({ ...now, readFault: true }));
                 },
@@ -595,9 +628,14 @@ window.__ModuleLoader__.load({
                 studioNote: { tone: 'fault', text: t('state.refused') },
               }));
               armHold();
+              const ticket = nextStudioRead();
               void readStudio().then(
-                (picture) => setState((now) => ({ ...now, studio: picture, studioFault: false, studioMissing: false })),
+                (picture) => {
+                  if (newestRead.current.studio !== ticket) return;
+                  setState((now) => ({ ...now, studio: picture, studioFault: false, studioMissing: false }));
+                },
                 (error) => {
+                  if (newestRead.current.studio !== ticket) return;
                   sayStudio(`${t('reason.unreadable')}: ${reasonOf(error)}`);
                   setState((now) => ({ ...now, studioFault: true, studioMissing: error?.status === 404 }));
                 },
@@ -606,10 +644,10 @@ window.__ModuleLoader__.load({
           );
         },
       };
-      return draw(state, act, kit);
+      return draw(state, act);
     }
 
-    /** The kit's status dot and its sheet, pulled before the section stands: the switch's state stands with it. */
+    /** The kit's console door, pulled before the section stands: a reason the face may not carry leaves by it. */
     const KIT = require.async('./client.kit.js');
     /** The page's shared lifetime of a temporary answer. */
     const HOLD = require.async('./client.hold.js');
@@ -623,9 +661,9 @@ window.__ModuleLoader__.load({
         pluginCtx.effect(() => pluginCtx.locale.register(NS, 'en', EN), `${PACKAGE}: the General dictionary`);
         /* The rail row stands before any read: the page is a place, and what it shows is the read's answer.
            It stands first — settings before facts — so the panel lands on General and the facts follow it.
-           The kit and the hold are pulled first: the switch's dot is the kit's, and a section that stood
-           without it would have to invent one — its sheet included, held by the section that draws it. A
-           pull that failed is named on the console and seats nothing. */
+           The kit and the hold are pulled first: the console door and the answer's lifetime are theirs, and a
+           section that stood without them would have to invent both. A pull that failed is named on the
+           console and seats nothing. */
         pluginCtx.effect(() => {
           let live = true;
           let armed = null;

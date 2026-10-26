@@ -135,9 +135,9 @@ window.__ModuleLoader__.load({
           /* The reason the row did not start stands first: it is the answer to the question the card is opened
              with, and the tools line under it reads as its consequence. */
           shared.reasonLine(row),
-          row.disabledRef === true ? h('p', { key: 'disabledRef', className: 'coreness-mcp-warn' }, t('fault.disabled-ref')) : null,
+          row.disabledRef === true ? h('p', { key: 'disabledRef', className: 'coreness-dim coreness-tone-fault', 'data-tone': 'fault' }, t('fault.disabled-ref')) : null,
           shared.signinBlock(row, signin, view, act),
-          h('p', { key: 'tools', className: 'coreness-mcp-dim coreness-dim' }, row.tools.length === 0
+          h('p', { key: 'tools', className: 'coreness-dim' }, row.tools.length === 0
             ? t('tools.none')
             : [
               /* The label is bold and the names beside it keep the plain weight, so the eye separates what the list is
@@ -149,7 +149,7 @@ window.__ModuleLoader__.load({
           /* The fields the host's own reader keeps as they stand are named in the editor, not here: the field lives
              in the reader's own servers file, this form does not write it, and its meaning is the host's — an
              identifier on the roster line says nothing a reader can act on. */
-          row.refs.length > 0 ? h('p', { key: 'refs', className: 'coreness-mcp-warn' }, t('refs', { names: row.refs.join(', ') })) : null,
+          row.refs.length > 0 ? h('p', { key: 'refs', className: 'coreness-dim coreness-tone-fault', 'data-tone': 'fault' }, t('refs', { names: row.refs.join(', ') })) : null,
         ].filter((node) => node !== null);
 
         /* The head carries two different things and says which is which by where it stands: the row's own state
@@ -162,10 +162,9 @@ window.__ModuleLoader__.load({
            the markup as well as in the rule: a span that exists only with a word in it gives back the width with the
            word, and a long word takes a line of its own. */
         const editing = view.editor !== null && view.editor.draft.entryId === row.entryId;
-        /* The answer of a press made in this row's editor belongs to this row's head too: the editor stands
-           inside the card, and the reader's eye is on the card he pressed in. */
-        const editorNote = editing && shared.noteNames(view.note ?? null, shared.draftRow(view.editor.draft)) ? view.note : null;
-        const mine = shared.noteOf(row, view) ?? editorNote;
+        /* The strip carries the answer to a press made in this row's editor as it carries any other: the card's
+           strip is the page's one answer room, and the editor draws no note of its own. */
+        const mine = shared.noteOf(row, view);
         /* What stands in the answer strip when no press has just answered: the row's own condition in one word,
            and nothing else. **The flow's own state never stands here**: this room is the row's, the sign-in is
            the flow's, and a wait said in both places said the same thing twice while taking the row's own
@@ -174,7 +173,7 @@ window.__ModuleLoader__.load({
         const state = mine === null ? shared.rowState(row) : null;
         const answerText = mine !== null ? shared.noteTextOf(mine) : (state === null ? '' : t(state.word));
         const answerTone = mine !== null ? shared.noteToneOf(mine) : (state === null ? undefined : state.tone);
-        const subtitleNode = h('span', { key: 'subtitle', className: 'coreness-mcp-subtitle' }, subtitle);
+        const subtitleNode = h('span', { key: 'subtitle', className: 'coreness-mcp-subtitle coreness-cutLine' }, subtitle);
         /* The strip is drawn **always**, empty when there is no answer: the reservation the rule makes
            (`flex:0 0 160px`) is a promise about the layout, and a span that appears and disappears keeps that promise
            only while its box does not depend on its words. Drawn only with a word in it, in a head that wraps
@@ -188,7 +187,6 @@ window.__ModuleLoader__.load({
              ever saw it, so the word could stand with a tone nothing could name. An empty room carries none —
              it stands before its word arrives, and a room with nothing in it states nothing. */
           'data-tone': answerTone,
-          'data-note': 'head',
           /* The row's own condition, named as the reading that chose it: the words on the face are the
              section's dictionary's, and this attribute is what tells them apart for anyone reading the tree. */
           'data-state': state === null ? undefined : state.state,
@@ -196,67 +194,65 @@ window.__ModuleLoader__.load({
           'aria-live': 'polite',
         }, answerText);
 
-        return h('li', { key: row.entryId, className: 'coreness-mcp-row coreness-card-box' }, [
-          h('div', { key: 'card', className: 'coreness-mcp-card', 'data-open': String(open) }, [
-            h('div', { key: 'head', className: 'coreness-mcp-head coreness-card-head' }, [
-              h('button', {
-                key: 'title',
-                type: 'button',
-                className: 'coreness-mcp-headButton',
-                'aria-expanded': open,
-                onClick: () => act.row(row.entryId, !open),
-              }, [
-                h('span', { key: 'name', className: 'coreness-mcp-name' }, row.server ?? row.id),
-                subtitleNode,
-              ]),
-              /* The answer stands on the name's own line, in the middle of the row, where the protocol chip
-                 stood before it: the head is a row again (not a column on the right), so a word that comes
-                 and goes changes no box. The strip is still a reserved 160 px and still drawn always, which
-                 is what keeps the row's height and the controls' places independent of the answer. The
-                 controls keep the card's right edge by the same rule as every other row of this page. */
-              answerNode,
-              h('span', { key: 'actions', className: 'coreness-mcp-actions' }, [
-                /* The sign-in stands first in the strip: the row's own act, before the menu of edits and the
-                   switch. It stands only where the flow can run — the door settles that at the row's address
-                   before this line is ever reached — and it is withdrawn while an attempt waits, because a
-                   second press of one key is refused by the platform's own registry. */
-                signable
-                  ? h('button', {
-                    key: 'signin',
-                    type: 'button',
-                    className: 'coreness-mcp-button coreness-button',
-                    disabled: busy,
-                    onClick: () => act.signin(row),
-                  }, t('signin'))
-                  : null,
-                items.length === 0 ? null : shared.rowMenu(items, menu === row.entryId, act, row.entryId),
-                /* The state is the switch's own: aria-checked carries it, the label names the row it belongs to,
-                   and the word a press would do stands in the title rather than in the row's line, so nothing in the
-                   cluster changes width when the state flips. */
-                h('button', {
-                  key: 'toggle',
-                  type: 'button',
-                  className: 'coreness-mcp-switch',
-                  role: 'switch',
-                  'aria-checked': row.enabled === true,
-                  'aria-label': `${shared.targetWords(row)} — ${row.enabled ? t('toggle.off') : t('toggle.on')}`,
-                  title: row.enabled ? t('toggle.off') : t('toggle.on'),
-                  disabled: busy || row.disabledRef,
-                  onClick: () => act.toggle(row, row.enabled !== true),
-                }, h('span', { key: 'thumb', className: 'coreness-mcp-switchThumb' })),
-              ]),
-              h('button', {
-                key: 'marker',
-                type: 'button',
-                className: 'coreness-mcp-marker',
-                'aria-expanded': open,
-                'aria-label': open ? t('close') : t('open'),
-                'data-open': String(open),
-                onClick: () => act.row(row.entryId, !open),
-              }, picker.chevronMark()),
+        return h('li', { key: row.entryId, className: 'coreness-card-box' }, [
+          h('div', { key: 'head', className: 'coreness-card-head' }, [
+            h('button', {
+              key: 'title',
+              type: 'button',
+              className: 'coreness-mcp-headButton',
+              'aria-expanded': open,
+              onClick: () => act.row(row.entryId, !open),
+            }, [
+              h('span', { key: 'name', className: 'coreness-mcp-name' }, row.server ?? row.id),
+              subtitleNode,
             ]),
-            open ? h('div', { key: 'body', className: 'coreness-mcp-body coreness-card-body' }, body) : null,
+            /* The answer stands on the name's own line, in the middle of the row, where the protocol chip
+               stood before it: the head is a row again (not a column on the right), so a word that comes
+               and goes changes no box. The strip is still a reserved 160 px and still drawn always, which
+               is what keeps the row's height and the controls' places independent of the answer. The
+               controls keep the card's right edge by the same rule as every other row of this page. */
+            answerNode,
+            h('span', { key: 'actions', className: 'coreness-mcp-actions' }, [
+              /* The sign-in stands first in the strip: the row's own act, before the menu of edits and the
+                 switch. It stands only where the flow can run — the door settles that at the row's address
+                 before this line is ever reached — and it is withdrawn while an attempt waits, because a
+                 second press of one key is refused by the platform's own registry. */
+              signable
+                ? h('button', {
+                  key: 'signin',
+                  type: 'button',
+                  className: 'coreness-mcp-button coreness-button',
+                  disabled: busy,
+                  onClick: () => act.signin(row),
+                }, t('signin'))
+                : null,
+              items.length === 0 ? null : shared.rowMenu(items, menu === row.entryId, act, row.entryId),
+              /* The switch is the set's control, worn untouched: its state is its own (aria-checked), the label
+                 names the row it belongs to, and the word a press would do stands in the title rather than in
+                 the row's line, so nothing in the cluster changes width when the state flips. */
+              h('button', {
+                key: 'toggle',
+                type: 'button',
+                className: 'coreness-switch',
+                role: 'switch',
+                'aria-checked': row.enabled === true,
+                'aria-label': `${shared.targetWords(row)} — ${row.enabled ? t('toggle.off') : t('toggle.on')}`,
+                title: row.enabled ? t('toggle.off') : t('toggle.on'),
+                disabled: busy || row.disabledRef,
+                onClick: () => act.toggle(row, row.enabled !== true),
+              }, h('span', { key: 'thumb', className: 'coreness-switchThumb' })),
+            ]),
+            h('button', {
+              key: 'marker',
+              type: 'button',
+              className: 'coreness-mcp-marker',
+              'aria-expanded': open,
+              'aria-label': open ? t('close') : t('open'),
+              'data-open': String(open),
+              onClick: () => act.row(row.entryId, !open),
+            }, picker.chevronMark()),
           ]),
+          open ? h('div', { key: 'body', className: 'coreness-card-body' }, body) : null,
           editing ? shared.editorOf(view.editor.draft, view, act) : null,
         ]);
       }
@@ -268,7 +264,7 @@ window.__ModuleLoader__.load({
         const busy = view.busy !== null;
         const name = h('input', {
           key: 'name',
-          className: 'coreness-mcp-input coreness-field coreness-field-box',
+          className: 'coreness-field coreness-field-box',
           value: pair.name,
           disabled: busy,
           'aria-label': t('field.name'),
@@ -277,7 +273,7 @@ window.__ModuleLoader__.load({
         });
         const value = h('input', {
           key: 'value',
-          className: 'coreness-mcp-input coreness-field coreness-field-box',
+          className: 'coreness-field coreness-field-box',
           value: pair.value,
           disabled: busy,
           'aria-label': t('field.value'),
@@ -291,7 +287,7 @@ window.__ModuleLoader__.load({
           disabled: busy,
           onClick: () => act.dropPair(kind, index),
         }, t('pair.remove'));
-        return h('li', { key: pair.key, className: 'coreness-mcp-pairRow' },
+        return h('li', { key: pair.key },
           h('div', { className: 'coreness-mcp-grid' }, [name, value, remove]));
       }
 

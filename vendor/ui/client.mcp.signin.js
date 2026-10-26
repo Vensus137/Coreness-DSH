@@ -52,11 +52,11 @@ window.__ModuleLoader__.load({
        * composition) and no attempt of that row may be waiting, because the platform's registry refuses a
        * second attempt for one key and a control there would be a button that cannot work.
        *
-       * **A row that serves is left alone, whatever a probe met** (requirement 5): a client whose tools stand
+       * **A row that serves is left alone, whatever a probe met**: a client whose tools stand
        * answers, so a sign-in offered beside them is a press that changes nothing. The condition is read from
        * the row's own picture — the tools the platform registered — and not from a second probe.
        *
-       * **And the press stands in one place at a time** (requirement 6): the strip carries it where the
+       * **And the press stands in one place at a time**: the strip carries it where the
        * standard's own signals announced a door at the row's address and the row is switched on; the row's own
        * settings carry it everywhere else the flow can run. That is the only way a server whose door the
        * standard's signals do not announce can be signed in at all — its address answers no pointer and no
@@ -135,10 +135,10 @@ window.__ModuleLoader__.load({
        */
       function reasonLine(row) {
         const words = reasonWords(row.failure ?? null);
-        if (words !== null) return h('p', { key: 'reason', className: 'coreness-mcp-warn' }, words);
+        if (words !== null) return h('p', { key: 'reason', className: 'coreness-dim coreness-tone-fault', 'data-tone': 'fault' }, words);
         const told = row.trouble ?? null;
         if (told === null || typeof told.text !== 'string' || told.text === '') return null;
-        return h('p', { key: 'reason', className: 'coreness-mcp-warn' }, told.text);
+        return h('p', { key: 'reason', className: 'coreness-dim coreness-tone-fault', 'data-tone': 'fault' }, told.text);
       }
 
       /** The name of the input the flow's own question is answered in. */
@@ -216,7 +216,7 @@ window.__ModuleLoader__.load({
         const parts = [];
         if (signin.state === 'waiting') {
           const sentence = typeof signin.message === 'string' && signin.message !== '' ? signin.message : t('signin.waiting');
-          parts.push(h('span', { key: 'words', className: 'coreness-mcp-signinWords' }, sentenceWithLink(sentence, url)));
+          parts.push(h('span', { key: 'words' }, sentenceWithLink(sentence, url)));
         }
         if (signin.prompt !== null) {
           const question = signin.prompt.message === '' ? t('signin.answerLabel') : signin.prompt.message;
@@ -227,12 +227,12 @@ window.__ModuleLoader__.load({
              language inside one card — and the question **under** the field, where the person reads it as the
              hint to the box he is typing in. The input keeps the question as its own accessible name, so the
              field is named for a reader who cannot see the hint. */
-          parts.push(h('div', { key: 'field', className: 'coreness-field coreness-mcp-signinField' }, [
+          parts.push(h('div', { key: 'field', className: 'coreness-field' }, [
             h('div', { key: 'line', className: 'coreness-mcp-signinLine' }, [
               h('input', {
                 key: 'value',
                 id: answerField(server),
-                className: 'coreness-mcp-input coreness-field coreness-field-box',
+                className: 'coreness-field coreness-field-box',
                 type: signin.prompt.kind === 'secret' ? 'password' : 'text',
                 'aria-label': question,
                 placeholder: signin.prompt.placeholder ?? '',
@@ -247,7 +247,7 @@ window.__ModuleLoader__.load({
                 onClick: () => act.reply(row),
               }, t('signin.answer')),
             ]),
-            h('p', { key: 'hint', className: 'coreness-mcp-dim coreness-dim' }, question),
+            h('p', { key: 'hint', className: 'coreness-dim' }, question),
           ]));
         }
         if (signin.state === 'refused' || signin.state === 'cancelled') {
@@ -257,7 +257,7 @@ window.__ModuleLoader__.load({
              answer is the one fact a person can act on. The server's words are the endpoint's message; they carry no
              secret. The code stands last, as the word a person repeats when asking about it. */
           const lines = shared.faultLines(code, signin.message);
-          parts.push(h('span', { key: 'words', className: 'coreness-mcp-signinWords' }, [
+          parts.push(h('span', { key: 'words' }, [
             lines.join(' — '),
             ' ',
             h('code', { key: 'code', 'data-code': code }, code),
@@ -278,8 +278,7 @@ window.__ModuleLoader__.load({
         if (parts.length === 0) return null;
         return h('div', {
           key: 'signin',
-          className: 'coreness-mcp-signin' + (signin.state === 'refused' ? ' coreness-mcp-warn' : ' coreness-mcp-dim coreness-dim'),
-          'data-note': 'signin',
+          className: 'coreness-mcp-signin' + (signin.state === 'refused' ? ' coreness-tone-fault' : ' coreness-dim'),
           'data-state': signin.state,
           'data-code': typeof signin.code === 'string' ? signin.code : undefined,
           'data-tone': signin.state === 'refused' ? 'fault' : 'plain',

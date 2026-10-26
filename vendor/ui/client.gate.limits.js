@@ -1,5 +1,5 @@
 /**
- * The rate gate's limits editor: the card of the four numbers a user may write, the card of every model under
+ * The rate gate's limits editor: the card of the three numbers a user may write, the card of every model under
  * a ceiling with its two pickers and its own press, the number field both cards are built from, and the ops a
  * draft travels as.
  *
@@ -25,8 +25,7 @@ window.__ModuleLoader__.load({
        * platform's own settings pages write for a field their draft dropped — and the service resolves it to the value the
        * profile's patch or the schema's default carries. That is what returns the row to the gate's own default,
        * the road this card itself records as otherwise closed: no `Reset to defaults` stands on it, and the way
-       * back is a fresh read of the file, not a press. `dryRun` never reaches this — it is a switch, and it
-       * carries true or false.
+       * back is a fresh read of the file, not a press.
        */
       const scalarOp = (name, value) => (value === null ? { op: 'unset', path: [name] } : { op: 'set', path: [name], value });
 
@@ -51,7 +50,6 @@ window.__ModuleLoader__.load({
           windowMs: value.windowMs ?? null,
           maxWaitMs: value.maxWaitMs ?? null,
           thresholdRatio: value.thresholdRatio ?? null,
-          dryRun: value.dryRun === true,
           rows: rows.map((one) => ({
             provider: typeof one?.provider === 'string' ? one.provider : '',
             model: typeof one?.model === 'string' ? one.model : '',
@@ -122,7 +120,7 @@ window.__ModuleLoader__.load({
        * field the page does not show is written as the file has it.
        */
       function labelRow(word, id) {
-        return h('div', { key: 'label', className: 'coreness-fieldLabel coreness-gate-fieldLabel' }, [
+        return h('div', { key: 'label', className: 'coreness-fieldLabel' }, [
           h('label', { key: 'word', htmlFor: id }, word),
         ]);
       }
@@ -137,14 +135,15 @@ window.__ModuleLoader__.load({
       function numberField({ id, key, word, name, value, disabled, onPatch, unit, hint, problem = null }) {
         return h('div', { key, className: 'coreness-field coreness-gate-field' }, [
           labelRow(word, id),
-          /* The unit stands **inside the box with the value**: the box is the wrapper's border, the input inside
-             carries no border of its own, and the unit is a suffix at the box's right edge. The border and the focus
-             ring (`:focus-within`) stand on the wrapper, so the field still says where the keyboard stands. */
-          h('span', { key: 'box', className: 'coreness-gate-unitBox' }, [
+          /* The unit stands **inside the box with the value**: the box is the page's field box, worn by the wrapper,
+             and the input inside it carries no border and no padding of its own — it is the control the box holds.
+             The unit is a suffix at the box's right edge, and the border and the focus ring (`:focus-within`) stand
+             on the wrapper, so the field still says where the keyboard stands. */
+          h('span', { key: 'box', className: 'coreness-field-box coreness-gate-unitBox' }, [
             h('input', {
               key: 'input',
               id,
-              className: 'coreness-gate-input coreness-field',
+              className: 'coreness-gate-input',
               type: 'number',
               value: value === null || value === undefined ? '' : String(value),
               disabled,
@@ -158,14 +157,14 @@ window.__ModuleLoader__.load({
             }),
             unit === null ? null : h('span', { key: 'unit', className: 'coreness-gate-unit' }, unit),
           ]),
-          hint === null ? null : h('p', { key: 'hint', className: 'coreness-gate-hint' }, hint),
+          hint === null ? null : h('p', { key: 'hint', className: 'coreness-dim' }, hint),
         ]);
       }
 
       /**
-       * The card of the limit itself: the four numbers a user may write, one draft, and the two controls
-       * that end it. Nothing here writes on a keystroke — a number typed digit by digit would be four writes,
-       * and three of them are values nobody asked for.
+       * The card of the limit itself: the three numbers a user may write, one draft, and the control that
+       * ends it. Nothing here writes on a keystroke — a number typed digit by digit would be a write per
+       * digit, and every one of them but the last is a value nobody asked for.
        */
       function limitCard(view, act) {
         const read = view.read;
@@ -189,11 +188,11 @@ window.__ModuleLoader__.load({
           tone: here?.tone ?? null,
           text: here === null ? '' : String(here.text ?? ''),
         };
-        return h('li', { key: 'limit', className: 'coreness-gate-row' }, [
-          h('div', { key: 'card', className: 'coreness-gate-card coreness-card-box' }, [
-            h('div', { key: 'head', className: 'coreness-gate-cardHead coreness-card-head' }, [
+        return h('li', { key: 'limit' }, [
+          h('div', { key: 'card', className: 'coreness-card-box' }, [
+            h('div', { key: 'head', className: 'coreness-card-head' }, [
               h('div', { key: 'title', className: 'coreness-gate-headButton' }, [
-                h('span', { key: 'name', className: 'coreness-gate-name' }, t('card.limit')),
+                h('span', { key: 'name', className: 'coreness-sectionTitle' }, t('card.limit')),
               ]),
               /* The answer stands in the card's own strip, reserved and drawn always, at the card's right edge on
                  the name's line — the one place an answer stands in every card of this page. The room keeps the
@@ -204,32 +203,29 @@ window.__ModuleLoader__.load({
                    strip on the page, beside the reservation rule the strips share, and this section writes no colour
                    of its own. A second tone vocabulary here painted the same word another colour than the section
                    beside this one. */
-                className: 'coreness-answer coreness-gate-answer',
-                'data-note': 'head',
-                'data-tone': answerNote.tone ?? 'plain',
+                className: 'coreness-answer',
+                /* A room with nothing in it states no tone: the attribute is the answer's, and while there is no
+                   answer there is none to state. */
+                'data-tone': answerNote.text === '' ? undefined : answerNote.tone,
                 role: 'status',
                 'aria-live': 'polite',
               }, answerNote.text),
             ]),
-            h('div', { key: 'body', className: 'coreness-gate-body coreness-card-body' }, [
-              h('div', { key: 'fields', className: 'coreness-gate-fields' }, fields),
-            ]),
+            h('div', { key: 'body', className: 'coreness-card-body' }, fields),
             h('div', { key: 'foot', className: 'coreness-gate-foot' }, [
-              h('span', { key: 'actions', className: 'coreness-fieldLabel' }, [
-                /* The section card carries `Apply` alone: the price of a removal is not high enough to need a
-                   cancelling press beside it, and the row's card does the same. What it costs is a real loss: this
-                   card carries no `Reset to defaults`, so a draft of this section can only be applied — the way back is
-                   a fresh read of the file (reloading the section), not a press. A reader who typed a wrong number and
-                   has not pressed `Apply` yet still has the field to fix it in; once pressed, the file holds it. */
-                h('button', {
-                  key: 'apply',
-                  type: 'button',
-                  className: 'coreness-gate-button coreness-button',
-                  'data-tone': 'primary',
-                  disabled: busy || view.draft === null || view.settings?.ok !== true || ceilingMissing,
-                  onClick: () => act.apply(),
-                }, t('control.apply')),
-              ]),
+              /* The section card carries `Apply` alone: the price of a removal is not high enough to need a
+                 cancelling press beside it, and the row's card does the same. What it costs is a real loss: this
+                 card carries no `Reset to defaults`, so a draft of this section can only be applied — the way back is
+                 a fresh read of the file (reloading the section), not a press. A reader who typed a wrong number and
+                 has not pressed `Apply` yet still has the field to fix it in; once pressed, the file holds it. */
+              h('button', {
+                key: 'apply',
+                type: 'button',
+                className: 'coreness-button',
+                'data-tone': 'primary',
+                disabled: busy || view.draft === null || view.settings?.ok !== true || ceilingMissing,
+                onClick: () => act.apply(),
+              }, t('control.apply')),
             ]),
           ]),
         ]);

@@ -141,7 +141,7 @@ window.__ModuleLoader__.load({
            end. Leaving the section unmounts it, and the note with it. */
         React.useEffect(() => {
           if (note === null) return undefined;
-          const timer = setTimeout(() => setNote(null), hold.holdOf(note));
+          const timer = setTimeout(() => setNote(null), hold.NOTE_HOLD_MS);
           return () => clearTimeout(timer);
         }, [note]);
 
@@ -337,7 +337,8 @@ window.__ModuleLoader__.load({
          *
          * A refusal's reason is said where the answer arrives rather than where the room is drawn: the face
          * carries the word and the console carries the code's sentence, by the page's one door, so a press that
-         * learned nothing is said every time it was made.
+         * learned nothing is said every time it was made. The tree is read back after a refusal as it is after a
+         * write: the control the reader sees is the one the platform holds, not the one the press asked for.
          */
         const save = async (body, server) => {
           setBusy(body.entryId ?? 'add');
@@ -357,6 +358,20 @@ window.__ModuleLoader__.load({
             const note = { fault: { code: error instanceof Refused ? error.code : 'write-failed', message: shared.reasonOf(error) }, params: { server }, server };
             setNote(note);
             kit.statusDetail(server, shared.noteReason(note));
+            /* The mask carried the press's room, and the answer stands behind it: the confirmation closes on
+               the answer, so the card's strip can say the word. The editor stays open with its draft. */
+            setConfirm(null);
+            /* The live read after the failed write — the set's rule for every control, and the toggle's own: a
+               refused write leaves the switch at the platform's value, not at the press. A read that fails in
+               turn is said on the console and leaves the picture that stands. */
+            void ask('GET').then(
+              (picture) => {
+                take(picture);
+              },
+              (readError) => {
+                kit.statusDetail(t('section'), `${t('fault.unreadable')}: ${shared.reasonOf(readError)}`);
+              },
+            );
           } finally {
             setBusy(null);
           }
@@ -445,7 +460,7 @@ window.__ModuleLoader__.load({
            * The removal: the row's grant goes **before** the row does.
            *
            * The flow's own records for that server are dropped first, so a row added again is signed in again
-           * rather than silently remembering a token (requirement 7). The drop is asked of the flow through this
+           * rather than silently remembering a token. The drop is asked of the flow through this
            * page's own door — the page never reaches into the store itself — and a refusal of it is told where a
            * reason that may not stand on the face goes: the servers file is the person's own, so their press is
            * not held by a record that could not be dropped, and the trace stands in the console rather than

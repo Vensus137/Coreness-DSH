@@ -53,6 +53,12 @@ window.__ModuleLoader__.load({
 
       /**
        * The web card: one head, one status, one checkbox and the footnote the spec asks for.
+       *
+       * The switch is the answer itself: a checked box says on, an unchecked one off, and a failed write
+       * leaves the box on the value the platform holds. The card's corner states a condition the box cannot
+       * — a row that could not be read, a read-only row — and the press's word stands in the card's strip,
+       * its reason in the console. A token nobody wrote is not this card's sentence: the box stands off and
+       * disabled, and the connection card's empty field and its dot say why.
        * @param {object} view the section's picture
        * @param {object} act the section's acts
        * @param {Function} headOf the section's own head maker
@@ -64,40 +70,28 @@ window.__ModuleLoader__.load({
         const selected = web?.ok === true && checkedOf(web.value);
         /* A token nobody wrote is the one reason the switch cannot be used even when the row is
            writable: selecting Qoder without it would leave the platform with an unavailable provider.
-           The box shows off and disabled, the note says the default search stands, and the section's
-           read clears a stale Qoder selection in the shared row. */
+           The box shows off and disabled, and the section's read clears a stale Qoder selection in the
+           shared row. */
         const tokenMissing = state?.ref === null || state?.ref === undefined
           || state?.credential?.configured !== true;
         const checked = selected && state?.webEnabled === true && !tokenMissing;
         const readFailure = view.status === 'failed' && view.view !== null ? view.reason : null;
         const disabled = view.webBusy === true || readFailure !== null || web?.ok !== true || web?.writable !== true || tokenMissing;
-        /* Every reason that stands is said, not only the first: a missing token keeps its sentence even
-           where the row cannot be read or written, as the token rule promises. */
-        const unread = web?.ok !== true ? (web?.fault ?? t('web.unread')) : null;
-        const readonly = web?.ok === true && web?.writable !== true ? t('state.readonly') : null;
-        const notes = [
-          view.webNote,
-          readFailure,
-          unread,
-          readonly,
-          state?.webEnabled === 'unknown' && web?.ok === true ? t('web.unread') : null,
-          tokenMissing ? t('web.noToken') : null,
-        ].filter((one) => one !== null && one !== undefined && one !== '');
-        const note = notes.length === 0 ? null : notes.join(' ');
-        return h('div', { key: 'web', className: 'coreness-qoder-card' }, [
+        return h('li', { key: 'web', className: 'coreness-card-box' }, [
           headOf('web', t('web.title')),
-          h('label', { key: 'row', className: 'coreness-check coreness-qoder-check' }, [
-            h('input', {
-              key: 'box',
-              type: 'checkbox',
-              checked,
-              disabled,
-              onChange: (event) => act.toggleWeb(event.target.checked),
-            }),
-            h('span', { key: 'label' }, t('web.label')),
+          h('div', { key: 'body', className: 'coreness-card-body' }, [
+            h('label', { key: 'row', className: 'coreness-check' }, [
+              h('input', {
+                key: 'box',
+                type: 'checkbox',
+                checked,
+                disabled,
+                onChange: (event) => act.toggleWeb(event.target.checked),
+              }),
+              h('span', { key: 'label' }, t('web.label')),
+            ]),
+            h('p', { key: 'foot', className: 'coreness-dim' }, t('web.footnote')),
           ]),
-          h('p', { key: 'foot', className: 'coreness-qoder-dim coreness-dim' }, t('web.footnote')),
-          note === null ? null : h('p', { key: 'note', className: 'coreness-qoder-line' }, note),
         ]);
       }
 

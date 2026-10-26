@@ -20,62 +20,65 @@ window.__ModuleLoader__.load({
        * @param {object} view the section's picture
        * @param {object} act the section's acts
        * @param {Function} headOf the section's own head maker, closed over the picture
-       * @param {object|null} headFact the newer fact of the two subjects this card carries
        * @param {boolean} writable whether this profile may write through the row it read
        */
-      function credentialCard(view, act, headOf, headFact, writable) {
+      function credentialCard(view, act, headOf, writable) {
         const state = view.view;
         const nodeRow = shared.nodeRow(view, act);
-        return h('div', { key: 'credential', className: 'coreness-qoder-card' }, [
-          /* The card's one status carries the word alone: a sweep's answer stands in the
-             corner while it is the newer fact, and the dot beside the card's name is the connection's own. */
-          headOf('credential', t('credential.label'), [], headFact),
-          state.ref === null ? null : h('div', { key: 'field', className: 'coreness-field coreness-qoder-field' }, [
-            h('label', { key: 'label', className: 'coreness-fieldLabel coreness-qoder-fieldLabel' }, t('field.token')),
-            h('input', {
-              key: 'input',
-              className: 'coreness-qoder-input coreness-field coreness-field-box',
-              type: 'password',
-              value: view.field ?? '',
-              disabled: view.busy !== null || !writable,
-              'aria-label': t('field.token'),
-              placeholder: t('field.placeholder'),
-              autoComplete: 'off',
-              onChange: (event) => act.patch(event.target.value),
-            }),
+        return h('li', { key: 'credential', className: 'coreness-card-box' }, [
+          /* The card's corner states the connection's own condition — nothing a press answered — and the
+             strip at its right is the one place a press's word stands: the token's and the node's, because
+             the node row is this card's. The dot beside the card's name is the connection's own: it takes
+             the last verdict about the token, and the card's state under it. */
+          headOf('credential', t('credential.label')),
+          h('div', { key: 'body', className: 'coreness-card-body' }, [
+            state.ref === null ? null : h('div', { key: 'field', className: 'coreness-field' }, [
+              h('label', { key: 'label', className: 'coreness-fieldLabel' }, t('field.token')),
+              h('input', {
+                key: 'input',
+                className: 'coreness-field coreness-field-box',
+                type: 'password',
+                value: view.field ?? '',
+                disabled: view.busy !== null || !writable,
+                'aria-label': t('field.token'),
+                placeholder: t('field.placeholder'),
+                autoComplete: 'off',
+                onChange: (event) => act.patch(event.target.value),
+              }),
+            ]),
+            state.ref === null ? null : h('div', { key: 'actions', className: 'coreness-qoder-actions' }, [
+              /* An empty field is not a write, so the button is off rather than ready to say so. */
+              h('button', {
+                key: 'save',
+                type: 'button',
+                className: 'coreness-button',
+                'data-tone': 'primary',
+                disabled: view.busy !== null || !writable || (view.field ?? '') === '',
+                onClick: () => act.save(),
+              }, view.busy === 'token' ? t('savingToken') : t('saveToken')),
+              h('button', {
+                key: 'clear',
+                type: 'button',
+                className: 'coreness-button',
+                disabled: view.busy !== null || !writable || state.credential?.configured !== true,
+                onClick: () => act.clear(),
+              }, view.busy === 'token' ? t('clearingToken') : t('clearToken')),
+              /* The value that stands can be asked about again: a token goes bad after it was written, and
+                 without this press the only way to ask would be to write the same value over itself. It asks
+                 the vendor and writes nothing, and it is off while the section is busy — and off where the row
+                 names no reference at all, because then there is nobody to ask about (`credential.noplace`). */
+              h('button', {
+                key: 'verify',
+                type: 'button',
+                className: 'coreness-button',
+                disabled: view.busy !== null || state.ref === null,
+                onClick: () => act.verify(),
+              }, view.busy === 'verify' ? t('token.checking') : t('token.check')),
+            ]),
+            nodeRow,
+            /* One card carries the connection and the node its requests go to: the row carries the address
+               and the press, and what the sweep answered is that press's word in this card's strip. */
           ]),
-          state.ref === null ? null : h('div', { key: 'actions', className: 'coreness-qoder-actions' }, [
-            /* An empty field is not a write, so the button is off rather than ready to say so. */
-            h('button', {
-              key: 'save',
-              type: 'button',
-              className: 'coreness-qoder-button coreness-button',
-              'data-tone': 'primary',
-              disabled: view.busy !== null || !writable || (view.field ?? '') === '',
-              onClick: () => act.save(),
-            }, view.busy === 'token' ? t('savingToken') : t('saveToken')),
-            h('button', {
-              key: 'clear',
-              type: 'button',
-              className: 'coreness-qoder-button coreness-button',
-              disabled: view.busy !== null || !writable || state.credential?.configured !== true,
-              onClick: () => act.clear(),
-            }, view.busy === 'token' ? t('clearingToken') : t('clearToken')),
-            /* The value that stands can be asked about again: a token goes bad after it was written, and
-               without this press the only way to ask would be to write the same value over itself. It asks
-               the vendor and writes nothing, and it is off while the section is busy — and off where the row
-               names no reference at all, because then there is nobody to ask about (`credential.noplace`). */
-            h('button', {
-              key: 'verify',
-              type: 'button',
-              className: 'coreness-qoder-button coreness-button',
-              disabled: view.busy !== null || state.ref === null,
-              onClick: () => act.verify(),
-            }, view.busy === 'verify' ? t('token.checking') : t('token.check')),
-          ]),
-          nodeRow,
-          /* One card carries the connection and the node its requests go to: the corner states the newer of the
-             two facts, and the row carries the address, the dot that says whether it answers, and the press. */
         ]);
       }
 
@@ -122,11 +125,11 @@ window.__ModuleLoader__.load({
             return;
           }
           setField('');
-          /* One read answers both questions. The strip's word and the word beside the field are drawn from the
-             same answer about the same reference, so the card cannot say two things at once — and it is read
-             *after* the write, because the verdict is stamped with the word this answer gives: stamped with the
-             older one it would be dropped by its own effect the moment it was drawn. A read that fails here is
-             the read's failure, not a store refusal. */
+          /* One read answers both questions. The press's word in the card's strip and the card's own state are
+             drawn from the same answer about the same reference, so the card cannot say two things at once — and
+             it is read *after* the write, because the verdict is stamped with the word this answer gives: stamped
+             with the older one it would be dropped by its own effect the moment it was drawn. A read that fails
+             here is the read's failure, not a store refusal. */
           let after;
           try {
             after = await read();
@@ -181,9 +184,10 @@ window.__ModuleLoader__.load({
             setNote({ where: 'credential', value: 'unsaved', detail: `${t('fault.clear')} — ${shared.reasonOf(error)}` });
             return;
           }
-          /* The same one read: the clear is confirmed by the state the section reads back, and the strip says
-             what that answer says — never the call's own word about itself. A read that fails here is the read's
-             failure, not a store refusal. */
+          /* The same one read: the clear is confirmed by the state the section reads back, and the press's word
+             follows that answer — a clear that did not stand says `Not saved` in the strip, and a clear that
+             stood says `Cleared` there while the store's word is the one it read back. Never the call's own
+             word about itself. A read that fails here is the read's failure, not a store refusal. */
           let after;
           try {
             after = await read();

@@ -191,10 +191,6 @@ window.__ModuleLoader__.load({
       'confirm.body': 'The row leaves the servers file and the harness drops the tools of that server. Nothing else about the profile changes.',
       'confirm.yes': 'Remove',
       'confirm.no': 'Cancel',
-      'done.created': 'Saved to the tree',
-      'done.updated': 'Saved to the tree',
-      'done.nothing': 'Nothing changed',
-      'done.removed': 'Removed from the tree',
       'fault.bad-action': 'The page asked for a save the plugin does not take',
       'fault.bad-name': 'A server name is 1 to 32 letters, digits, underscores or hyphens',
       'fault.name-taken': 'Another row of this file already takes that name',
@@ -212,6 +208,8 @@ window.__ModuleLoader__.load({
       'fault.env-ref': 'An environment variable of this row stands as an expression in the file: the form does not write over it',
       'fault.config-ref': 'A setting of this row stands as an expression in the file: the form does not write over it',
       'fault.disabled-ref': 'The enablement of this row stands as an expression in the file: the toggle does not write over it',
+      'state.written': 'Saved',
+      'state.nothing': 'Nothing changed',
       'state.refused': 'Not saved',
       'fault.not-saved': 'The save did not stand: the tree does not hold what was written; the servers file\'s own write is not observed here',
       'fault.write-failed': 'The Loader refused the write',
@@ -267,25 +265,14 @@ window.__ModuleLoader__.load({
     const CSS = `
 /* The section's own heading, worn from the page's own head rather than declared again here: the head, its title
    and its count are the page's own classes, and the arrangement and the type stand once, in the page's own sheet. */
-/* The section's state sentence and its rows' dim line: the page's small role, 12/18 in label-tertiary, which
-   stands once in the page's own sheet as coreness-dim and is worn below beside each of these two names. The
-   names stay: this section's own checks and the hint sample select the lines by them. */
 /* The word that names the list, in the weight that names rather than explains: the page's own rule for a small line
    (naming is 500, explaining is 400), and the reason the label is set apart from the names it introduces. */
 .coreness-mcp-toolsLabel{font-weight:500}
-.coreness-mcp-failed p{margin:0;font-size:14px;line-height:22px}
-.coreness-mcp-warn{color:var(--dsw-alias-state-warn-label);margin:0;font-size:12px;line-height:18px}
-/* The tone of a room, read off the attribute the instruments read rather than off a class only the drawing
-   knew: the colour and the reading are one fact, and the page keeps one description of each fact. */
-.coreness-mcp [data-note][data-tone='fault']{color:var(--dsw-alias-state-error-primary);margin:0;font-size:12px;line-height:18px}
-.coreness-mcp [data-note][data-tone='done']{color:var(--dsw-alias-state-success-primary);margin:0;font-size:12px;line-height:18px}
-/* The tones this line carries stand once in the entry's sheet — coreness-tone-done and coreness-tone-fault,
-   worn beside this class — because the state's sentence is painted there. */
 .coreness-mcp-signin code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
 /* The row's own sign-in block in a card's body: a column of lines — the sentence, the field with its hint, and
-   the reset — stood apart by the 8 the page's action strips stand on. The tone is worn beside this class — the
-   warn rule for a refusal, the page's dim role for a wait — because a colour is a fact of the state and not of
-   this box. */
+   the reset — stood apart by the 8 the page's action strips stand on. The tone is the set's own class beside this
+   one — coreness-tone-fault for a refusal, the page's dim role for a wait — because a colour is a fact of the
+   state and not of this box. */
 .coreness-mcp-signin{display:flex;flex-direction:column;gap:8px;margin:0;font-size:12px;line-height:18px}
 /* The flow's address is carried by the words "sign in" **inside** the sentence the person reads, so the link is
    words and not a bordered control of its own: it keeps the sentence's own ink and is marked by the one sign a
@@ -303,79 +290,40 @@ window.__ModuleLoader__.load({
    page's card action lines stand on; the free room in front of them, and not this number, is what holds them
    there. */
 .coreness-mcp-actions{align-items:center;gap:8px;margin-left:auto;display:inline-flex;flex:none}
-/* The strip an answer to a press lives in: the free place in the head, on the right, reserved before the
-   answer arrives so that nothing else in the head moves when it comes or goes. It takes the room that is
-   left over (flex:1 1 auto, below) and cuts a long sentence with an ellipsis rather than pushing the
-   actions or the marker — the whole sentence stands in the title, and a refusal's reason also stands in
-   the row's or the section's own state. */
-/* The answer stands on the **name's own line**, at the right of the row but not at the card's edge — the actions
-   and the marker after it are what keep that edge — and not in the middle of the head: the head centres its
-   children (align-items:center), so a strip shorter than the head sits on the buttons' line. align-self:flex-start
-   lifts it to the head's top, which is the line the name stands on, and it changes nothing else: the box is still
-   reserved (flex:0 0 160px), the head still does not wrap, the chip stays where it stands, and the head's height
-   comes from the room under the name, not from the strip. */
-/* The strip is a constant 160 px box that never shrinks and never grows, in this card as in the
-   others: the head is a row, the strip stands in its middle and the controls keep the card's right edge, so a word
-   that comes and goes changes no box — the row's height comes from the name and the buttons, not from the answer.
-   The colours of its three tones stand with the strip itself, in the page's own sheet beside the reservation rule:
-   this section brought the strip, and a section painting it is how the same word came to wear another
-   colour in the section beside this one. */
-/* This section's own tones, and the button rules it keeps: the base, the hover, the two primary rules, the
-   disabled look and the ring stand once in the page's own sheet, in the shared button
-   class every button here wears beside this one. */
+/* The strip an answer to a press lives in is the page's own element: its width is reserved by the page's rule,
+   so the empty room a card draws before any word arrives is the room the word stands in, and a word that comes
+   and goes moves no box of this head. The colours of its three tones stand with the strip itself, in the page's
+   own sheet. */
+/* The button rules this section keeps: the destructive hover and the small control's own height. The base, the
+   hover, the primary rules, the disabled look and the ring stand once in the page's own sheet, in the shared
+   button class every button here wears beside this one. */
 .coreness-mcp-button[data-tone='danger']:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover-danger)}
 /* The small control's role, named as the platform names its own: .sm{height:28px;font-size:12px;line-height:18px}.
    It is written as a height and not as a padding because the page's
    own scale of distances has no 5 — 18 + 5 + 5 is the platform's arithmetic, and the platform states its result, not
    the sum. Any control of this page that is small takes this role. */
 .coreness-mcp-actions .coreness-mcp-button{border-radius:var(--dsw-radius-sm);height:28px;padding:0 10px;font-size:12px;line-height:18px;white-space:nowrap}
-/* The row's state drawn as a switch, property by property from the host's own General settings. Its track is 36 by 20
-   with the pill radius and 2 px of padding; its thumb is 16 by 16, a circle, resting 2 px in from each end; and it
-   slides by 16 px, so 2 + 16 + 16 leaves 2 px of air at the round end — a thumb sitting flush against that end reads
-   as a less round pill, which is the whole of the difference this copies. The host places its thumb with that padding
-   and a static child; ours stands absolutely at the same 2 px, since a track's padding does not place an absolute
-   child and the drawing is identical either way — the mechanism is named here rather than copied blind. The off
-   position is the page's own: no switch of the host's stands off in its settings, so the thumb rests at the same 2 px
-   of air, mirrored, and nothing is invented for a state the host does not show. The three colours are the host's own
-   readings — near-black on, translucent black off, white thumb — and stand as values rather than token names because
-   its token table could not be read from here: no published name is claimed for them. The page's own half is the pill
-   radius and the ring; the host declares that box with a transparent colour and draws no visible ring this page has
-   read, so the ring wears the page's own published focus colour and what its settings show on focus stands unread.
-   The transition reads as none in the window this page is walked in, whose roots wear the still class and whose rule
-   stops every transition inside them: the declaration below is the host's own .12s transform, and that reading
-   belongs to the window, not to the drawing. */
-.coreness-mcp-switch{position:relative;box-sizing:border-box;width:36px;height:20px;flex:none;padding:2px;border:none;border-radius:var(--coreness-pill-radius);background:rgba(0, 0, 0, 0.12);cursor:pointer}
-.coreness-mcp-switch[aria-checked='true']{background:rgb(15, 17, 21)}
-.coreness-mcp-switch:disabled{opacity:.4;cursor:default}
-.coreness-mcp-switch:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:2px}
-.coreness-mcp-switchThumb{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:rgb(255, 255, 255);transition:transform .12s ease}
-.coreness-mcp-switch[aria-checked='true'] .coreness-mcp-switchThumb{transform:translateX(16px)}
-/* The editor stands where the cards of the list stand, so it keeps the page's card-to-card distance from whatever is
-   above it — a card, an empty state, or nothing at all. The first attempt hung that distance on what precedes the
-   editor (a sibling of the list), and that missed the state the user meets on a fresh machine: with no server declared
-   the list is not drawn, an empty state stands in its place, and the form touched it — 0 px against the 8 px the same
-   pair reads when a card is above. The distance belongs to the editor, not to its neighbour, so it is written there and
-   holds for every neighbour: card and form, empty state and form, form and form. What follows the editor keeps the same
-   value by the sibling rule. */
-.coreness-mcp-rows + *,.coreness-mcp-editor + *{margin-top:8px}
+/* The row's switch is the set's control: coreness-switch and its thumb stand once in the page's own sheet, and
+   this card wears them untouched. */
+/* The editor keeps the page's card-to-card distance from whatever stands above it — a card, an empty state, or
+   nothing at all — and the add row under the list takes the set's own distance. */
 .coreness-mcp-editor{border-radius:var(--dsw-radius-lg);background:var(--dsw-alias-bg-module-platform);flex-direction:column;gap:12px;padding:12px 14px;margin-top:8px;display:flex}
 .coreness-mcp-editorHead{align-items:center;justify-content:space-between;display:flex}
-/* The right side of the editor's head: the row's own acts and the editor's answer, parted by the 8 the page's
-   action lines stand on. The answer keeps the top right it has always had; the sign-in stands before it, on the
-   line a person reads the row's name on, and not among the form's own acts — a press that never touches the
-   draft must not read as one that saves it. */
+/* The right side of the editor's head: the row's own acts and the editor's own answer, on the line a person reads
+   the row's name on and not among the form's own acts — a press that never touches the draft must not read as one
+   that saves it. */
 .coreness-mcp-editorBeside{align-items:center;gap:8px;display:inline-flex}
 .coreness-mcp-editorTitle{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px}
-.coreness-mcp-fieldLabel{color:var(--dsw-alias-label-secondary);font-size:12px;font-weight:500;line-height:18px}
+/* The answer a press makes before its row exists: a draft has no card, so the editor is the one room that press's
+   word can stand in. Its colour is the set's tone class beside this one; this rule carries only the line's own size
+   and place. */
 .coreness-mcp-editorNote{flex:none;text-align:right;font-size:12px;line-height:18px}
 textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
 /* A form row's controls stand six apart in a grid of three fixed columns: the columns are the form's own, so the
    row never wraps and the distance is a grid's, not a line's — the Qoder's row, which may break, carries its own. */
 .coreness-mcp-grid{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:6px;display:grid}
-/* A pair row carries no box of its own: a bordered card per entity of a nested map frames what the row's own
-   controls already stand as, and the frame under the map's label is redundant. The rows stand on the fields' axis,
-   and the block is read by the label above it and by the pitch of the pairs list (coreness-mcp-pairs). The class
-   stays on the row as its own name; no rule carries it. */
+/* A pair row carries no box of its own: the rows stand on the fields' axis, and the map is read by the label
+   above it. */
 .coreness-mcp-editorActions{justify-content:flex-end;gap:8px;display:flex}
 /* The mask keeps the platform's own distance from the frame's top — the host's token, floored at 24 — and 24 at
    the sides: the page declares no number of its own for a room the platform already owns. */
@@ -388,20 +336,12 @@ textarea.coreness-mcp-input{height:auto;min-height:64px;resize:vertical}
 .coreness-mcp-dialogBody{margin:0;font-size:14px;line-height:22px;color:var(--dsw-alias-label-secondary)}
 /* The card's head is its disclosure: the name and the subtitle in a button, the actions and the toggle beside it,
    the marker at the side, and the body only while it is open. */
-.coreness-mcp-card{flex-direction:column;gap:12px;display:flex}
 .coreness-mcp-headButton{box-sizing:border-box;border:none;background:0 0;color:inherit;font:inherit;text-align:left;padding:0;cursor:pointer;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto;display:flex}
 .coreness-mcp-headButton:focus-visible{box-shadow:0 0 0 2px var(--dsw-alias-state-business-primary);outline:none;border-radius:var(--dsw-radius-md)}
 .coreness-mcp-name{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px}
-/* The subtitle carries the row's target and its state, so it is the one line of this card a long sentence could
-   grow — and the card with it. Two lines are the reserved room, the same reservation the Qoder section's state area
-   keeps; the rest of the sentence scrolls inside it and the words stay whole in the DOM. The room is reserved both
-   ways: a maximum alone leaves a short subtitle a short head where a long one takes a tall one, so the floor is the
-   reservation and the ceiling its limit. */
-/* The room under the name is reserved (the head's own two lines) and a value longer than it scrolls — but the
-   engine draws a scrollbar for that, and a bar at the room's right edge reads as a rule nobody drew. The bar is
-   hidden here (the wheel and the keyboard still scroll the room); the reserved height stays where it was. */
-.coreness-mcp-subtitle{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.coreness-mcp-subtitle::-webkit-scrollbar{width:0;height:0}
+/* The subtitle carries the row's target and its state, in the section's own ink and pair; the one line and its
+   cut are the page's cut line, worn beside this class. */
+.coreness-mcp-subtitle{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;min-width:0}
 .coreness-mcp-marker{box-sizing:border-box;border:none;background:0 0;color:var(--dsw-alias-label-secondary);flex:none;width:24px;height:24px;cursor:pointer;justify-content:center;align-items:center;display:inline-flex}
 .coreness-mcp-marker svg{transition:transform .15s ease}
 .coreness-mcp-marker[data-open='true'] svg{transform:rotate(180deg)}

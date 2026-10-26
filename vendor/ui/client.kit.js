@@ -29,19 +29,15 @@ window.__ModuleLoader__.load({
       loading: { words: '{subject} is loading', tone: 'plain' },
       unset: { words: '{subject} is not set', tone: 'plain' },
       set: { words: '{subject} is set', tone: 'plain' },
-      accepted: { words: '{subject} accepted', tone: 'done' },
-      refused: { words: '{subject} refused', tone: 'fault' },
       /* The outcome family says the page's own words and **carries no subject**: `Saved` and `Not saved` are the
          same words on every card, because an outcome is about the press and not about the card it was made in —
-         the user's own ruling, and the words the chunks already say. The nine values under them are **states and
-         verdicts**, not outcomes, and the page carries no plain word for any of them: they keep their subject
-         rather than being flattened into words nobody chose. */
+         the user's own ruling, and the words the chunks already say. Every other entry is a **state** the corner
+         says, not an outcome and not a verdict: it keeps the card's subject, and a verdict's short word belongs
+         to the strip as the section's own, its tone to the mark's table rather than a sentence here. */
       saved: { words: 'Saved', tone: 'done' },
       unsaved: { words: 'Not saved', tone: 'fault' },
       unwritable: { words: '{subject} cannot be changed here', tone: 'fault' },
       unread: { words: '{subject} was not read', tone: 'fault' },
-      answered: { words: '{subject} answered', tone: 'done' },
-      unanswered: { words: '{subject} did not answer', tone: 'fault' },
     };
 
     /* The two tones of the map above, and the page's own tone class each one wears:
@@ -50,16 +46,16 @@ window.__ModuleLoader__.load({
     const TONE_CLASS = { done: ' coreness-tone-done', fault: ' coreness-tone-fault' };
 
     /**
-     * The mark's own tone: **a connection's three states**, and the one place the dot's colour is written.
+     * The mark's own tone: **a connection's states**, and the one place the dot's colour is written.
      *
-     * The word's tone stands in `STATUS_WORDS` and stays there — the same `statusNode` draws every card's word
-     * (the entry's own card, the frame of the wait, the head of every card the section draws), and `set`
-     * turning green in that map turns `Profile is set` green on the entry's own card. The dot means a connection, and a connection has three states: none
-     * stored — grey, the entry's own `plain`; something stored — green, the one divergence named here;
-     * something wrong — red, the entry's own `fault`. A value this table does not name keeps the tone of the
-     * entry its word is drawn from, so the node's own answer stays green beside the address it belongs to.
+     * None stored — grey, the map's own `plain`; something stored — green, the divergence named here (`set`'s
+     * sentence stays plain in the map); something wrong — red, and a store's fault already red. The two
+     * verdicts name their tone here too: their word is the strip's, out of the section's dictionary, so the
+     * map keeps no sentence of theirs and the dot says the verdict by colour alone. A value this table does
+     * not name keeps the tone of the entry its word is drawn from, so `unread` stays red beside the address
+     * it belongs to.
      */
-    const MARK_TONES = { set: 'done' };
+    const MARK_TONES = { set: 'done', accepted: 'done', refused: 'fault' };
 
     /** The sentence of one value, with the card's own subject in it, or null for a value nobody holds. */
     function statusWord(subject, value) {
@@ -97,20 +93,24 @@ window.__ModuleLoader__.load({
      * `data-status` names the value and `data-tone` is the entry's own tone; there is no other way to
      * give this element a colour. `title` carries nothing: a tooltip is the face as well, and every
      * reason this page keeps is in the console through `statusDetail`.
+     *
+     * A value the map does not hold is nothing to state: the guard is one place (an own key, so a name the
+     * object inherits is not a state either), and after it the entry is a fact of the map and needs no
+     * second test anywhere below.
      */
     function statusNode({ subject, value, data }) {
-      const entry = value === undefined || value === null ? null : STATUS_WORDS[value];
+      const entry = Object.hasOwn(STATUS_WORDS, value) ? STATUS_WORDS[value] : undefined;
       /* Nothing to state is nothing drawn: an element with a place and no words is a reserved box, and the
          page keeps no reserved boxes. A card that states nothing carries no status at all. */
-      if (entry === null) return null;
+      if (entry === undefined) return null;
       return h('span', {
         className: 'coreness-status' + (TONE_CLASS[entry.tone] ?? ''),
-        'data-status': entry === null ? 'none' : value,
-        'data-tone': entry === null ? 'plain' : entry.tone,
+        'data-status': value,
+        'data-tone': entry.tone,
         role: 'status',
         'aria-live': 'polite',
         ...data ?? {},
-      }, entry === null ? '' : statusWord(subject, value));
+      }, statusWord(subject, value));
     }
 
     /**
@@ -127,18 +127,25 @@ window.__ModuleLoader__.load({
      * Where the corner already says that same state — a fault keeps its word, an outcome its own — the mark is
      * `aria-hidden`, because a dot read out beside the word that answers for it is the same fact twice.
      * `spoken` is that fact, handed over by the caller, which is the only one that knows what stands beside.
+     *
+     * A value only the mark's table names — a verdict — has no word here at all: the dot draws and says
+     * nothing, because the strip beside it carries the word.
      */
     function statusMark(value, data) {
-      const entry = value === undefined || value === null ? null : STATUS_WORDS[value];
+      const entry = Object.hasOwn(STATUS_WORDS, value) ? STATUS_WORDS[value] : undefined;
+      const ownTone = Object.hasOwn(MARK_TONES, value);
+      /* A mark for a value neither table holds draws nothing: the dot's tone is the mark's, and a dot with
+         no state behind it is a claim nobody made. */
+      if (entry === undefined && !ownTone) return null;
       const { subject, spoken, ...rest } = data ?? {};
-      const tone = MARK_TONES[value] ?? (entry === null ? 'plain' : entry.tone);
-      /* A mark with no entry has no word of its own to say, and a mark whose state the corner already says in
-         words is not said a second time. */
-      const speaks = spoken !== true && subject !== undefined && entry !== null;
+      const word = entry === undefined ? null : statusWord(subject, value);
+      const tone = ownTone ? MARK_TONES[value] : entry.tone;
+      /* A mark whose state the corner already says in words — or that has no word at all — is not said. */
+      const speaks = spoken !== true && subject !== undefined && word !== null;
       return h('span', {
         className: 'coreness-status-mark',
         'data-tone': tone,
-        ...(speaks ? { role: 'img', 'aria-label': statusWord(subject, value) } : { 'aria-hidden': 'true' }),
+        ...(speaks ? { role: 'img', 'aria-label': word } : { 'aria-hidden': 'true' }),
         ...rest,
       });
     }

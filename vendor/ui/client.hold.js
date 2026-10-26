@@ -27,9 +27,6 @@ window.__ModuleLoader__.load({
     /** How often a section asks the page for a value no announcement follows, in milliseconds. */
     const BEAT_MS = 2000;
 
-    /** How long this answer stands: the one number, asked once. */
-    const holdOf = () => NOTE_HOLD_MS;
-
-    return { BEAT_MS, holdOf };
+    return { BEAT_MS, NOTE_HOLD_MS };
   },
 });

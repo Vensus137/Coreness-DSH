@@ -19,10 +19,10 @@
  * overwriting it, and the section then re-reads: the call's own word about what it wrote is never the
  * section's state. The gate's route is never asked to write — it answers a picture.
  *
- * What the section draws follows the two sections beside it: cards in the host's own sheets, carried by
- * `--dsw-alias-*` tokens alone, and the section's own sentence in a room drawn in every state — a room that
- * reserves no height, so a sentence takes the lines it says and the cards under it keep the list's own line of
- * air. What is reserved on this page is the width of an answer strip, never its height.
+ * What the section draws follows the sections beside it: the page's own card, head, body, list, field and
+ * answer classes, carried by `--dsw-alias-*` tokens alone, and the section's own sentence in a room drawn in
+ * every state — a room that reserves no height, so a sentence takes the lines it says and the cards under it
+ * keep the list's own line of air. What is reserved on this page is the width of an answer strip, never its height.
  */
 window.__ModuleLoader__.load({
   id: '@coreness/ui/client.gate.js',
@@ -44,7 +44,7 @@ window.__ModuleLoader__.load({
     const PACKAGE = '@coreness/ui';
 
     /** The live fields of the row that stand as one number each, in the order the card shows them. */
-    const SCALARS = ['windowMs', 'maxWaitMs', 'thresholdRatio', 'dryRun'];
+    const SCALARS = ['windowMs', 'maxWaitMs', 'thresholdRatio'];
 
     /* The section's own words. One namespace, one dictionary: the rail row's label is a thunk so it
        follows the language without a re-registration, and every failure the two doors can answer with
@@ -53,16 +53,16 @@ window.__ModuleLoader__.load({
       /* One word for the rail's row and for the page's heading: the label and the heading are one key, because a
          word drawn from two places drifts and no check reads the picture. */
       section: 'Rate limiter',
-      title: 'Rate limiter',
       caption: 'A ceiling in tokens per minute, attached to a model: the gate holds a request the window cannot take and lets it go marked forced when the wait bound is spent.',
       /* The whole sentence: the two facts that cost money and the one that saves a surprise, and no mechanics.
          "Of this run alone" says whose count it is without the word "process"; the window's being per provider and
          model, and its living in memory, are mechanics and stand outside this room. */
       'state.standing': 'Of this run alone: a reload keeps it, a restart wipes it, spend elsewhere is not counted.',
+      'state.reading': 'Reading the gate…',
       'state.error': 'The gate could not be read',
       'state.unwritable': 'The row is not configurable from here: {fault}',
       /* The answer to a press is one of three words, the same on every page of this product: `Saved` for a change
-         that landed, `Nothing changed` for a press that changed nothing, and the refusal in the error tone. What a
+         that landed, `Nothing changed` for a press that changed nothing, and the refusal in the fault tone. What a
          longer sentence would carry stands in the console (the `statusDetail` door), never as a second sentence on
          the face. */
       'state.written': 'Saved',
@@ -107,81 +107,55 @@ window.__ModuleLoader__.load({
       'add.none': 'This profile’s catalogue carries no model to name.',
     };
 
-    /* The host's own sheets, copied rule for rule and renamed, carried by its tokens alone: the settings
-       card, its head, the tag, the field and its input, the buttons and the foot are the host's own rules,
-       and the sections beside this one draw them the same way.
-       Nothing in this room reserves a height: a line here takes the height of what it says, and a reservation
-       would move the cards under it. */
+    /* The section's own rules, and only what no other page draws: the head's shrinking floor, the row card's
+       line, the equal share of its fields, the boxed unit of the number field and the two feet. The card, the
+       head, the body, the list, the field, the label, the hint, the answer strip, the failure block and the
+       buttons are the page's own classes, worn beside these. Nothing in this room reserves a height: a line
+       here takes the height of what it says, and a reservation would move the cards under it. */
     const CSS = `
-/* The set's head, and the section's own room under it; the head's flex direction is irrelevant with one child
-   and stays for the live walk's marker. */
-.coreness-gate-head{gap:6px;min-width:0}
-.coreness-gate-state{margin:0;font-size:12px;line-height:18px;overflow-wrap:anywhere;color:var(--dsw-alias-label-tertiary)}
-/* The two tones this section shares with the page stand once in the entry's sheet — coreness-tone-done and
-   coreness-tone-fault — and the state wears them beside this class. Warn is the gate's own: no other section
-   warns, so it stays here. */
-.coreness-gate-state[data-tone='warn']{color:var(--dsw-alias-state-warn-label)}
-/* A row's answer: the same word, the same tone, and no box of its own — the box it stands in is the page's own
-   answer rule's, which is why the page keeps exactly one reserved strip; what this section writes is where the
-   word sits, at the right end of the head, and nothing else. */
-.coreness-gate-rowAnswer{margin-left:auto}
-.coreness-gate-answer{align-self:flex-start}
-/* The tone's colour is not this section's to write: every strip on the page wears the page's own answer class
-   and the tones are painted once, beside the reservation rule the strips share. This section kept
-   four rules of its own — a base colour and three tone classes — in a vocabulary of its own, where the page
-   says fault and this section said error, and the user caught the result with his own eye: the same word in
-   another colour in the section beside it. What stands here is only what is this section's: where the strip
-   sits in the head. */
-.coreness-gate-headButton{box-sizing:border-box;border:none;background:0 0;color:inherit;font:inherit;text-align:left;padding:0;flex-direction:column;min-width:0;flex:1 1 auto;display:flex}
+/* The head may shrink below its words, so the title wraps before the reserved strip is pushed out of the card. */
+.coreness-gate-head{min-width:0}
+/* The section's state sentence: the page's small role stands in coreness-dim, worn beside this class; this rule
+   keeps only the wrap a fault's reason may need, which can be a word longer than the room. */
+.coreness-gate-state{overflow-wrap:anywhere}
+/* The card's name takes the growing room, so the answer strip stands at the head's right edge. */
+.coreness-gate-headButton{flex-direction:column;min-width:0;flex:1 1 auto;display:flex}
+/* The row card's name — the pair it is about; the limit card's title is the page's section title. */
 .coreness-gate-name{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px}
-/* A hint line: the page's small role, one pair for it everywhere — 12/18 in label-tertiary. */
-.coreness-gate-dim{margin:0;font-size:12px;line-height:18px;color:var(--dsw-alias-label-tertiary);overflow-wrap:anywhere}
-.coreness-gate-refused{margin:8px 0 0;font-size:12px;line-height:18px;color:var(--dsw-alias-state-warn-label);overflow-wrap:anywhere}
+/* The **row cards** — and only they — stand their three fields on one line, so these rules are scoped to the row
+   card's own class; the limit card keeps its fields one to a line. The line takes the card's whole inner width
+   and the fields share it equally, so there is no empty space at either edge. The pairs dissolve with
+   display:contents and their fields become the line's own items; the equal share is written as flex:1 1 0 on the
+   field itself, which is what makes the three of them equal rather than sized by their content. A backtick must
+   not stand in these comments: this stylesheet is a template literal and one closes it. */
+.coreness-gate-rowCard .coreness-gate-body{flex-direction:row;flex-wrap:wrap;align-items:flex-start}
+.coreness-gate-rowCard .coreness-gate-body>.coreness-gate-pair{display:contents}
+/* The row card's fields: the three share its line equally and never shrink past the width a picker can still
+   be read in. */
+.coreness-gate-rowCard .coreness-gate-field{min-width:180px;flex:1 1 0}
+/* The number field's box: the page's own field box, with the unit standing inside it. The box is the shared
+   class; these rules carry only what the shared class cannot — the row inside the box, the input stripped of
+   the border and padding the box now carries, the focus ring on the box whose focusable child is the input,
+   the dim a disabled field takes (the page's own rule is written for a control, and the box is a wrapper),
+   and the suffix's own ink. No rule of the shared box is repeated here. */
+.coreness-gate-unitBox{display:flex;align-items:center}
+.coreness-gate-unitBox:focus-within{border-color:var(--dsw-alias-state-business-primary)}
+.coreness-gate-unitBox:has(> input:disabled){opacity:.6}
+.coreness-gate-input{border:none;background:0 0;color:inherit;font:inherit;flex:1 1 auto;min-width:0;padding:0}
+.coreness-gate-input:focus{outline:none}
+.coreness-gate-unit{flex:none;color:var(--dsw-alias-label-tertiary)}
+/* The row's actions: a line of their own under the three fields, hard against the right edge. flex-basis:100%
+   is what makes the line its own: the body is a wrapping row of fields, and this child asks for the whole width
+   and wraps onto the next line. */
+.coreness-gate-rowFoot{flex-basis:100%;justify-content:flex-end;gap:8px;display:flex}
+/* The limit card's foot: its one press hard against the right edge. */
+.coreness-gate-foot{justify-content:flex-end;align-items:center;flex-wrap:wrap;display:flex}
+/* The rows the host refused, under the list: the page's failure block, placed with the section's own air and
+   roomed for a reason longer than its line. */
+.coreness-gate-refused{margin:8px 0 0;overflow-wrap:anywhere}
 .coreness-gate-refusedTitle{margin:0}
 .coreness-gate-refusedList{margin:2px 0 0;padding:0 0 0 18px}
 .coreness-gate-refusedRow{margin:0}
-.coreness-gate-fields{flex-direction:column;gap:8px;display:flex}
-.coreness-gate-pair{flex-direction:column;gap:6px;display:flex}
-/* The **row cards** — and only they — stand their three fields on one line; the section's own card (The limit) keeps
-   its fields one to a line and is untouched. Both kinds carry coreness-gate-row, so the row cards carry a second class
-   of their own and this rule names that one: a selector on the shared class alone would reach the section's card and
-   narrow its fields.
-   The line takes the card's whole inner width and the fields share it equally, so there is no empty space at either edge.
-   The pairs dissolve with display:contents and their fields become the line's own items; the equal share is written as
-   flex:1 1 0 on the field itself, which is what makes the three of them equal rather than sized by their content.
-   A backtick must not stand in these comments: this stylesheet is a template literal and one closes it. */
-.coreness-gate-rowCard .coreness-gate-body{flex-direction:row;flex-wrap:wrap;align-items:flex-start}
-.coreness-gate-rowCard .coreness-gate-body>.coreness-gate-pair{display:contents}
-/* What the gate's own field adds to the shared column: each of the pair's two fields takes an equal share of the
-   row and never shrinks past the width its picker can still be read in. */
-.coreness-gate-field{min-width:180px;flex:1 1 0}
-/* The gate's own label: its voice stands here, as every chunk's does, and this one is the field's whole row — a div
-   whose child is the name — so it stands as a block in the column, while the sections' labels are the name itself
-   and stand inline. */
-.coreness-gate-fieldLabel{color:var(--dsw-alias-label-secondary);font-size:12px;font-weight:500;line-height:18px;display:flex}
-.coreness-gate-input{box-sizing:border-box;border:none;background:0 0;color:var(--dsw-alias-label-primary);flex:1 1 auto;min-width:0;font:inherit;padding:6px 10px;font-size:14px;line-height:22px}
-/* The box is the wrapper now, so the ring belongs to the wrapper: the input inside it has no border to colour.
-   The number and its unit touch by intent — the unit is the number's own name and stands against it — so this
-   box declares no room between them. */
-.coreness-gate-unitBox{box-sizing:border-box;display:inline-flex;align-items:center;width:100%;border:.5px solid var(--dsw-alias-border-l4);border-radius:var(--dsw-radius-md);background:var(--dsw-alias-bg-layer-1)}
-.coreness-gate-unitBox:focus-within{border-color:var(--dsw-alias-state-business-primary)}
-.coreness-gate-unitBox>.coreness-gate-input:focus{outline:none}
-.coreness-gate-unit{flex:none;padding-right:10px;color:var(--dsw-alias-label-tertiary);font-size:14px;line-height:22px}
-/* A hint line: the host's own rule for one is label-tertiary at 12px/18px, as its advanced hint rule and the
-   plugin manager's guides are. This one carried --dsw-alias-label-dimmed, the host's own *placeholder* token and no
-   hint's colour, so it read dimmer than the same kind of line in the sections beside it. */
-.coreness-gate-hint{margin:0;font-size:12px;line-height:18px;color:var(--dsw-alias-label-tertiary)}
-/* The row's actions: a line of their own under the four fields, hard against the right edge. flex-basis:100% is what
-   makes the line its own: the body is a wrapping row of fields, and this child asks for the whole width and wraps onto
-   the next line. */
-.coreness-gate-rowFoot{flex-basis:100%;justify-content:flex-end;gap:8px;display:flex}
-/* The three buttons of a row stand as tall as the boxes a value is typed into (a field's box is 32), where a button
-   of this page is otherwise 36. Scoped to the row's own line so nothing else on the page moves with it; the
-   platform's own button is 36 and is not touched. */
-.coreness-gate-foot{justify-content:flex-end;align-items:center;flex-wrap:wrap;display:flex}
-/* The rate limiter's own tone, and the one button rule this sheet keeps: the base, the hover, the two primary
-   rules, the disabled look and the ring stand once in the page's own sheet, in the shared
-   button class every button here wears beside this one. */
 `;
 
     /**

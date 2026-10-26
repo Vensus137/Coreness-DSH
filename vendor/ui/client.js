@@ -48,9 +48,10 @@ window.__ModuleLoader__.load({
       'seat.empty': 'No sections loaded; see the console',
     };
 
-    /* What this slice draws, and nothing ahead of it: the frame, the card's furniture and the two state
-       tones. A later section's shared rule is added here when that section first draws it — the kit owns
-       the status surface's own sheet, a section chunk owns what only it draws. */
+    /* What this sheet holds, and nothing ahead of it: the page's frame and rail, the card's furniture, the
+       shared controls — the field, its label and box, the check, the switch and its thumb — the answer strip
+       and the two state tones. A later section's shared rule is added here when that section first draws it —
+       the kit owns the status surface's own sheet, a section chunk owns what only it draws. */
     const CSS = `
 :root{--coreness-elevation:0 12px 32px #0000002e;--coreness-news-strip:160px;--coreness-pill-radius:999px}
 .coreness-page{display:flex;height:100%;box-sizing:border-box;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary)}
@@ -96,6 +97,9 @@ window.__ModuleLoader__.load({
 .coreness-sectionIntro{color:var(--dsw-alias-label-tertiary);margin:8px 0 0;font-size:14px;line-height:22px}
 .coreness-sectionCount{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;font-variant-numeric:tabular-nums}
 .coreness-failed{color:var(--dsw-alias-state-error-primary);flex-direction:column;gap:4px;display:flex}
+/* The block's sentences: its paragraphs at the page's line pair, declared here so a section adds no cut of
+   its own. */
+.coreness-failed p{margin:0;font-size:14px;line-height:22px}
 /* The page's button, declared once and worn by every section that draws one, beside that section's own
    class; a section keeps only what is its own. Later rules at equal specificity win within this sheet, so
    the danger look and the add box stand after the button they vary. */
@@ -113,38 +117,60 @@ window.__ModuleLoader__.load({
 .coreness-answer[data-tone='plain']{color:var(--dsw-alias-label-tertiary)}
 .coreness-answer[data-tone='done']{color:var(--dsw-alias-state-success-primary,var(--dsw-alias-label-secondary))}
 .coreness-answer[data-tone='fault']{color:var(--dsw-alias-state-error-primary,var(--dsw-alias-label-primary))}
-/* The field's column and its label's arrangement: what every control this page labels is built as. */
+/* The field's column, its label's voice and its box: what every control this page labels is built as. The
+   label is one small line wherever a field stands — its pair, weight and ink stand here, and a section adds
+   no second cut of them. */
 .coreness-field{flex-direction:column;gap:6px;display:flex}
 .coreness-field:disabled{opacity:.6;cursor:default}
-.coreness-fieldLabel{align-items:center;display:inline-flex}
+.coreness-fieldLabel{align-items:center;display:inline-flex;color:var(--dsw-alias-label-secondary);font-size:12px;font-weight:500;line-height:18px}
 .coreness-field-box{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l4);border-radius:var(--dsw-radius-md);width:100%;font:inherit;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);padding:6px 10px;font-size:14px;line-height:22px}
 .coreness-field-box:focus{border-color:var(--dsw-alias-state-business-primary);outline:none}
 .coreness-field-box::placeholder{color:var(--dsw-alias-label-dimmed)}
-/* What the page's own check controls are built as: a box and its word on one line. The box keeps the margin
-   the browser gives it — a reset here would be a rule of ours about a control that is the platform's, and
-   every box on the page would need it kept in step. */
-.coreness-check{display:inline-flex;align-items:center}
+/* What the page's own check controls are built as: a box and its word on one line, at the line pair every
+   check on the page stands on. The box keeps the margin the browser gives it — a reset here would be a rule
+   of ours about a control that is the platform's, and every box on the page would need it kept in step. */
+.coreness-check{display:inline-flex;align-items:center;gap:8px;font-size:14px;line-height:22px}
+/* The page's on/off control: a track and a thumb, drawn as the host draws one in its own settings. The three
+   colours are the host's readings and stand as values, not token names — its table published no name this
+   page could read. The off position is the page's own: the host's settings show no switch standing off, so
+   the thumb rests at the same 2px of air, mirrored. The thumb slides 16px rather than the track's padding
+   placing it, because a track's padding does not place an absolute child, and 2 + 16 + 16 leaves the same
+   2px at the round end. The .12s is the host's own transition, stopped where the page is walked still; the
+   ring is the page's published focus colour, the host's focus look not read from here. */
+.coreness-switch{position:relative;box-sizing:border-box;width:36px;height:20px;flex:none;padding:2px;border:none;border-radius:var(--coreness-pill-radius);background:rgba(0, 0, 0, 0.12);cursor:pointer}
+.coreness-switch[aria-checked='true']{background:rgb(15, 17, 21)}
+.coreness-switch:disabled{opacity:.4;cursor:default}
+.coreness-switch:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:2px}
+.coreness-switchThumb{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:rgb(255, 255, 255);transition:transform .12s ease}
+.coreness-switch[aria-checked='true'] .coreness-switchThumb{transform:translateX(16px)}
 /* The two tones the kit's status map wears beside its own classes. */
 .coreness-tone-done[data-tone]{color:var(--dsw-alias-state-success-primary)}
 .coreness-tone-fault[data-tone],.coreness-tone-fault[data-level]{color:var(--dsw-alias-state-error-primary)}
 @media (prefers-reduced-motion:reduce){.coreness-still *{transition:none!important}}
 `;
 
-    /** The page's sheet, held for as long as the page stands: put in here, put back if it is taken. */
-    function useStyles() {
-      React.useEffect(() => {
-        let stands = true;
-        const put = () => {
-          if (stands) ensureStyles();
-        };
-        put();
-        const watcher = new MutationObserver(put);
-        watcher.observe(document.head, { childList: true });
-        return () => {
-          stands = false;
-          watcher.disconnect();
-        };
-      }, []);
+    /**
+     * The page's sheet, held for as long as the package stands: put in here, put back if it is taken.
+     *
+     * The hold belongs to the package and not to the page: the tokens and the shared controls this sheet
+     * declares are read by surfaces seated outside the page's mount — the sidebar's credits foot, the
+     * picker's popup, a switch on a card — so they must stand whether or not the main panel is mounted.
+     * A hold taken from a component would tie them to a mount that may never come; the platform's own
+     * replace takes the package's style tags with it, so the observer puts the sheet back while the
+     * package lives.
+     */
+    function holdStyles() {
+      let stands = true;
+      const put = () => {
+        if (stands) ensureStyles();
+      };
+      put();
+      const watcher = new MutationObserver(put);
+      watcher.observe(document.head, { childList: true });
+      return () => {
+        stands = false;
+        watcher.disconnect();
+      };
     }
 
     function ensureStyles() {
@@ -165,7 +191,7 @@ window.__ModuleLoader__.load({
     let t = (key) => key;
     /** How many chunk pulls are still outstanding; the pane stays blank until this is zero. */
     let pendingPulls = CHUNKS.length;
-    /** Set by the mounted page: re-render when the last pull settles (a failure touches no seat). */
+    /** Set by the mounted page: one chunk's pull settled — the pane re-reads and the empty word's grace restarts. */
     let settle = () => {};
 
     /** The rail's rows: the sections the chunks registered, by order. The seat decides; this page does not. */
@@ -186,28 +212,36 @@ window.__ModuleLoader__.load({
          installed bundle cannot drift apart. A read that fails leaves the title without it: the version is
          not a status surface, and a made-up one would be worse than none. */
       const [version, setVersion] = React.useState(undefined);
-      /* The grace before an empty seat is said in words; a section is normally seated in a few frames, and a
-         section chunk that was pulled still assembles its own parts behind its apply. */
-      const [gracePassed, setGracePassed] = React.useState(false);
+      /* How many chunk pulls have settled. A settle is the news an empty seat waits on: each one restarts the
+         grace below, because a chunk that has applied is still assembling its own parts. */
+      const [settled, setSettled] = React.useState(0);
+      /* The settle whose grace has passed. The empty word stands only while it is the newest settle. */
+      const [graceFor, setGraceFor] = React.useState(-1);
 
-      /* The page's sheet, ensured where the page is drawn: the platform's own replace re-mounts a plugin over
-         the module table it already has and takes the package's style tags with it, so the mount is the one
-         place a sheet can be put back. */
-      useStyles();
+      /* No sheet is held here: the entry holds the page's sheet for the package's whole life, so the mount
+         finds it in place and a panel that is closed and opened again takes nothing away from the foot. */
 
       React.useEffect(() => {
         const reread = () => setRevision((revision) => revision + 1);
-        settle = reread;
-        const timer = setTimeout(() => setGracePassed(true), 1200);
+        settle = () => setSettled((count) => count + 1);
         const offSeat = ctx.slots.subscribe(SECTION_SEAT, reread);
         const offLocale = ctx.locale.subscribe(reread);
         return () => {
           settle = () => {};
-          clearTimeout(timer);
           offSeat();
           offLocale();
         };
       }, []);
+
+      /* The grace before an empty seat is said in words: armed on every settle, cleared by the next one and by
+         the unmount, so the word needs 1200 ms of a settled, empty seat. A countdown from the mount could
+         expire while the chunks still assemble their own parts, and the word would stand over a section about
+         to arrive. */
+      React.useEffect(() => {
+        if (pendingPulls !== 0) return undefined;
+        const timer = setTimeout(() => setGraceFor(settled), 1200);
+        return () => clearTimeout(timer);
+      }, [settled]);
 
       React.useEffect(() => {
         let live = true;
@@ -249,10 +283,11 @@ window.__ModuleLoader__.load({
       const active = rows.some((row) => row.id === chosen) ? chosen : (rows[0]?.id ?? null);
       /* A pane with no row is not yet known to be empty: a chunk may have applied and still be assembling its
          own parts, and a sentence that stops being true a moment later is worse than a blank frame. The pane
-         draws nothing until the pulls settle and a grace has passed; only then does an empty seat say so. */
+         draws nothing until the pulls settle and that settle's grace has passed; only then does an empty seat
+         say so. */
       const body = active !== null
         ? renderSlot(SECTION_SEAT, { id: active }, { only: active })
-        : (gracePassed && pendingPulls === 0
+        : (pendingPulls === 0 && graceFor === settled
           ? h('p', { key: 'empty', className: 'coreness-empty' }, t('seat.empty'))
           : null);
 
@@ -297,10 +332,10 @@ window.__ModuleLoader__.load({
 
     return {
       /* What this entry reads: the slots and the locale for the frame and the seat, the two remotes the
-         rail's version tag asks about the composition's own bundle, and the four the Qoder section and the
-         credits action read — a chunk borrows the entry's context, so this list is what waits for a service.
-         No settings form service stands here: the General page's Page Studio card writes through its own host
-         route, so the page works in a profile that mounts no platform settings surface. */
+         rail's version tag asks about the composition's own bundle, and the four the Qoder section, the
+         rate gate and the General page read through the context a chunk borrows — this list is what waits
+         for a service. No settings form service stands here: the General page's Page Studio card writes
+         through its own host route, so the page works in a profile that mounts no platform settings surface. */
       inject: [
         'slots',
         'locale',
@@ -317,6 +352,9 @@ window.__ModuleLoader__.load({
         t = ctx.locale.bind(NS);
         pendingPulls = CHUNKS.length;
         ctx.effect(() => ctx.locale.register(NS, 'en', EN), `${PACKAGE}: dictionary`);
+        /* The page's sheet stands here, with the package's life: its tokens and shared controls are read by
+           surfaces that do not stand inside the page's mount, so the sheet cannot wait for one. */
+        ctx.effect(() => holdStyles(), `${PACKAGE}: the page's sheet`);
 
         ctx.slots.inject('main', () => ctx.slots.register({
           name: 'main',
@@ -337,35 +375,43 @@ window.__ModuleLoader__.load({
            switches are cards drawn on the General page — no settings-form row is contributed. Each applies
            with this context and registers wherever its surface lives, so a chunk needs nothing from here
            but the context: one id per chunk, and no shared state to keep in step. A pull that never
-           arrives is said on the console; a surface simply stands without its part. */
+           arrives is said on the console; a surface simply stands without its part. Nothing is disposed
+           here: a chunk's own resources are its `ctx.effect` registrations, which end with the context it
+           was applied to. */
         for (const chunk of CHUNKS) {
           ctx.effect(() => {
             let live = true;
-            let dispose = null;
+            /* One settle for both answers — a pull that arrived and one that never did take the same guard,
+               one decrement and one re-render. The effect's disposal ends the count: a pull that settles
+               after it says nothing. */
+            const settlePull = () => {
+              if (!live) return;
+              live = false;
+              pendingPulls -= 1;
+              settle();
+            };
             require.async(chunk).then(
               (loaded) => {
                 if (!live) return;
-                pendingPulls -= 1;
                 /* A chunk whose apply throws is named like a pull that never arrived: the section's half is
                    missing, and a page standing without it and no line anywhere is the failure this entry
                    exists to say. The other settles still run. */
                 try {
-                  dispose = loaded.apply(ctx) ?? null;
+                  loaded.apply(ctx);
                 } catch (error) {
                   console.error(`${PACKAGE}: the chunk ${chunk} did not apply: ${error?.message ?? error}`);
                 } finally {
-                  settle();
+                  settlePull();
                 }
               },
               (error) => {
-                pendingPulls -= 1;
+                if (!live) return;
                 console.error(`${PACKAGE}: the chunk ${chunk} did not arrive: ${error?.message ?? error}`);
-                settle();
+                settlePull();
               },
             );
             return () => {
               live = false;
-              if (typeof dispose === 'function') dispose();
             };
           }, `${PACKAGE}: ${chunk}`);
         }

@@ -35,27 +35,29 @@ window.__ModuleLoader__.load({
       /**
        * The one sentence of the section's room, and its tone.
        *
-       * The empty case says **nothing**: a sentence about there being no limit repeated what the cards already show.
-       * The room is drawn in every state and reserves no height: nothing on this page is reserved, so an empty room
-       * is a quiet room of no lines, the cards under it keep the list's own line of air, and a sentence that arrives
-       * takes its line and moves them by it.
+       * The room is drawn in every state and reserves no height: nothing on this page is reserved, so a sentence
+       * takes its line and moves the cards under it by that line. The words are the read's own — a read in flight,
+       * a failed read, a row nobody may write, a catalogue that could not be read or offers nothing, and the
+       * catalogue's refusal made on the read — and nothing is said about the section being empty.
        */
-      /* The two words this section's notes use for a state's tone, and the page's own tone class each one wears:
-         the word stays the section's — the walk and the batch read it in `data-tone` —
-         and the colour stands once in the page's sheet. A word with no entry here paints what it painted before. */
-      const TONE_CLASS = { done: ' coreness-tone-done', error: ' coreness-tone-fault' };
+      /* The one tone this section's room carries, and the page's own tone class it wears: the word stays the
+         section's — the walk and the batch read it in `data-tone` — and the colour stands once in the page's
+         sheet. A word with no entry here paints what it painted before. */
+      const TONE_CLASS = { fault: ' coreness-tone-fault' };
 
       function noteOf(view) {
-        /* A read in flight says nothing: the load is background here, as on the other pages of this page, and a word
-           that only reports it would either reserve a line forever or move the cards once for no news. */
-        if (view.status === 'loading') return { tone: null, text: '' };
-        if (view.status === 'failed') return { tone: 'error', text: `${t('state.error')} — ${view.fault}` };
-        if (view.settings !== null && view.settings.ok === false) return { tone: 'warn', text: t('state.unwritable', { fault: view.settings.fault }) };
+        /* A read in flight says so: the card's boxes are blank until it answers, and a reader who is not told the
+           read is running reads three blanks as three unset values. */
+        if (view.status === 'loading') return { tone: null, text: t('state.reading') };
+        if (view.status === 'failed') return { tone: 'fault', text: `${t('state.error')} — ${view.fault}` };
+        /* A row nobody may write is a fault of the write, and the page's tones are two: done and fault. */
+        if (view.settings !== null && view.settings.ok === false) return { tone: 'fault', text: t('state.unwritable', { fault: view.settings.fault }) };
         /* A catalogue that could not be read is a failure, not an empty list: the pickers offer nothing because
            nothing was read, and the section says so instead of letting the profile read as empty. */
-        if (view.catalogFault !== null && view.catalogFault !== undefined) return { tone: 'error', text: `${t('catalog.failed')} — ${view.catalogFault}` };
-        /* The sentence about the window is no longer this room's: it left for the caption, which is drawn in every
-           state. The room keeps the read's own words — a read in flight, a failed read, a row nobody may write. */
+        if (view.catalogFault !== null && view.catalogFault !== undefined) return { tone: 'fault', text: `${t('catalog.failed')} — ${view.catalogFault}` };
+        /* A catalogue that was read and offers no pair is a condition of the section, and the room is where the
+           section's conditions stand: the add row keeps its one control. */
+        if (view.catalog !== null && view.catalog !== undefined && shared.pairsOf(view.catalog).length === 0) return { tone: null, text: t('add.none') };
         return { tone: null, text: '' };
       }
 
@@ -94,17 +96,28 @@ window.__ModuleLoader__.load({
           apply: act.apply ?? (() => {}),
         };
         const refused = view.picture?.refused ?? [];
-        return h('div', { className: 'coreness-still coreness-gate coreness-sectionBody' }, [
+        /* The room names its state as every section's root does — `reading` while the first read runs, `failed`
+           when the picture did not answer, `ready` after it — so the page's walk reads one vocabulary across the
+           sections. The settings row's fault is the room's sentence, not the section's state: the picture is there. */
+        return h('div', {
+          className: 'coreness-still coreness-sectionBody',
+          'data-state': view.status === 'loading' ? 'reading' : view.status === 'failed' ? 'failed' : 'ready',
+        }, [
           h('div', { key: 'head', className: 'coreness-sectionHead coreness-gate-head' }, [
-            h('h4', { key: 'title', className: 'coreness-sectionTitle' }, t('title')),
+            h('h4', { key: 'title', className: 'coreness-sectionTitle' }, t('section')),
           ]),
           /* The caption carries the surface's own sentence as well: a property of the section stands in every state, so
              it is drawn always — and a line that is always drawn moves nothing when a press answers. */
           h('p', { key: 'caption', className: 'coreness-sectionIntro' }, [t('caption'), ' ', t('state.standing')]),
-          /* The one room the section's own sentence stands in, in every state: the room keeps no height of
-             its own, so the cards move by the line an arriving sentence takes. */
-          h('p', { key: 'state', className: 'coreness-gate-state' + (TONE_CLASS[note.tone] ?? ''), 'data-tone': note.tone ?? 'plain' }, note.text),
-          h('ul', { key: 'cards', className: 'coreness-list coreness-gate-cards coreness-card-list' }, [
+          /* The one room the section's own sentence stands in, in every state: the room keeps no height of its
+             own, so the cards move by the line an arriving sentence takes. Its word is the page's small role worn
+             beside this class; the tone stands in the attribute, and a room with nothing in it states none. */
+          h('p', {
+            key: 'state',
+            className: 'coreness-dim coreness-gate-state' + (TONE_CLASS[note.tone] ?? ''),
+            'data-tone': note.text === '' ? undefined : note.tone,
+          }, note.text),
+          h('ul', { key: 'cards', className: 'coreness-list coreness-card-list' }, [
             shared.limitCard({ ...view, busy }, acting),
             ...rows.map(({ row }, index) => shared.rowCard({
               row,
@@ -118,7 +131,7 @@ window.__ModuleLoader__.load({
              that hid it would let the reader believe a ceiling stands that does not. The host's own sentence is the
              line — the route already wrote it in words, with the index and the pair in it. Nothing is added to the
              tree when the picture refuses none, so a frame without refused rows keeps the set's own frame. */
-          ...(refused.length === 0 ? [] : [h('div', { key: 'refused', className: 'coreness-gate-refused' }, [
+          ...(refused.length === 0 ? [] : [h('div', { key: 'refused', className: 'coreness-gate-refused coreness-failed' }, [
             h('p', { key: 'title', className: 'coreness-gate-refusedTitle' }, t('refused.title')),
             h('ul', { key: 'list', className: 'coreness-gate-refusedList' }, refused.map((one, index) => h('li', {
               key: `r${index}`,
@@ -127,7 +140,8 @@ window.__ModuleLoader__.load({
           ])]),
           /* The control stands in **every** state, the loading one included: it waits for the catalogue by being
              disabled and saying so, not by being absent. The first frame therefore holds the same tile the ready frame
-             holds, and the card and the section do not move when the read lands. */
+             holds, and the card and the section do not move when the read lands. The add row keeps one child, as the
+             sections beside this one do; a catalogue that offers nothing is said in the room above. */
           h('div', { key: 'add', className: 'coreness-addRow' }, [
             h('button', {
               key: 'add',
@@ -136,7 +150,6 @@ window.__ModuleLoader__.load({
               disabled: busy || view.catalog === null,
               onClick: () => acting.addRow(),
             }, view.catalogFault !== null && view.catalogFault !== undefined ? t('add.unread') : view.catalog === null ? t('add.reading') : t('control.add')),
-            view.catalog !== null && shared.pairsOf(view.catalog).length === 0 ? h('span', { key: 'none', className: 'coreness-gate-dim' }, t('add.none')) : null,
           ]),
         ]);
       }
@@ -192,7 +205,7 @@ window.__ModuleLoader__.load({
         React.useEffect(() => {
           const note = state.view.note;
           if (note === null || note === undefined) return undefined;
-          const timer = setTimeout(() => setState((now) => ({ view: { ...now.view, note: null } })), hold.holdOf());
+          const timer = setTimeout(() => setState((now) => ({ view: { ...now.view, note: null } })), hold.NOTE_HOLD_MS);
           return () => clearTimeout(timer);
         }, [state.view.note]);
 
@@ -201,6 +214,10 @@ window.__ModuleLoader__.load({
          *
          * It merges into whatever the section holds by then — the state updater is the only reader of the
          * current view, so a beat that lands while a user is typing never overwrites the draft.
+         *
+         * A settings read that fails keeps the row the section last read: the room names the fault, and the boxes
+         * go on reporting the row the platform last held rather than going blank under a sentence that says the
+         * row cannot be addressed from here.
          */
         async function read() {
           try {
@@ -212,7 +229,7 @@ window.__ModuleLoader__.load({
                 status: 'ready',
                 picture,
                 settings,
-                read: shared.valuesOf(settings.ok === true ? settings : null),
+                read: settings.ok === true ? shared.valuesOf(settings) : now.view.read,
                 fault: null,
               },
             }));
@@ -365,11 +382,10 @@ window.__ModuleLoader__.load({
               /* A press with nothing to write is **answered rather than met with silence**: the draft closes, and
                  the section's own strip — the surface that outlives the press — says the third word the dictionary
                  above promises for a press that changed nothing. Its tone is the page's own word for it, `plain`,
-                 written here rather than left to the drawing's fallback (`answerNote.tone ?? 'plain'`): the tone of
-                 an answer is a decision, and the MCP section decides the same one for the same word off the
-                 dictionary's key (`noteToneOf`) — a word that reads the same and carries no tone
-                 is a colour nobody chose. No reason travels with it: nothing failed and nothing was asked, so
-                 there is nothing to say beside the word. */
+                 written here and not left to the drawing: the tone of an answer is a decision, and the MCP section
+                 decides the same one for the same word off the dictionary's key (`noteToneOf`) — a word that reads
+                 the same and carries no tone is a colour nobody chose. No reason travels with it: nothing failed
+                 and nothing was asked, so there is nothing to say beside the word. */
               setState((now) => ({ view: { ...now.view, draft: null, note: { tone: 'plain', text: t('state.nothing'), at: null } } }));
               return;
             }

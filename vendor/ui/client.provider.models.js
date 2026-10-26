@@ -246,7 +246,7 @@ window.__ModuleLoader__.load({
              model, and because two roads can be compared only by their numbers. */
           'data-max-tokens': entry?.maxTokens === undefined ? '' : String(entry.maxTokens),
         }, [
-          h('div', { key: 'head', className: 'coreness-qoder-head coreness-card-head' }, [
+          h('div', { key: 'head', className: 'coreness-card-head' }, [
             /* The row reads as the option does: the name the vendor published, the host's separator and the
                multiplier that came with the same answer (`optionWords` carries the list's own reading). A row
                the listing does not carry has no rate to show and is named without one. */
@@ -257,10 +257,10 @@ window.__ModuleLoader__.load({
           ]),
           ...marks?.description === null || marks?.description === undefined
             ? []
-            : [h('p', { key: 'desc', className: 'coreness-qoder-dim coreness-dim' }, marks.description)],
+            : [h('p', { key: 'desc', className: 'coreness-dim' }, marks.description)],
           h('div', { key: 'fields', className: 'coreness-qoder-grid' }, [
-            h('div', { key: 'id', className: 'coreness-field coreness-qoder-field' }, [
-              h('span', { key: 'label', className: 'coreness-fieldLabel coreness-qoder-fieldLabel' }, t('models.model')),
+            h('div', { key: 'id', className: 'coreness-field' }, [
+              h('span', { key: 'label', className: 'coreness-fieldLabel' }, t('models.model')),
               /* The model is chosen from the live catalogue: the vendor names a model differently in its own
                  menu than on the wire, so an id typed from memory is a guess. What the list draws is the
                  vendor's own name and the rate it published — the wire id stands only where two names would
@@ -286,8 +286,8 @@ window.__ModuleLoader__.load({
                 onChoose: (next) => act.chooseModel(index, next),
               }),
             ]),
-            h('div', { key: 'effort', className: 'coreness-field coreness-qoder-field' }, [
-              h('label', { key: 'label', className: 'coreness-fieldLabel coreness-qoder-fieldLabel' }, t('models.effortLabel')),
+            h('div', { key: 'effort', className: 'coreness-field' }, [
+              h('label', { key: 'label', className: 'coreness-fieldLabel' }, t('models.effortLabel')),
               /* The control offers the levels this model's own vendor publishes, read from the live
                  catalogue's entry for the row's id, plus the level that stands and our own `Off` — and it is
                  the page's own picker, the same control the wire id is chosen with, not a native `select`.
@@ -308,11 +308,11 @@ window.__ModuleLoader__.load({
                 onChoose: (next) => act.patchRow(index, { effort: next }),
               }),
             ]),
-            h('div', { key: 'window', className: 'coreness-field coreness-qoder-field' }, [
-              h('label', { key: 'label', className: 'coreness-fieldLabel coreness-qoder-fieldLabel' }, t('models.window')),
+            h('div', { key: 'window', className: 'coreness-field' }, [
+              h('label', { key: 'label', className: 'coreness-fieldLabel' }, t('models.window')),
               h('input', {
                 key: 'input',
-                className: 'coreness-qoder-input coreness-field coreness-field-box',
+                className: 'coreness-field coreness-field-box',
                 type: 'text',
                 value: draft.window,
                 disabled: view.busy !== null,
@@ -326,12 +326,12 @@ window.__ModuleLoader__.load({
             ]),
           ]),
           h('div', { key: 'inputs', className: 'coreness-qoder-inputs' }, [
-            h('span', { key: 'label', className: 'coreness-fieldLabel coreness-qoder-fieldLabel' }, t('models.inputs')),
-            h('label', { key: 'text', className: 'coreness-check coreness-qoder-check' }, [
+            h('span', { key: 'label', className: 'coreness-fieldLabel' }, t('models.inputs')),
+            h('label', { key: 'text', className: 'coreness-check' }, [
               h('input', { key: 'box', type: 'checkbox', checked: true, disabled: true, readOnly: true }),
               t('models.text'),
             ]),
-            h('label', { key: 'image', className: 'coreness-check coreness-qoder-check' }, [
+            h('label', { key: 'image', className: 'coreness-check' }, [
               h('input', {
                 key: 'box',
                 type: 'checkbox',
@@ -345,7 +345,7 @@ window.__ModuleLoader__.load({
             h('button', {
               key: 'remove',
               type: 'button',
-              className: 'coreness-qoder-button coreness-button',
+              className: 'coreness-button',
               disabled: view.busy !== null,
               onClick: () => act.removeRow(index),
             }, t('models.remove')),
@@ -422,67 +422,73 @@ window.__ModuleLoader__.load({
        */
       function modelsCard(view, act, headOf, rows, problems, clashing) {
         const state = view.view;
-        return h('div', { key: 'models', className: 'coreness-qoder-card' }, [
+        return h('li', { key: 'models', className: 'coreness-card-box' }, [
           headOf('models', `${t('models.label')} (${rows.length})`, [
             /* The tag says the one thing a reader cannot get anywhere else: a route that is declared and **not**
                registered fails every request through it. A word about the ordinary state is not news, and the head
                says the ordinary state by being there. */
             state.live ? null : h('span', { key: 'live', className: 'coreness-tag coreness-qoder-tag' }, t('state.unregistered')),
           ]),
-          /* The list's own room, with the list's own news inside it: what the catalogue is doing or what it
-             answered, the sentence a route with no model gets, and the rows — one block whatever the state.
-             A line standing beside the list would be a block the card grew and dropped as the answer landed,
-             and everything under it would move by that line's height every time: the shape the page's own
-             check holds (no card changes what stands under its head in any state). */
-          h('ul', { key: 'list', className: 'coreness-list coreness-qoder-models' }, [
-            catalogueNote(state) === null
-              ? null
-              : h('li', { key: 'catalogue', className: 'coreness-qoder-line' }, catalogueNote(state)),
-            ...(rows.length === 0
-              ? [h('li', { key: 'none', className: 'coreness-qoder-dim coreness-dim' }, t('models.none'))]
-              : rows.map((row, index) => modelRow(row, index, view, problems, act, clashing))),
-          ]),
-          h('div', { key: 'add', className: 'coreness-qoder-actions' }, h('button', {
-            key: 'addRow',
-            type: 'button',
-            className: 'coreness-add coreness-qoder-add coreness-button',
-            /* A row is chosen from the live catalogue: without it, adding a row would offer an empty
-               picker whose only value is a guess. */
-            disabled: view.busy !== null || state.catalogue.models === null,
-            onClick: () => act.addRow(),
-          }, t('models.addRow'))),
-          /* The one refusal left in this card: the fallback window has no control here, and an empty place
-             would read as a control that was forgotten. The effort's own footnote went with the control
-             that now moves it. */
-          h('p', { key: 'windowNote', className: 'coreness-qoder-dim coreness-dim' }, t('models.windowNote')),
-          h('p', { key: 'note', className: 'coreness-qoder-dim coreness-dim' }, t('models.note')),
-          h('div', { key: 'actions', className: 'coreness-qoder-foot' }, [
-            h('button', {
-              key: 'reset',
-              type: 'button',
-              className: 'coreness-qoder-button coreness-button',
-              'data-align': 'start',
-              disabled: view.busy !== null,
-              onClick: () => act.reset(),
-            }, t('reset')),
-            h('div', { key: 'right', className: 'coreness-qoder-actions' }, [
-              /* Apply stands only over a draft: the section as it was read has nothing to write, and a
-                 press that wrote the same list back would be an edit nobody made. */
-              h('button', {
-                key: 'cancel',
+          h('div', { key: 'body', className: 'coreness-card-body' }, [
+            /* The list's own room, with the list's own news inside it: what the catalogue is doing or what it
+               answered, the sentence a route with no model gets, and the rows — one block whatever the state.
+               A line standing beside the list would be a block the card grew and dropped as the answer landed,
+               and everything under it would move by that line's height every time: the shape the page's own
+               check holds (no card changes what stands under its head in any state). */
+            /* The rows and the control that adds one are one block, outside the body's gap: the add row keeps
+               the set's own 12 under the last row — the card body's gap is between blocks, not between a list
+               and the press that grows it. */
+            h('div', { key: 'rows' }, [
+              h('ul', { key: 'list', className: 'coreness-list' }, [
+                catalogueNote(state) === null
+                  ? null
+                  : h('li', { key: 'catalogue', className: 'coreness-qoder-line' }, catalogueNote(state)),
+                ...(rows.length === 0
+                  ? [h('li', { key: 'none', className: 'coreness-dim' }, t('models.none'))]
+                  : rows.map((row, index) => modelRow(row, index, view, problems, act, clashing))),
+              ]),
+              h('div', { key: 'add', className: 'coreness-addRow' }, h('button', {
+                key: 'addRow',
                 type: 'button',
-                className: 'coreness-qoder-button coreness-button',
-                disabled: view.busy !== null || view.draft === null,
-                onClick: () => act.cancel(),
-              }, t('cancel')),
+                className: 'coreness-add coreness-button',
+                /* A row is chosen from the live catalogue: without it, adding a row would offer an empty
+                   picker whose only value is a guess. */
+                disabled: view.busy !== null || state.catalogue.models === null,
+                onClick: () => act.addRow(),
+              }, t('models.addRow'))),
+            ]),
+            /* The one refusal left in this card: the fallback window has no control here, and an empty place
+               would read as a control that was forgotten. The effort's own footnote went with the control
+               that now moves it. */
+            h('p', { key: 'windowNote', className: 'coreness-dim' }, t('models.windowNote')),
+            h('p', { key: 'note', className: 'coreness-dim' }, t('models.note')),
+            h('div', { key: 'actions', className: 'coreness-qoder-foot' }, [
               h('button', {
-                key: 'apply',
+                key: 'reset',
                 type: 'button',
-                className: 'coreness-qoder-button coreness-button',
-                'data-tone': 'primary',
-                disabled: view.busy !== null || problems.length > 0 || view.draft === null,
-                onClick: () => act.apply(),
-              }, view.busy === 'models' ? t('models.applying') : t('apply')),
+                className: 'coreness-button',
+                disabled: view.busy !== null,
+                onClick: () => act.reset(),
+              }, t('reset')),
+              h('div', { key: 'right', className: 'coreness-qoder-actions' }, [
+                /* Apply stands only over a draft: the section as it was read has nothing to write, and a
+                   press that wrote the same list back would be an edit nobody made. */
+                h('button', {
+                  key: 'cancel',
+                  type: 'button',
+                  className: 'coreness-button',
+                  disabled: view.busy !== null || view.draft === null,
+                  onClick: () => act.cancel(),
+                }, t('cancel')),
+                h('button', {
+                  key: 'apply',
+                  type: 'button',
+                  className: 'coreness-button',
+                  'data-tone': 'primary',
+                  disabled: view.busy !== null || problems.length > 0 || view.draft === null,
+                  onClick: () => act.apply(),
+                }, view.busy === 'models' ? t('models.applying') : t('apply')),
+              ]),
             ]),
           ]),
         ]);

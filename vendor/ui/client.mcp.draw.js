@@ -34,7 +34,7 @@ window.__ModuleLoader__.load({
         const attribute = trimmed ? { title: words } : null;
         if (row.url !== null && row.url !== '') return h('code', attribute, shown);
         if (row.command !== null && row.command !== '') return h('code', attribute, shown);
-        return h('span', { className: 'coreness-mcp-dim coreness-dim', ...attribute }, shown);
+        return h('span', { className: 'coreness-dim', ...attribute }, shown);
       }
 
       /** The count line over the section: the total, then only the states that occur. */
@@ -54,12 +54,19 @@ window.__ModuleLoader__.load({
         const picture = view.picture;
         const rows = picture?.rows ?? [];
 
-        /* Before the first answer nothing is drawn — not even a count line. A count over a roster
-           nobody has read says the profile declares no server, and that is a claim this section has
-           not earned; the words appear when the read that earns them has come back. The room is named
-           `reading` while that read runs, so a reader is not left to tell this silence from the other
-           silences the section draws: it is a state, and it is the only one that makes no claim. */
-        if (view.status === 'loading') return h('div', { className: 'coreness-still coreness-mcp coreness-sectionBody', 'data-state': 'reading' }, []);
+        /* Before the first answer the section's frame stands — its head and its intro — so the answer lands in a
+           section that was already there and moves nothing. The count and the roster do not: both are the read's
+           news, and a count over a roster nobody has read would state that the profile declares no server. The
+           room is named `reading` while that read runs. A card of the roster cannot stand before its row is read
+           — a frame with no name would be a row inventing itself — so what stands is the section, not a card. */
+        if (view.status === 'loading') {
+          return h('div', { className: 'coreness-still coreness-sectionBody', 'data-state': 'reading' }, [
+            h('div', { key: 'head', className: 'coreness-sectionHead' }, [
+              h('h4', { key: 'title', className: 'coreness-sectionTitle' }, t('title')),
+            ]),
+            h('p', { key: 'intro', className: 'coreness-sectionIntro' }, t('intro')),
+          ]);
+        }
 
         const head = h('div', { key: 'head', className: 'coreness-sectionHead' }, [
           h('h4', { key: 'title', className: 'coreness-sectionTitle' }, t('title')),
@@ -69,35 +76,35 @@ window.__ModuleLoader__.load({
         const parts = [head, h('p', { key: 'intro', className: 'coreness-sectionIntro' }, t('intro'))];
 
         if (view.status === 'failed') {
-          parts.push(h('div', { key: 'failed', className: 'coreness-mcp-failed coreness-failed' }, [
+          parts.push(h('div', { key: 'failed', className: 'coreness-failed' }, [
             h('p', { key: 'word', role: 'alert' }, view.fault === null ? t('state.failed') : shared.faultLines(view.fault.code, view.fault.message).join(' — ')),
           ]));
           /* The picture that stands is drawn under the reason: a read that failed is not a reason to empty the
              section, and the reader keeps the rows this session already read. Only when there is nothing to
              keep does the section stand as the fault alone. */
-          if (picture === null || picture.state !== 'ready') return h('div', { className: 'coreness-still coreness-mcp coreness-sectionBody' }, parts);
+          if (picture === null || picture.state !== 'ready') return h('div', { className: 'coreness-still coreness-sectionBody' }, parts);
         }
 
         if (picture.state === 'no-file') {
-          parts.push(h('p', { key: 'nofile', className: 'coreness-mcp-status coreness-dim', role: 'status' }, t('state.nofile')));
-          parts.push(h('p', { key: 'hint', className: 'coreness-mcp-dim coreness-dim' }, t('state.nofile.hint')));
-          return h('div', { className: 'coreness-still coreness-mcp coreness-sectionBody' }, parts);
+          parts.push(h('p', { key: 'nofile', className: 'coreness-dim', role: 'status' }, t('state.nofile')));
+          parts.push(h('p', { key: 'hint', className: 'coreness-dim' }, t('state.nofile.hint')));
+          return h('div', { className: 'coreness-still coreness-sectionBody' }, parts);
         }
 
         if (picture.state === 'failed') {
-          parts.push(h('div', { key: 'failed', className: 'coreness-mcp-failed coreness-failed' }, [
+          parts.push(h('div', { key: 'failed', className: 'coreness-failed' }, [
             h('p', { key: 'word', role: 'alert' }, t('state.failed')),
             h('p', { key: 'reason' }, String(picture.reason)),
           ]));
-          return h('div', { className: 'coreness-still coreness-mcp coreness-sectionBody' }, parts);
+          return h('div', { className: 'coreness-still coreness-sectionBody' }, parts);
         }
 
         if (picture.file.enabled === false) {
-          parts.push(h('p', { key: 'off', className: 'coreness-mcp-warn', role: 'status' }, t('state.offFile')));
+          parts.push(h('p', { key: 'off', className: 'coreness-dim coreness-tone-fault', 'data-tone': 'fault', role: 'status' }, t('state.offFile')));
         }
 
         if (rows.length === 0) {
-          parts.push(h('p', { key: 'empty', className: 'coreness-mcp-status coreness-dim', role: 'status' }, t('empty')));
+          parts.push(h('p', { key: 'empty', className: 'coreness-dim', role: 'status' }, t('empty')));
         } else {
           const cards = rows.map((row) => shared.cardOf({
             key: row.entryId,
@@ -107,7 +114,7 @@ window.__ModuleLoader__.load({
             open: (view.open ?? new Set()).has(row.entryId),
             menu: view.menu ?? null,
           }));
-          parts.push(h('ul', { key: 'rows', className: 'coreness-list coreness-mcp-rows coreness-card-list' }, cards));
+          parts.push(h('ul', { key: 'rows', className: 'coreness-list coreness-card-list' }, cards));
         }
 
         if (view.editor !== null && view.editor.draft.entryId === null) {
@@ -123,25 +130,25 @@ window.__ModuleLoader__.load({
             }, t('add'))));
         }
 
-        if (view.confirm !== null) parts.push(shared.dialogOf(view.confirm, view, act));
+        if (view.confirm !== null) parts.push(shared.dialogOf(view.confirm, act));
 
         /* The settled room is named by the picture's own state, so the name and the words drawn in the room
            are one fact: nothing here is inferred from the length of the roster. */
-        return h('div', { className: 'coreness-still coreness-mcp coreness-sectionBody', 'data-state': picture.state }, parts);
+        return h('div', { className: 'coreness-still coreness-sectionBody', 'data-state': picture.state }, parts);
       }
 
-      /** The word of one outcome, as the plugin's own answer names it. */
+      /** The word of one outcome, as the plugin's own answer names it: the page's one word for a change that landed. */
       function outcomeWord(result) {
         const words = {
-          created: 'done.created',
-          updated: 'done.updated',
-          nothing: 'done.nothing',
-          removed: 'done.removed',
+          created: 'state.written',
+          updated: 'state.written',
+          nothing: 'state.nothing',
+          removed: 'state.written',
           /* The two names a toggle answers with read as a save reads: the tree was written, and that is the
              outcome. The row's own control already says Enabled or Disabled — the row carries the state and the
              answer carries what the press did — so no word is invented for the switch. */
-          enabled: 'done.updated',
-          disabled: 'done.updated',
+          enabled: 'state.written',
+          disabled: 'state.written',
         };
         return words[result] ?? null;
       }
@@ -158,11 +165,11 @@ window.__ModuleLoader__.load({
       }
 
 
-      /* The tone words this section's notes and rows use, and the page's own tone class each one wears:
-         the word stays this section's — the instruments read it in `data-tone` and
-         `data-level` — and the colour stands once in the page's sheet. A word with no entry here paints what it
-         painted before. */
-      const TONE_CLASS = { done: ' coreness-tone-done', fault: ' coreness-tone-fault', danger: ' coreness-tone-fault', error: ' coreness-tone-fault' };
+      /* The tone words this section's notes and rows use, and the set's own class each one wears: the word stays
+         this section's — the instruments read it in `data-tone` — and the colour stands once in the page's sheet.
+         The vocabulary is the set's: `done` and `fault` for a state, and `danger` for the destructive press's own
+         colour. A word with no entry here paints what it painted before. */
+      const TONE_CLASS = { done: ' coreness-tone-done', fault: ' coreness-tone-fault', danger: ' coreness-tone-danger' };
 
       /**
        * The tone of one note: a refusal is a fault, a press that **changed nothing** is plain — the user's own
@@ -172,7 +179,7 @@ window.__ModuleLoader__.load({
        */
       function noteToneOf(note) {
         if (note.fault !== undefined) return 'fault';
-        return note.word === 'done.nothing' ? 'plain' : 'done';
+        return note.word === 'state.nothing' ? 'plain' : 'done';
       }
 
       /** The reason a refusal carries: the code's own sentence, which stands as the strip's tooltip and not as its word. */
@@ -190,15 +197,16 @@ window.__ModuleLoader__.load({
       /**
        * The note a card carries: the last press that named this row, and nothing else.
        *
-       * One word stands in one place, and that place is where the press was made: a confirmation still open
-       * draws it (a removal is asked for there), an editor still open draws it (a refusal left it standing
-       * beside the draft), and a row at rest draws it in the room its own state keeps.
+       * The card's strip is the page's answer room, so a press's word stands there whatever room the press was
+       * made in: the confirmation draws no answer of its own, and the editor of a row that stands leaves its word
+       * to that row's card. A draft that is not a row yet has no card, so the editor says that press's word itself
+       * — and the card whose name that draft happens to carry is not that press's room, even when the refusal is
+       * the file already holding the name.
        */
       function noteOf(row, view) {
         const note = view.note ?? null;
         if (!noteNames(note, row)) return null;
-        if (noteNames(note, view.editor === null ? null : draftRow(view.editor.draft))) return null;
-        if (noteNames(note, view.confirm)) return null;
+        if (view.editor !== null && view.editor.draft.entryId === null && noteNames(note, draftRow(view.editor.draft))) return null;
         return note;
       }
 

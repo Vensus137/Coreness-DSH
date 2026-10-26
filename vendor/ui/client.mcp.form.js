@@ -17,11 +17,11 @@ window.__ModuleLoader__.load({
         const busy = view.busy !== null;
         const http = draft.transport === 'streamable-http';
         const fields = [
-          h('div', { key: 'name', className: 'coreness-field coreness-mcp-field' }, [
-            h('label', { key: 'label', className: 'coreness-fieldLabel coreness-mcp-fieldLabel' }, draft.entryId === null ? t('field.name') : t('field.nameFixed')),
+          h('div', { key: 'name', className: 'coreness-field' }, [
+            h('label', { key: 'label', className: 'coreness-fieldLabel' }, draft.entryId === null ? t('field.name') : t('field.nameFixed')),
             h('input', {
               key: 'input',
-              className: 'coreness-mcp-input coreness-field coreness-field-box',
+              className: 'coreness-field coreness-field-box',
               value: draft.server,
               disabled: busy || draft.entryId !== null,
               'aria-label': t('field.name'),
@@ -29,8 +29,8 @@ window.__ModuleLoader__.load({
               onChange: (event) => act.patch({ server: event.target.value }),
             }),
           ]),
-          h('div', { key: 'transport', className: 'coreness-field coreness-mcp-field' }, [
-            h('span', { key: 'label', className: 'coreness-fieldLabel coreness-mcp-fieldLabel' }, t('field.transport')),
+          h('div', { key: 'transport', className: 'coreness-field' }, [
+            h('span', { key: 'label', className: 'coreness-fieldLabel' }, t('field.transport')),
             /* The kind is chosen in the page's own control, from the platform's two values: the words are
                the page's (`kind.http` and the like) and the value that travels is the platform's own
                spelling, exactly as the native select this replaced handed it over. */
@@ -45,11 +45,11 @@ window.__ModuleLoader__.load({
             }),
           ]),
           http
-            ? h('div', { key: 'url', className: 'coreness-field coreness-mcp-field' }, [
-              h('label', { key: 'label', className: 'coreness-fieldLabel coreness-mcp-fieldLabel' }, t('field.url')),
+            ? h('div', { key: 'url', className: 'coreness-field' }, [
+              h('label', { key: 'label', className: 'coreness-fieldLabel' }, t('field.url')),
               h('input', {
                 key: 'input',
-                className: 'coreness-mcp-input coreness-field coreness-field-box',
+                className: 'coreness-field coreness-field-box',
                 value: draft.url,
                 disabled: busy,
                 'aria-label': t('field.url'),
@@ -57,20 +57,20 @@ window.__ModuleLoader__.load({
                 onChange: (event) => act.patch({ url: event.target.value }),
               }),
             ])
-            : h('div', { key: 'command', className: 'coreness-field coreness-mcp-field' }, [
-              h('label', { key: 'label', className: 'coreness-fieldLabel coreness-mcp-fieldLabel' }, t('field.command')),
+            : h('div', { key: 'command', className: 'coreness-field' }, [
+              h('label', { key: 'label', className: 'coreness-fieldLabel' }, t('field.command')),
               h('input', {
                 key: 'input',
-                className: 'coreness-mcp-input coreness-field coreness-field-box',
+                className: 'coreness-field coreness-field-box',
                 value: draft.command,
                 disabled: busy,
                 'aria-label': t('field.command'),
                 onChange: (event) => act.patch({ command: event.target.value }),
               }),
-                h('p', { key: 'help', className: 'coreness-mcp-dim coreness-dim' }, t('help.command')),
+                h('p', { key: 'help', className: 'coreness-dim' }, t('help.command')),
             ]),
-          http ? null : h('div', { key: 'args', className: 'coreness-field coreness-mcp-field' }, [
-            h('label', { key: 'label', className: 'coreness-fieldLabel coreness-mcp-fieldLabel' }, t('field.args')),
+          http ? null : h('div', { key: 'args', className: 'coreness-field' }, [
+            h('label', { key: 'label', className: 'coreness-fieldLabel' }, t('field.args')),
             h('textarea', {
               key: 'area',
               className: 'coreness-mcp-input coreness-field coreness-field-box',
@@ -79,13 +79,13 @@ window.__ModuleLoader__.load({
               'aria-label': t('field.args'),
               onChange: (event) => act.patch({ args: event.target.value }),
             }),
-                h('p', { key: 'help', className: 'coreness-mcp-dim coreness-dim' }, t('help.args')),
+                h('p', { key: 'help', className: 'coreness-dim' }, t('help.args')),
           ]),
-          h('div', { key: 'timeout', className: 'coreness-field coreness-mcp-field' }, [
-            h('label', { key: 'label', className: 'coreness-fieldLabel coreness-mcp-fieldLabel' }, t('field.timeout')),
+          h('div', { key: 'timeout', className: 'coreness-field' }, [
+            h('label', { key: 'label', className: 'coreness-fieldLabel' }, t('field.timeout')),
             h('input', {
               key: 'input',
-              className: 'coreness-mcp-input coreness-field coreness-field-box',
+              className: 'coreness-field coreness-field-box',
               value: draft.timeout,
               disabled: busy,
               inputMode: 'numeric',
@@ -103,7 +103,7 @@ window.__ModuleLoader__.load({
           http ? pairsField('headers', t('field.headers'), draft, view, act) : null,
           /* The headers field writes a value into the servers file at rest, and the warning stands under the field
              it is about, where the person typing it reads it. */
-          http ? h('p', { key: 'headersHelp', className: 'coreness-mcp-dim coreness-dim' }, t('help.headers')) : null,
+          http ? h('p', { key: 'headersHelp', className: 'coreness-dim' }, t('help.headers')) : null,
         ].filter((field) => field !== null);
 
         /* The form's own pair, in the one order every card of this page keeps and the harness itself keeps: `Cancel`
@@ -129,11 +129,11 @@ window.__ModuleLoader__.load({
           }, busy ? t('saving') : t('apply')),
         ];
 
-        /* A refusal of a **new** row is said here, in the editor: there is no card yet, so there is no head to
-           put it in — the one answer the page cannot place in a card's own strip. Every other answer stands in
-           the head of the card the press was made in (`cardOf`), the editor of a row included. The draft is the
-           fact that stands when the news goes. */
+        /* A refusal of a **new** row has no card to stand in: the row does not exist yet, so the editor keeps the
+           draft and says the word itself, in its own line. The editor of a row that stands leaves every answer to
+           that row's card, whose strip is the page's answer room — as the removal's confirmation does. */
         const note = draft.entryId === null && shared.noteNames(view.note ?? null, shared.draftRow(draft)) ? view.note : null;
+        const noteTone = note === null ? null : shared.noteToneOf(note);
         /* What this save will drop, when the draft leaves the branch: the row as the file holds it, read against
            the branch the draft now carries. The line stands before the press — the loss is named while the reader
            can still change his mind — and nothing is said when the branch stays. */
@@ -142,8 +142,7 @@ window.__ModuleLoader__.load({
 
         /* The same press as the strip's, where the strip does not carry it: the flow stands to run the attempt at
            this row and the standard's signals announced no door, so the row's own settings are the only way a
-           person can ask (requirement 6). A draft that is not saved yet has no row to sign in, and no control is
-           drawn for one. */
+           person can ask. A draft that is not saved yet has no row to sign in, and no control is drawn for one. */
         const signin = row === null ? null : (view.signins ?? {})[row.entryId] ?? null;
         const signHere = row !== null && shared.signinPlace(row, signin) === 'settings';
 
@@ -161,13 +160,13 @@ window.__ModuleLoader__.load({
                   onClick: () => act.signin(row),
                 }, t('signin'))
                 : null,
-              /* The editor is a head of its own, and its answer stands where Qoder's stands: the top right. The
-                 row's own head keeps its answer in the middle — two heads, two places, both by the user's word. */
+              /* The editor's own answer line, for the press that made no row: it stands at the top right of the
+                 editor, on the line the title and the sign-in stand on, and it takes the set's tone class for its
+                 state. The editor of a row that stands draws none — that row's card carries the word. */
               note === null ? null : h('span', {
                 key: 'note',
-                className: 'coreness-mcp-editorNote',
-                'data-tone': shared.noteToneOf(note),
-                'data-note': 'editor',
+                className: 'coreness-mcp-editorNote' + (shared.TONE_CLASS[noteTone] ?? ''),
+                'data-tone': noteTone,
                 role: 'status',
                 'aria-live': 'polite',
               }, shared.noteTextOf(note)),
@@ -177,11 +176,11 @@ window.__ModuleLoader__.load({
              and every field a newer host may add. It stood in the roster as a list of
              identifiers, where a reader could do nothing with it; here it is said once, in words, beside the
              fields it is about, and it names no identifier of a plugin's business. */
-          h('p', { key: 'kept', className: 'coreness-mcp-dim coreness-dim' }, t('editor.kept')),
+          h('p', { key: 'kept', className: 'coreness-dim' }, t('editor.kept')),
           lost === null ? null : h('p', {
             key: 'drop',
-            className: 'coreness-mcp-warn',
-            'data-note': 'drop',
+            className: 'coreness-dim coreness-tone-fault',
+            'data-tone': 'fault',
           }, t('editor.drop', {
             kind: shared.KIND_LABELS[row.transport] === undefined ? row.transport : t(shared.KIND_LABELS[row.transport]),
             fields: lost.join(', '),
@@ -195,9 +194,9 @@ window.__ModuleLoader__.load({
       function pairsField(kind, label, draft, view, act) {
         const pairs = kind === 'headers' ? draft.headers : draft.env;
         const busy = view.busy !== null;
-        return h('div', { key: kind, className: 'coreness-field coreness-mcp-field' }, [
-          h('label', { key: 'label', className: 'coreness-fieldLabel coreness-mcp-fieldLabel' }, label),
-          pairs.length === 0 ? null : h('ul', { key: 'rows', className: 'coreness-list coreness-mcp-pairs' }, pairs.map((pair, index) => shared.pairRow(kind, pair, index, view, act))),
+        return h('div', { key: kind, className: 'coreness-field' }, [
+          h('label', { key: 'label', className: 'coreness-fieldLabel' }, label),
+          pairs.length === 0 ? null : h('ul', { key: 'rows', className: 'coreness-list' }, pairs.map((pair, index) => shared.pairRow(kind, pair, index, view, act))),
           h('div', { key: 'add', className: 'coreness-mcp-editorActions' }, h('button', {
             key: 'add',
             type: 'button',
@@ -239,8 +238,8 @@ window.__ModuleLoader__.load({
 
 
       /** The confirmation of a removal: the host's own dialog over its own mask. */
-      function dialogOf(row, view, act) {
-        return h(ConfirmDialog, { key: 'confirm', row, view, act });
+      function dialogOf(row, act) {
+        return h(ConfirmDialog, { key: 'confirm', row, act });
       }
 
       /**
@@ -248,10 +247,10 @@ window.__ModuleLoader__.load({
        *
        * The focus moves to the cancel button on mount, Tab stays within the two actions, Escape closes the
        * dialog, and the focus goes back to the row's menu trigger. The title names the dialog; the press that
-       * asks for the removal is made here, so a refusal of it is said here too — behind the mask the reader
-       * cannot see the card's own room, and the answer belongs where the hand is.
+       * asks for the removal is made here, and its answer stands in the card's own strip — the dialog closes on
+       * the answer, so the word it left behind is not hidden behind the mask.
        */
-      function ConfirmDialog({ row, view, act }) {
+      function ConfirmDialog({ row, act }) {
         const mask = React.useRef(null);
         const cancel = React.useRef(null);
         const back = React.useRef(null);
@@ -285,7 +284,6 @@ window.__ModuleLoader__.load({
           };
         }, []);
         const busy = act.isBusy(row.entryId);
-        const note = shared.noteNames(view.note ?? null, row) ? view.note : null;
         const titleId = `mcp-confirm-title-${String(row.entryId).replace(/[^A-Za-z0-9_-]+/gu, '-')}`;
         return h('div', {
           key: 'confirm',
@@ -298,13 +296,6 @@ window.__ModuleLoader__.load({
           h('div', { key: 'dialog', className: 'coreness-mcp-dialog' }, [
             h('h4', { key: 'title', id: titleId, className: 'coreness-mcp-dialogTitle' }, t('confirm.title', { server: row.server ?? row.id })),
             h('p', { key: 'body', className: 'coreness-mcp-dialogBody' }, t('confirm.body')),
-            note === null ? null : h('p', {
-              key: 'note',
-              'data-tone': shared.noteToneOf(note),
-              'data-note': 'dialog',
-              role: 'status',
-              'aria-live': 'polite',
-            }, shared.noteTextOf(note)),
             h('div', { key: 'actions', className: 'coreness-mcp-editorActions' }, [
               h('button', {
                 key: 'no',

@@ -51,7 +51,10 @@ window.__ModuleLoader__.load({
         const [sweep, setSweep] = React.useState(null);
         const [draft, setDraft] = React.useState(null);
         const [webBusy, setWebBusy] = React.useState(false);
-        const [webNote, setWebNote] = React.useState(null);
+        /* Whether the automatic cleanup of a stale shared selection has already failed on this visit: it runs
+           when the read shows a selection outliving its switch, and a failure is said in the console and not
+           retried on every read. */
+        const [webCleanupFailed, setWebCleanupFailed] = React.useState(false);
         /* Which published read the cleanup below may act on: a mount paints `lastRead` first, and that
            picture can be older than the store. The cleanup waits for `take` to publish a fresh read. */
         const [readGeneration, setReadGeneration] = React.useState(0);
@@ -107,7 +110,7 @@ window.__ModuleLoader__.load({
            and its life is that value rather than the hold (the effect below). */
         React.useEffect(() => {
           if (note === null || note.stamp !== undefined) return undefined;
-          const timer = setTimeout(() => setNote(null), hold.holdOf());
+          const timer = setTimeout(() => setNote(null), hold.NOTE_HOLD_MS);
           return () => clearTimeout(timer);
         }, [note]);
 
@@ -216,9 +219,10 @@ window.__ModuleLoader__.load({
           setNote(null);
           setSweep(null);
           /* The answer is **news of this press**, so it is a note like the two refusals above and like every
-             other press's word in this section: it stands for the page's own hold and goes with it (the
-             effect above). The record set beside it — `setSweep` — keeps what the sweep found for the reasons
-             list under the cards and for the row's own address, and states no word of its own. */
+             other press's word in this section: its word stands in the card's strip for the page's own hold
+             and goes with it (the effect above). The record set beside it — `setSweep` — keeps what the sweep
+             found for the reasons list under the cards and for the row's own address, and states no word of
+             its own. */
           const news = (answer) => {
             const said = shared.sweepAccount(answer);
             return said === null ? { where: 'node', value: 'unanswered' } : { where: 'node', value: 'answered', detail: said };
@@ -241,7 +245,7 @@ window.__ModuleLoader__.load({
             }
             /* A pin needs no word of its own: the node that answered is written into the row, and the row's
                own node line changes to it — the confirmation is the address the reader watches. The answer
-               still stands beside it as this press's news, for its own hold. */
+               still stands in the card's strip as this press's news, for its own hold. */
             setNote(news(answer));
             await read();
           } catch (error) {
@@ -261,11 +265,14 @@ window.__ModuleLoader__.load({
 
         /* One write pair, in the documented order: the flag first on the way on, the two provider values
            first on the way off. The web row is re-read after the flag on the way on, because the first
-           write moves the revision the second one must carry. A failed write is shown and the section is
-           read again, so the box reports the live value rather than the value the press hoped for. */
+           write moves the revision the second one must carry. The control is the answer, so a failed write
+           is followed by the read: the box reports the live value rather than the value the press hoped
+           for, and the press's word stands in the card's strip, its reason in the console. */
         const toggleWeb = async (checked) => {
           setWebBusy(true);
-          setWebNote(null);
+          setNote(null);
+          setWebCleanupFailed(false);
+          let wrote = false;
           try {
             const qoder = state.view?.settings;
             if (qoder === null || qoder === undefined) throw new Error(t('web.unread'));
@@ -294,13 +301,20 @@ window.__ModuleLoader__.load({
               ]);
               if (!flag.wrote) throw new Error(flag.fault);
             }
+            wrote = true;
             await read();
+            setNote({ where: 'web', value: 'saved' });
           } catch (error) {
-            setWebNote(shared.reasonOf(error));
+            /* A write that did not land says its word in the strip; a read that failed after it leaves the
+               box unread, and that is the card's own condition in its corner. Either way the reason is the
+               console's, and the read below puts the box back on the platform's value. */
+            const said = shared.reasonOf(error);
+            kit.statusDetail(t('web.title'), said);
+            setNote({ where: 'web', value: wrote ? 'unread' : 'unsaved' });
             try {
               await read();
             } catch (readError) {
-              setWebNote(`${shared.reasonOf(error)} — ${shared.reasonOf(readError)}`);
+              kit.statusDetail(t('web.title'), shared.reasonOf(readError));
             }
           } finally {
             setWebBusy(false);
@@ -312,11 +326,12 @@ window.__ModuleLoader__.load({
         /**
          * A selection outliving its switch or its token still stands in the row: the Qoder half is cleared
          * on the read, so the platform's search returns; a DeepSeek half stays. The box is drawn off while
-         * the flag is off or the token is missing; the failure word is the switch's, one attempt per read.
+         * the flag is off or the token is missing; this cleanup is the read's own consequence — no press made
+         * it — so a failure is the console's and is not retried on every read.
          */
         const clearStaleWeb = async () => {
           setWebBusy(true);
-          setWebNote(null);
+          setWebCleanupFailed(false);
           try {
             const webNow = await shared.readWeb(ctx.remote);
             if (!webNow.ok) throw new Error(webNow.fault);
@@ -338,11 +353,12 @@ window.__ModuleLoader__.load({
             }
             await read();
           } catch (error) {
-            setWebNote(shared.reasonOf(error));
+            setWebCleanupFailed(true);
+            kit.statusDetail(t('web.title'), shared.reasonOf(error));
             try {
               await read();
             } catch (readError) {
-              setWebNote(`${shared.reasonOf(error)} — ${shared.reasonOf(readError)}`);
+              kit.statusDetail(t('web.title'), shared.reasonOf(readError));
             }
           } finally {
             setWebBusy(false);
@@ -352,7 +368,7 @@ window.__ModuleLoader__.load({
         /* The switch or the token can leave by either door — this section's clear or the platform's own
            Settings → Models. The section already re-reads on the credential announcement; this effect is
            the read's consequence: with the flag off or no token and a stale selection, one cleanup write,
-           then the section is read again. A failure stands in the card's note and is not retried on every
+           then the section is read again. A failure is said in the console and is not retried on every
            read. */
         const tokenMissing = state.view?.ref === null || state.view?.ref === undefined
           || state.view?.credential?.configured !== true;
@@ -361,9 +377,9 @@ window.__ModuleLoader__.load({
           if (readGeneration === 0 || state.status !== 'ready') return;
           if (state.view?.webEnabled === 'unknown') return;
           if (webSelected !== true || (tokenMissing !== true && state.view?.webEnabled !== false)) return;
-          if (webBusy || webNote !== null) return;
+          if (webBusy || webCleanupFailed) return;
           void clearStaleWeb();
-        }, [readGeneration, state.status, tokenMissing, webSelected, state.view?.webEnabled, webBusy, webNote]);
+        }, [readGeneration, state.status, tokenMissing, webSelected, state.view?.webEnabled, webBusy, webCleanupFailed]);
 
         /* The editor's own draft: built from the read rows the first time a field or a button is touched,
            and dropped by every read. */
@@ -388,11 +404,10 @@ window.__ModuleLoader__.load({
           /* The second add is not a defect and is not refused: the press appends a row, the draft keeps every row
              added until `Apply` writes the list, and a profile may hold the same model twice — so the two windows a
              second press leaves are legitimate, and what was missing was **the page saying what it did**. The
-             sentence stands in the card's own strip for the page's hold (`answerStrip`), and it says `another` only
-             where the draft already holds a row the file does not: that row is the earlier press's own, and it is
-             what the second window is. The file is not touched by this press, so the corner keeps the map's own word
-             for a draft that is not written (`unsaved`) — the act and the state are two facts and the page says
-             both. */
+             sentence stands in the models card's strip for the page's hold, and it says `another` only where the
+             draft already holds a row the file does not: that row is the earlier press's own, and it is what the
+             second window is. The file is not touched by this press, so the corner says the card's own condition
+             and the strip carries the press's sentence while its hold lasts. */
           const again = editing.some((row) => row.stored === undefined);
           setNote({ where: 'models', value: 'unsaved', line: t(again ? 'models.addedAgain' : 'models.added') });
           /* A new row names no effort, and the route's own effort answers for it until one is chosen: the
@@ -503,7 +518,6 @@ window.__ModuleLoader__.load({
           note,
           sweep,
           webBusy,
-          webNote,
           draft: state.view?.status === 'ready' ? (draft === null ? null : editing) : null,
         };
 

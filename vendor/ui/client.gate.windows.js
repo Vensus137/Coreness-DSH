@@ -56,7 +56,6 @@ window.__ModuleLoader__.load({
         })));
       }
 
-      /** The picture's own words for the outcome of a decision, so the ring is drawn in the page's language. */
       /**
        * One card per model under a limit: its head carries the pair and the row's own answer, and its body the
        * pair's two pickers, the ceiling and the two controls, so the card is what the row is and nothing else.
@@ -77,12 +76,12 @@ window.__ModuleLoader__.load({
         const note = problem === null ? (view.note?.at === index ? view.note : null) : { tone: 'fault', text: t('state.refused') };
 
         const pairs = pairsOf(catalog);
-        return h('li', { key: `row${index}`, className: 'coreness-gate-row coreness-gate-rowCard' }, [
-          h('div', { key: 'card', className: 'coreness-gate-card coreness-card-box' }, [
-            /* The card is small by decision — a head and one row of fields — and a fold in front of four fields
+        return h('li', { key: `row${index}`, className: 'coreness-gate-rowCard' }, [
+          h('div', { key: 'card', className: 'coreness-card-box' }, [
+            /* The card is small by decision — a head and one row of fields — and a fold in front of three fields
                costs a press and hides what the section is about. Its head says what the row is and presses nothing,
                and the fields stand under it always. */
-            h('div', { key: 'head', className: 'coreness-gate-cardHead coreness-card-head' }, [
+            h('div', { key: 'head', className: 'coreness-card-head' }, [
               h('span', { key: 'title', className: 'coreness-gate-headButton' }, [
                 h('span', { key: 'name', className: 'coreness-gate-name' }, pairOf(held)),
                 ]),
@@ -93,12 +92,12 @@ window.__ModuleLoader__.load({
                  word. */
               h('span', {
                 key: 'rowAnswer',
-                /* The same class, the same tone word and the same rules as the section's own strip: only the place
-                   is this section's. The class that carried the tone here (rowAnswer-done, rowAnswer-error) was
-                   the section painting a colour the page decides — the tone travels in `data-tone` now, and an
-                   empty room states none, like every other strip on the page. */
-                className: 'coreness-answer coreness-gate-rowAnswer',
-                'data-note': 'row',
+                /* The page's own strip and nothing else: the class, the reserved width and the tone word are the
+                   same as every other strip's, and this card writes no place of its own — the head's own rule puts
+                   the strip at the right edge. The class that carried the tone here (rowAnswer-done,
+                   rowAnswer-error) was the section painting a colour the page decides — the tone travels in
+                   `data-tone` now, and an empty room states none, like every other strip on the page. */
+                className: 'coreness-answer',
                 'data-tone': note?.tone,
                 role: 'status',
                 'aria-live': 'polite',
@@ -107,7 +106,7 @@ window.__ModuleLoader__.load({
             h('div', { key: 'body', className: 'coreness-gate-body coreness-card-body' }, [
                 h('div', { key: 'pair', className: 'coreness-gate-pair' }, [
                   h('div', { key: 'provider', className: 'coreness-field coreness-gate-field' }, [
-                    h('span', { key: 'label', className: 'coreness-fieldLabel coreness-gate-fieldLabel' }, t('field.provider')),
+                    h('span', { key: 'label', className: 'coreness-fieldLabel' }, t('field.provider')),
                     /* The pair is chosen in the page's own control, from what the route advertises. A value
                        the listing does not carry stays what the row holds and is drawn as it stands — the
                        way the models editor draws a model the catalogue does not know — where the native
@@ -117,19 +116,21 @@ window.__ModuleLoader__.load({
                       key: 'picker',
                       name: `gate-provider-${index}`,
                       value: held.provider,
-                      disabled: busy,
+                      /* A picker with no catalogue to offer is a control that cannot act: it waits disabled until
+                         the catalogue is read, as the add button does, and the room says why when it was not read. */
+                      disabled: busy || view.catalog === null,
                       'aria-label': `${t('field.provider')} (${pairOf(held)})`,
                       options: [...new Set(pairs.map((one) => one.provider))].map((provider) => ({ value: provider, words: provider })),
                       onChoose: (next) => act.patchRow(index, { provider: next }),
                     }),
                   ]),
                   h('div', { key: 'model', className: 'coreness-field coreness-gate-field' }, [
-                    h('span', { key: 'label', className: 'coreness-fieldLabel coreness-gate-fieldLabel' }, t('field.model')),
+                    h('span', { key: 'label', className: 'coreness-fieldLabel' }, t('field.model')),
                     h(picker.IdPicker, {
                       key: 'picker',
                       name: `gate-model-${index}`,
                       value: held.model,
-                      disabled: busy,
+                      disabled: busy || view.catalog === null,
                       'aria-label': `${t('field.model')} (${pairOf(held)})`,
                       options: pairs.filter((one) => one.provider === held.provider).map((one) => ({ value: one.model, words: one.name })),
                       onChoose: (next) => act.patchRow(index, { model: next }),
@@ -152,18 +153,21 @@ window.__ModuleLoader__.load({
                   h('button', {
                     key: 'remove',
                     type: 'button',
-                    className: 'coreness-gate-button coreness-button',
-                    disabled: busy,
+                    className: 'coreness-button',
+                    /* The row's removal writes the row: with no writable settings row there is nothing to write,
+                       and a press that cannot act is disabled, not silent. */
+                    disabled: busy || view.settings?.ok !== true,
                     onClick: () => act.removeRow(index),
                   }, t('control.remove')),
                   h('button', {
                     key: 'apply',
                     type: 'button',
-                    className: 'coreness-gate-button coreness-button',
+                    className: 'coreness-button',
                     'data-tone': 'primary',
                     /* A press with no draft has nothing to write and would close nothing: the card's own rule,
-                       the same condition the limit card's Apply carries. */
-                    disabled: busy || problem !== null || view.draft === null,
+                       the same condition the limit card's Apply carries, with the writable row and the ceiling's
+                       own condition beside it. */
+                    disabled: busy || problem !== null || view.draft === null || view.settings?.ok !== true,
                     /* The row's own press carries its place, so the word it earns stands in this row's card. */
                     onClick: () => act.apply({ at: index }),
                   }, t('control.apply')),

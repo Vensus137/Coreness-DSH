@@ -15,8 +15,6 @@ window.__ModuleLoader__.load({
     /** The credits door the account's policy is read and changed through: the product's own route. */
     const CREDITS_ROUTE = '/api/coreness.credits';
 
-    /** How often the row asks the route again while the held picture carries no policy yet. */
-    
     /** The node's own functions, made once over the section's words and the parts beside them. */
     function create({ t, kit, picker, hold, ctx, shared }) {
       /**
@@ -85,15 +83,16 @@ window.__ModuleLoader__.load({
       const credentialWord = (credential) => `${credential?.configured === true ? 'set' : 'unset'}/${credential?.source ?? 'none'}`;
 
       /**
-       * The verdict as the card's status: `accepted` in green, `refused` in red, and — where the check settled
+       * The verdict as the card's press: `accepted` in green, `refused` in red, and — where the check settled
        * nothing — `set`, the durable truth about the value.
        *
-       * The account is said here, where the answer arrives, and not where the status is drawn: a check that
-       * learned nothing is said every time it is made, never only on the first. Its sentence is the console's
-       * alone: `set` is a state a reader is simply in, and the card keeps no word for it on the user's word —
-       * the dot beside the name says that state, out loud, and a check that settled nothing leaves it as it
-       * was. The stamp is the word the stored value carries while this verdict stands, which is what ends
-       * its life when the store's own word changes.
+       * Its word stands in the card's strip, which is a press's one place on this page, and the dot beside
+       * the card's name takes the verdict, so the dot turns red on a refusal instead of keeping the colour
+       * of the state under it. The account is said here, where the answer arrives, and not where the drawing
+       * reads it: a check that learned nothing is said every time it is made, never only on the first. Its
+       * sentence is the console's alone; `set` names the state that stands, and the strip reads the press's
+       * own word for it (`No verdict`). The stamp is the word the stored value carries while this verdict
+       * stands, which is what ends its life when the store's own word changes.
        * @param {{outcome: string, reason?: string|null}} verdict the route's answer
        * @param {string} stamp the word the stored value carries while this verdict stands
        * @returns {object} the note
@@ -114,9 +113,9 @@ window.__ModuleLoader__.load({
 
       /**
        * What a sweep's own record says about the node: which node answered and how much it offers, as the
-       * account the console keeps — never a word for the face. The word is the press's note (`check`), and
-       * the live walk reads the answer by the `data-answer` the note carries (`statusOf`), so a record that
-       * outlives its press states nothing anywhere.
+       * account the console keeps — never a word for the face. The word is the press's note (`check`), which
+       * stands in the card's strip, and the live walk reads the answer by the `data-answer` the strip carries
+       * (`answerOf`), so a record that outlives its press states nothing anywhere.
        */
       const sweepAccount = (sweep) => {
         if (sweep === null) return null;
@@ -208,14 +207,14 @@ window.__ModuleLoader__.load({
         if (privacy.kind === 'failed') {
           return h('button', {
             type: 'button',
-            className: 'coreness-qoder-button coreness-button',
+            className: 'coreness-button',
             disabled: true,
           }, t('privacy.unread'));
         }
         if (privacy.share_enabled !== true) return null;
         return h('button', {
           type: 'button',
-          className: 'coreness-qoder-button coreness-button',
+          className: 'coreness-button',
           disabled: busy,
           title: privacyTitle(privacy),
           onClick: async () => {
@@ -245,10 +244,11 @@ window.__ModuleLoader__.load({
          the right, and the reserved room of the card's header takes it — and **no mark stands here either**: a node
          is assumed to answer, so a dot saying "it works" states what nobody needs told, while a red dot beside an
          address would say "a connection" in the colour that means a fault. What a node answered stands in the
-         corner's word and in the reasons list under the card, and with nothing standing between the address and
+         card's strip and in the reasons list under the card, and with nothing standing between the address and
          the press nothing arriving can move it. The action stays a hand and never a tick — pinning writes the
-         profile's patch, and a pin made by a timer would be a claim about a state nobody read. Its class is kept
-         for the live walk, which presses it and reads the answer in the card's own room. */
+         profile's patch, and a pin made by a timer would be a claim about a state nobody read. This row's class
+         is kept for the live walk, which presses the action inside it and reads the answer in the card's own
+         strip. */
       function nodeRow(view, act) {
         const state = view.view;
         return h('div', { key: 'node', className: 'coreness-qoder-node' }, [
@@ -256,7 +256,7 @@ window.__ModuleLoader__.load({
           h('button', {
             key: 'check',
             type: 'button',
-            className: 'coreness-qoder-button coreness-button',
+            className: 'coreness-button',
             disabled: view.busy !== null,
             onClick: () => act.check(),
           }, view.busy === 'check' ? t('node.checking') : t('node.check')),

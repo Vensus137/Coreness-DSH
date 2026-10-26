@@ -17,7 +17,6 @@ window.__ModuleLoader__.load({
       return h('span', {
         key: 'answer',
         className: 'coreness-answer',
-        'data-note': 'head',
         'data-tone': note === null ? undefined : note.tone,
         role: 'status',
         'aria-live': 'polite',
@@ -30,10 +29,10 @@ window.__ModuleLoader__.load({
      * The section's picture carries it, and a composition that mounts no studio Host half answers no route:
      * the card then stands with its missing sentence and the box disabled rather than offering a write that
      * cannot land. Its state words are the frame's: the strip says a save, a refusal or the unread word, the
-     * dot says on, and the check keeps its name — while the first read is in flight the body says the page's
-     * reading line, so the card stands from the first paint and the answer moves nothing.
+     * check is the answer, and the check row carries the page's reading line while the first read is in
+     * flight, so the card stands from the first paint and the answer moves nothing.
      */
-    function drawStudio(state, act, kit) {
+    function drawStudio(state, act) {
       const picture = state.studio;
       const ready = picture !== null && picture !== undefined;
       const fault = state.studioFault === true;
@@ -57,7 +56,7 @@ window.__ModuleLoader__.load({
           answerStrip(note),
         ]),
         h('div', { key: 'body', className: 'coreness-card-body' }, [
-          h('label', { key: 'check', className: 'coreness-check coreness-general-check' }, [
+          h('label', { key: 'check', className: 'coreness-check' }, [
             h('input', {
               key: 'box',
               type: 'checkbox',
@@ -66,7 +65,6 @@ window.__ModuleLoader__.load({
               onChange: (event) => act.studio(event.target.checked),
             }),
             h('span', { key: 'word' }, word),
-            ready && picture.enabled === true ? kit.statusMark('set', { key: 'mark', subject: words('studio.check') }) : null,
           ]),
           h('p', { key: 'hint', className: 'coreness-dim' }, [words('studio.description'), ' ', words('studio.cache')]),
           unwritable ? h('p', { key: 'unavailable', className: 'coreness-dim' }, words('studio.unavailable')) : null,
@@ -76,40 +74,31 @@ window.__ModuleLoader__.load({
     }
 
     /** The section as it draws: one picture, one set of acts, and the two cards the page carries. */
-    function draw(state, act, kit) {
+    function draw(state, act) {
       const head = h('div', { key: 'head', className: 'coreness-sectionHead' }, [
         h('h4', { key: 'title', className: 'coreness-sectionTitle' }, words('section')),
       ]);
-      if (state.status === 'failed') {
-        /* A section that failed whole draws the cards it holds a picture for: the studio card's own read never
-           answered here, and a card that said "Reading" forever would be a lie of the failure. */
-        const standing = state.studio === null ? null : drawStudio(state, act, kit);
-        return h('div', { className: 'coreness-still coreness-sectionBody', 'data-state': 'failed' }, [
-          head,
-          h('div', { key: 'fault', className: 'coreness-failed' }, [
-            h('p', { key: 'word', className: 'coreness-dim' }, words('state.error')),
-          ]),
-          standing === null ? null : h('ul', { key: 'cards', className: 'coreness-list coreness-card-list' }, [standing]),
-        ]);
-      }
-      const studio = drawStudio(state, act, kit);
+      const studio = drawStudio(state, act);
       const { value, draft, note, busy, prompt, promptBusy, promptFault, beatFault, readFault } = state;
       const loading = state.status === 'loading';
       const editable = !loading && value?.editable === true && state.refreshing !== true && readFault !== true;
       const writing = busy || promptBusy || state.refreshing === true;
       /* A fault is the strip's word, never a line of its own: the strip stands in the card head with its room
          kept, so a read that failed says "Not read" without moving the page; the reason is said in the console,
-         where a reader who has to act on it looks. A composition's own condition takes the same room — one word,
-         no line that appears at the read — so the card keeps its shape whether the team service is mounted or not. */
-      const condition = value?.mounted === false ? words('team.missing') : null;
+         where a reader who has to act on it looks. The card's own conditions take the same room — one word, no
+         line that appears at the read — so the card keeps its shape whether the team service is mounted or the
+         profile's editor can address the row. */
+      const condition = value?.mounted === false
+        ? words('team.missing')
+        : value !== null && value?.editable !== true ? words('team.unwritable') : null;
       const stripNote = note ?? (promptFault || beatFault || readFault
         ? { tone: 'fault', text: words('state.unread') }
         : condition === null ? null : { tone: 'plain', text: condition });
       /* The switch's row stands while the card is read, after a row was found, and after its read failed — a
          failed read is said in the strip and keeps the rows it drew; only a composition that addresses no row
          hides them, and the card does not grow a control it drew no place for. */
-      const switchStands = loading || prompt !== null || promptFault === true;
-      return h('div', { className: 'coreness-still coreness-sectionBody', 'data-state': loading ? 'reading' : 'ready' }, [
+      const switchStands = loading || prompt !== null || promptFault === true || readFault === true;
+      return h('div', { className: 'coreness-still coreness-sectionBody', 'data-state': loading ? 'reading' : state.status === 'failed' ? 'failed' : 'ready' }, [
         head,
         h('ul', { key: 'cards', className: 'coreness-list coreness-card-list' }, [h('li', { key: 'card', className: 'coreness-card-box' }, [
           h('div', { key: 'cardhead', className: 'coreness-card-head coreness-general-head' }, [
@@ -118,14 +107,14 @@ window.__ModuleLoader__.load({
           ]),
           h('div', { key: 'body', className: 'coreness-card-body' }, [
             h('div', { key: 'field', className: 'coreness-field' }, [
-              h('div', { key: 'label', className: 'coreness-fieldLabel coreness-general-label' }, [
+              h('div', { key: 'label', className: 'coreness-fieldLabel' }, [
                 h('label', { key: 'word', htmlFor: 'general-ceiling' }, words('team.field')),
               ]),
               h('div', { key: 'row', className: 'coreness-general-field' }, [
                 h('input', {
                   key: 'input',
                   id: 'general-ceiling',
-                  className: 'coreness-general-input',
+                  className: 'coreness-field-box coreness-general-input',
                   type: 'number',
                   min: 1,
                   step: 1,
@@ -148,7 +137,7 @@ window.__ModuleLoader__.load({
                revision, a body the editor would not take — stands in the console, where a reader who has to act
                on it looks, and never as a line that moves the card. */
             h('p', { key: 'remark', className: 'coreness-dim' }, words('team.remark')),
-            switchStands ? h('label', { key: 'check', className: 'coreness-check coreness-general-check' }, [
+            switchStands ? h('label', { key: 'check', className: 'coreness-check' }, [
               h('input', {
                 key: 'box',
                 type: 'checkbox',
@@ -157,10 +146,9 @@ window.__ModuleLoader__.load({
                 onChange: (event) => act.prompt(event.target.checked),
               }),
               h('span', { key: 'word' }, words('team.prompt')),
-              prompt?.on === true ? kit.statusMark('set', { key: 'mark', subject: words('team.prompt') }) : null,
             ]) : null,
             switchStands ? h('p', { key: 'promptHint', className: 'coreness-dim' }, words('team.promptHint')) : null,
-            switchStands ? h('label', { key: 'reviewCheck', className: 'coreness-check coreness-general-check' }, [
+            switchStands ? h('label', { key: 'reviewCheck', className: 'coreness-check' }, [
               h('input', {
                 key: 'box',
                 type: 'checkbox',
@@ -169,7 +157,6 @@ window.__ModuleLoader__.load({
                 onChange: (event) => act.review(event.target.checked),
               }),
               h('span', { key: 'word' }, words('team.review')),
-              prompt?.review === true ? kit.statusMark('set', { key: 'mark', subject: words('team.review') }) : null,
             ]) : null,
             switchStands ? h('p', { key: 'reviewHint', className: 'coreness-dim' }, words('team.reviewHint')) : null,
           ]),
