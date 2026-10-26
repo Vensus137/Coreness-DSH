@@ -1,0 +1,16 @@
+<section class="s s-split" id="{{id}}"{{?band}} data-band="surface"{{/band}} aria-labelledby="{{headingId}}">
+  <div class="wrap">
+    {{?number}}<p class="ann ann--number" aria-hidden="true">{{number}}</p>{{/number}}
+    <div class="grid">
+      <div class="span-7 stack">
+        <h2 class="t-h1" id="{{headingId}}">{{heading}}</h2>
+        {{#paragraphs}}<p class="t-body">{{.}}</p>{{/paragraphs}}
+      </div>
+      <div class="span-5 s-split__evidence stack">
+        {{#evidenceList}}<ul class="s-split__list">{{#items}}<li>{{?label}}<span class="ann ann--unit">{{label}}</span>{{/label}}<p class="t-body">{{text}}</p></li>{{/items}}</ul>{{/evidenceList}}
+        {{#evidenceNumber}}<p class="t-numeral">{{value}}{{?unit}} <span class="ann ann--unit">{{unit}}</span>{{/unit}}</p>{{?source}}<p class="ann ann--source">{{source}}</p>{{/source}}{{/evidenceNumber}}
+        {{#evidenceLabels}}<dl class="s-split__labels">{{#items}}<div><dt class="ann ann--caption">{{label}}</dt><dd class="t-h3">{{value}}</dd></div>{{/items}}</dl>{{/evidenceLabels}}
+      </div>
+    </div>
+  </div>
+</section>

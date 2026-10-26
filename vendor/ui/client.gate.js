@@ -116,7 +116,6 @@ window.__ModuleLoader__.load({
 /* The set's head, and the section's own room under it; the head's flex direction is irrelevant with one child
    and stays for the live walk's marker. */
 .coreness-gate-head{gap:6px;min-width:0}
-.coreness-gate-caption{margin:0;font-size:14px;line-height:22px;color:var(--dsw-alias-label-tertiary)}
 .coreness-gate-state{margin:0;font-size:12px;line-height:18px;overflow-wrap:anywhere;color:var(--dsw-alias-label-tertiary)}
 /* The two tones this section shares with the page stand once in the entry's sheet — coreness-tone-done and
    coreness-tone-fault — and the state wears them beside this class. Warn is the gate's own: no other section

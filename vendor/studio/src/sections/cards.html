@@ -1,0 +1,9 @@
+<section class="s s-cards" id="{{id}}"{{?band}} data-band="surface"{{/band}}{{?heading}} aria-labelledby="{{headingId}}"{{/heading}}>
+  <div class="wrap stack">
+    {{?number}}<p class="ann ann--number" aria-hidden="true">{{number}}</p>{{/number}}
+    {{?heading}}<h2 class="t-h1" id="{{headingId}}">{{heading}}</h2>{{/heading}}
+    <ul class="grid s-cards__list">
+      {{#items}}<li class="s-cards__item{{?isLead}} s-cards__lead{{/isLead}}"><h3 class="t-h3">{{title}}</h3><p class="t-body">{{body}}</p>{{?note}}<p class="t-small">{{note}}</p>{{/note}}</li>{{/items}}
+    </ul>
+  </div>
+</section>

@@ -10,11 +10,12 @@
  * seat draws the explicit empty state below; no section is special-cased.
  *
  * The facts are read, never written. The sections read their own routes and remotes; the switches that
- * enable and disable a plugin stay on the platform's own Plugins page. The look is the product's own markup
- * and CSS, carrying `--dsw-alias-*` tokens as the only shared styling; the platform's control library is
- * deliberately not required as a module. Package-local chunks beside this file are served on demand and
- * asked for with `require.async`: a chunk that never arrives leaves its section out of the rail and is said
- * on the console, because a swallowed failure would look like a page that simply has nothing there.
+ * enable and disable a plugin are the product's own cards on the General page, not rows on the platform's
+ * Plugins page. The look is the product's own markup and CSS, carrying `--dsw-alias-*` tokens as the only
+ * shared styling; the platform's control library is deliberately not required as a module. Package-local
+ * chunks beside this file are served on demand and asked for with `require.async`: a chunk that never
+ * arrives leaves its section out of the rail and is said on the console, because a swallowed failure would
+ * look like a page that simply has nothing there.
  */
 window.__ModuleLoader__.load({
   id: '@coreness/ui',
@@ -89,6 +90,10 @@ window.__ModuleLoader__.load({
 /* A section's heading: its parts on one baseline, and the article's own line inside it. */
 .coreness-sectionHead{align-items:baseline;gap:10px;display:flex}
 .coreness-sectionTitle{margin:0;font-size:16px;font-weight:500;line-height:24px}
+/* The sentence under a section's heading, in every section that carries one: the same size, ink and
+   distance from the heading, declared once so a section cannot stand a few pixels tighter than its
+   neighbours — the rate limiter stood at zero margin while the MCP and the Qoder sections had 8px. */
+.coreness-sectionIntro{color:var(--dsw-alias-label-tertiary);margin:8px 0 0;font-size:14px;line-height:22px}
 .coreness-sectionCount{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;font-variant-numeric:tabular-nums}
 .coreness-failed{color:var(--dsw-alias-state-error-primary);flex-direction:column;gap:4px;display:flex}
 /* The page's button, declared once and worn by every section that draws one, beside that section's own
@@ -293,9 +298,9 @@ window.__ModuleLoader__.load({
     return {
       /* What this entry reads: the slots and the locale for the frame and the seat, the two remotes the
          rail's version tag asks about the composition's own bundle, and the four the Qoder section and the
-         credits action read — the platform's llm/session/settings/credentials namespaces. A chunk borrows the
-         entry's context, so this list is what waits for a namespace; a remote named here is not read by the
-         frame, and a chunk that reads one before the entry names it reads `undefined`. */
+         credits action read — a chunk borrows the entry's context, so this list is what waits for a service.
+         No settings form service stands here: the General page's Page Studio card writes through its own host
+         route, so the page works in a profile that mounts no platform settings surface. */
       inject: [
         'slots',
         'locale',
@@ -328,10 +333,11 @@ window.__ModuleLoader__.load({
           locale: NS,
         }, CorenessGlyph));
 
-        /* The chunks beside this entry carry the product's own sections. Each registers itself into the seat
-           this page declared, so the chunk needs nothing from here but the context: one id per chunk, and no
-           shared state to keep in step. A pull that never arrives is said on the console; the rail simply has
-           one row fewer. */
+        /* The chunks beside this entry carry the product's own surfaces: the page's sections, whose
+           switches are cards drawn on the General page — no settings-form row is contributed. Each applies
+           with this context and registers wherever its surface lives, so a chunk needs nothing from here
+           but the context: one id per chunk, and no shared state to keep in step. A pull that never
+           arrives is said on the console; a surface simply stands without its part. */
         for (const chunk of CHUNKS) {
           ctx.effect(() => {
             let live = true;

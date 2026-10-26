@@ -100,7 +100,7 @@ window.__ModuleLoader__.load({
           ]),
           /* The caption carries the surface's own sentence as well: a property of the section stands in every state, so
              it is drawn always — and a line that is always drawn moves nothing when a press answers. */
-          h('p', { key: 'caption', className: 'coreness-gate-caption' }, [t('caption'), ' ', t('state.standing')]),
+          h('p', { key: 'caption', className: 'coreness-sectionIntro' }, [t('caption'), ' ', t('state.standing')]),
           /* The one room the section's own sentence stands in, in every state: the room keeps no height of
              its own, so the cards move by the line an arriving sentence takes. */
           h('p', { key: 'state', className: 'coreness-gate-state' + (TONE_CLASS[note.tone] ?? ''), 'data-tone': note.tone ?? 'plain' }, note.text),

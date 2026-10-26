@@ -267,7 +267,6 @@ window.__ModuleLoader__.load({
     const CSS = `
 /* The section's own heading, worn from the page's own head rather than declared again here: the head, its title
    and its count are the page's own classes, and the arrangement and the type stand once, in the page's own sheet. */
-.coreness-mcp-intro{color:var(--dsw-alias-label-tertiary);margin:8px 0 0;font-size:14px;line-height:22px}
 /* The section's state sentence and its rows' dim line: the page's small role, 12/18 in label-tertiary, which
    stands once in the page's own sheet as coreness-dim and is worn below beside each of these two names. The
    names stay: this section's own checks and the hint sample select the lines by them. */

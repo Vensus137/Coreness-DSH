@@ -1,0 +1,9 @@
+<section class="slide" data-layout="{{layout}}" aria-labelledby="{{headingId}}"{{?hidden}} hidden{{/hidden}}>
+  <div class="slide__head"><h2 class="t-h1" id="{{headingId}}">{{heading}}</h2></div>
+  <div class="slide__body slide__body--top">
+    <ul class="slide__list">
+      {{#items}}<li class="slide__item">{{?label}}<span class="t-label slide__item-label">{{label}}</span>{{/label}}<span class="t-body slide__item-text">{{text}}</span></li>{{/items}}
+    </ul>
+  </div>
+  <div class="slide__foot">{{?source}}<p class="t-label">{{source}}</p>{{/source}}</div>
+</section>

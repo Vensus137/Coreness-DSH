@@ -33,6 +33,8 @@ window.__ModuleLoader__.load({
     const NS = 'coreness.general';
     /** The host route that reads and writes the team's ceiling, and reports the policy's outcome. */
     const ROUTE = '/api/coreness.team';
+    /** The host route the Page Studio card reads and writes: the namespace, the value and the set's state. */
+    const STUDIO = '/api/coreness.studio';
     const STYLE_ID = 'coreness-ui-general-style';
     /** The module id the sheet is marked with, as the host marks its own (`data-plugin-css`). */
     const STYLE_TAG = '@coreness/ui/client.general.js';
@@ -50,9 +52,7 @@ window.__ModuleLoader__.load({
       'team.promptHint': 'On, the product\'s paragraph stands in the Lead\'s prompt in place of the policy\'s last sentence: the Lead leads and sets the plan, hands the work out as shared tasks, takes none of the members\' work over, and answers for the result — it closes the task while the user judges the surface they see, and it never holds a turn open: no wait_agent, no sleep or poll inside a command; when time must pass it sets a reminder and ends the turn. Every other line of the policy stays as the platform wrote it, and a teammate\'s prompt keeps the platform\'s text. Off, the text is the platform\'s, untouched. When the policy\'s last sentence is not the one the switch replaces, it changes nothing until it is. Applies from the session\'s next step; a change may invalidate the provider\'s cached prefix.',
       'team.review': 'Review pass',
       'team.reviewHint': 'On, the paragraph about reviews follows the team text in the Lead\'s prompt: a reviewer is a fresh agent with a clean eye, called on every circle of work and not on small tasks; it holds the work against the spec and the traces, asks where it is weak, where it is extra and what is missing, and every finding carries a path and a quote; it does not edit and does not accept, and the review does not replace the acceptance that closes the task. The paragraph stands inside the text the Team prompt switch supplies, so it changes nothing while that switch is off.',
-      'team.reading': 'Reading the team picture…',
-      'team.unavailable': 'This composition cannot write the team row; its value stands in the Cordis configuration.',
-      'team.missing': 'The team service is not mounted; the ceiling applies when it is.',
+      'team.missing': 'Not mounted',
       'state.error': 'The team could not be read',
       'state.unread': 'Not read',
       'state.saved': 'Saved',
@@ -60,12 +60,20 @@ window.__ModuleLoader__.load({
       'reason.invalid': 'The ceiling is a whole number of at least 1.',
       'reason.unreachable': 'The team route could not be reached.',
       'reason.unreadable': 'The value in force could not be re-read',
+      /* The Page Studio card: the feature's switch, the words the product uses for it, and the two
+         sentences a profile that cannot write it needs. */
+      'studio.title': 'Page Studio',
+      'studio.description': 'Builds a static page or a 5–9 screen HTML presentation from one prompt. Off, the four studio tools and the page-studio skill are not registered.',
+      'studio.cache': 'Applies to the next request; the prompt cache is rebuilt.',
+      'studio.check': 'Draw pages and decks',
+      'studio.reading': 'Reading the Page Studio switch…',
+      'studio.unavailable': 'This profile cannot write the switch from the page: its value stands in the Cordis configuration.',
+      'studio.missing': 'Page Studio is not mounted in this composition.',
     };
 
     /* The card's own look: the frame, the strip's room, the field's box and the check are the page's; a
        section keeps only what is its own. */
     const CSS = `
-.coreness-general-card{margin:12px 0 0}
 .coreness-general-head{display:flex;align-items:center;gap:10px}
 .coreness-general-head .coreness-sectionTitle{flex:1 1 auto}
 .coreness-general-field{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -128,11 +136,11 @@ window.__ModuleLoader__.load({
      * is the card's sentence, not the browser's: "Failed to fetch" is what a raw throw reads like, and the
      * card is no place for a message nothing on the page can act on. The cause goes to the console.
      */
-    async function reach(init) {
+    async function reach(init, path = ROUTE) {
       try {
-        return await fetch(ROUTE, init);
+        return await fetch(path, init);
       } catch (error) {
-        console.error(`${PACKAGE}: ${ROUTE} could not be reached: ${reasonOf(error)}`);
+        console.error(`${PACKAGE}: ${path} could not be reached: ${reasonOf(error)}`);
         throw new Error(t('reason.unreachable'));
       }
     }
@@ -161,6 +169,37 @@ window.__ModuleLoader__.load({
       if (!answer.ok) throw new Error(`${ROUTE} answered ${answer.status} ${answer.statusText}`);
       const payload = await answer.json();
       if (payload?.ok !== true) throw new Error(payload?.error?.message ?? `${ROUTE} refused the write`);
+      return payload.value;
+    }
+
+    /**
+     * The Page Studio picture: the settings namespace, the Host's value, whether the profile's editor can
+     * address the row, and whether the model-facing set stands. A composition that mounts no studio Host
+     * half answers no route: the failure carries the route's status, so the card can name the feature as not
+     * mounted rather than offering a write that cannot land.
+     */
+    async function readStudio() {
+      const answer = await reach({ method: 'GET' }, STUDIO);
+      if (!answer.ok) throw Object.assign(new Error(`${STUDIO} answered ${answer.status} ${answer.statusText}`), { status: answer.status });
+      const payload = await answer.json();
+      if (payload?.ok !== true) throw new Error(payload?.error?.message ?? `${STUDIO} refused the read`);
+      return payload.value;
+    }
+
+    /**
+     * One write of the Page Studio switch, through the Host's own route: the platform's profile editor
+     * persists it, so the card needs no settings plugin of its own. What answers is the picture after the
+     * write — the Host's value and the set's state — never the word the press asked for.
+     */
+    async function writeStudio(on) {
+      const answer = await reach({
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ enabled: on }),
+      }, STUDIO);
+      if (!answer.ok) throw new Error(`${STUDIO} answered ${answer.status} ${answer.statusText}`);
+      const payload = await answer.json();
+      if (payload?.ok !== true) throw new Error(payload?.error?.message ?? `${STUDIO} refused the write`);
       return payload.value;
     }
 
@@ -215,11 +254,23 @@ window.__ModuleLoader__.load({
       ? {
           status: 'loading', refreshing: true, value: null, draft: '', note: null, busy: false,
           prompt: null, promptBusy: false, promptFault: false, beatFault: false, readFault: false,
+          studio: null, studioBusy: false, studioNote: null, studioFault: false, studioMissing: false,
         }
       : {
           status: 'ready', refreshing: true, value: lastRead.value, draft: draftOf(lastRead.value), note: null, busy: false,
           prompt: lastRead.prompt, promptBusy: false, promptFault: false, beatFault: false, readFault: false,
+          studio: lastRead.studio, studioBusy: false, studioNote: null, studioFault: false, studioMissing: false,
         });
+
+    /**
+     * The Page Studio fields one studio read answers: the picture it read, or the card's own condition when it
+     * did not answer. A failed read leaves the last picture standing — a sentence about a moment never replaces
+     * knowledge — and a route that is not there names the feature as not mounted.
+     */
+    function studioFields(now, { studio, studioFault, studioMissing }) {
+      if (studioFault === true) return { studio: now.studio, studioFault: true, studioMissing: studioMissing === true };
+      return { studio, studioFault: false, studioMissing: false };
+    }
 
     /** The page as it stands: both reads settle before the card is drawn once, and a press is read back. */
     function GeneralSection({ kit, ctx, hold, card }) {
@@ -231,6 +282,8 @@ window.__ModuleLoader__.load({
 
       /** The console's door is the kit's: one subject, one place, said where the answer arrived. */
       const say = React.useCallback((reason) => kit.statusDetail(t('team.title'), reason), [kit]);
+      /** The same door for the Page Studio card, under its own subject. */
+      const sayStudio = React.useCallback((reason) => kit.statusDetail(t('studio.title'), reason), [kit]);
 
       /** Which read is the newest: an answer that is no longer the newest does not publish. */
       const newestRead = React.useRef(0);
@@ -245,7 +298,7 @@ window.__ModuleLoader__.load({
       const noteTimer = React.useRef(null);
       const armHold = React.useCallback(() => {
         if (noteTimer.current !== null) clearTimeout(noteTimer.current);
-        noteTimer.current = setTimeout(() => setState((now) => ({ ...now, note: null })), hold.holdOf());
+        noteTimer.current = setTimeout(() => setState((now) => ({ ...now, note: null, studioNote: null })), hold.holdOf());
       }, [hold]);
       React.useEffect(() => () => {
         if (noteTimer.current !== null) clearTimeout(noteTimer.current);
@@ -255,8 +308,8 @@ window.__ModuleLoader__.load({
        * failure leaves the last picture alone rather than replacing knowledge with a sentence about a moment. */
       React.useEffect(() => {
         if (state.status !== 'ready') return;
-        lastRead = { value: state.value, prompt: state.prompt };
-      }, [state.status, state.value, state.prompt]);
+        lastRead = { value: state.value, prompt: state.prompt, studio: state.studio };
+      }, [state.status, state.value, state.prompt, state.studio]);
 
       /** Both reads of one moment: the route's picture, and the switch's row in the namespace it names. The
        * settings row failing is said on the console and costs only the switch: the ceiling was read, and a card
@@ -271,16 +324,38 @@ window.__ModuleLoader__.load({
           promptFault = true;
           say(`${t('reason.unreadable')}: ${reasonOf(error)}`);
         }
-        return { value, prompt, promptFault };
-      }, [ctx, say]);
+        /* The Page Studio card's own read: a composition that mounts no studio Host half answers no
+           route, which is the card's own condition and costs nothing else — the team's picture stands. */
+        let studio = null;
+        let studioFault = false;
+        let studioMissing = false;
+        try {
+          studio = await readStudio();
+        } catch (error) {
+          studioFault = true;
+          studioMissing = error?.status === 404;
+          sayStudio(reasonOf(error));
+        }
+        return { value, prompt, promptFault, studio, studioFault, studioMissing };
+      }, [ctx, say, sayStudio]);
 
       React.useEffect(() => {
         let live = true;
         const ticket = nextRead();
         readAll().then(
-          ({ value, prompt, promptFault }) => {
+          ({ value, prompt, promptFault, studio, studioFault, studioMissing }) => {
             if (!live || newestRead.current !== ticket) return;
-            setState((now) => ({ ...now, status: 'ready', refreshing: false, readFault: false, value, draft: draftOf(value), prompt, promptFault }));
+            setState((now) => ({
+              ...now,
+              status: 'ready',
+              refreshing: false,
+              readFault: false,
+              value,
+              draft: draftOf(value),
+              prompt,
+              promptFault,
+              ...studioFields(now, { studio, studioFault, studioMissing }),
+            }));
           },
           (error) => {
             if (!live || newestRead.current !== ticket) return;
@@ -304,7 +379,7 @@ window.__ModuleLoader__.load({
         const reread = () => {
           const ticket = nextRead();
           readAll().then(
-            ({ value, prompt, promptFault }) => {
+            ({ value, prompt, promptFault, studio, studioFault, studioMissing }) => {
               if (!live || newestRead.current !== ticket) return;
               setState((now) => ({
                 ...now,
@@ -316,6 +391,8 @@ window.__ModuleLoader__.load({
                 value,
                 /* A settings half that could not be read keeps the view the card already holds. */
                 prompt: prompt ?? now.prompt,
+                /* The Page Studio card follows its own read the same way. */
+                ...studioFields(now, { studio, studioFault, studioMissing }),
                 /* A draft the reader has changed is theirs; an unedited one follows the read. */
                 draft: now.draft !== draftOf(now.value) ? now.draft : draftOf(value),
               }));
@@ -491,6 +568,43 @@ window.__ModuleLoader__.load({
         },
         prompt: (on) => flip('prompt', on),
         review: (on) => flip('review', on),
+        /* One press of the Page Studio switch: the Host's route writes the field through the platform's
+           profile editor and answers the picture after the write. A refusal is the strip's word and the
+           console's reason, and the card is read back so it stands on the Host's value, not on the press. */
+        studio: (on) => {
+          if (state.studio === null || state.studioBusy === true) return;
+          setState((now) => ({ ...now, studioBusy: true, studioNote: null }));
+          writeStudio(on).then(
+            (picture) => {
+              setState((now) => ({
+                ...now,
+                studioBusy: false,
+                studio: picture,
+                studioFault: false,
+                studioMissing: false,
+                studioNote: { tone: 'done', text: t('state.saved') },
+              }));
+              armHold();
+            },
+            (error) => {
+              const reason = reasonOf(error);
+              sayStudio(reason);
+              setState((now) => ({
+                ...now,
+                studioBusy: false,
+                studioNote: { tone: 'fault', text: t('state.refused') },
+              }));
+              armHold();
+              void readStudio().then(
+                (picture) => setState((now) => ({ ...now, studio: picture, studioFault: false, studioMissing: false })),
+                (error) => {
+                  sayStudio(`${t('reason.unreadable')}: ${reasonOf(error)}`);
+                  setState((now) => ({ ...now, studioFault: true, studioMissing: error?.status === 404 }));
+                },
+              );
+            },
+          );
+        },
       };
       return draw(state, act, kit);
     }

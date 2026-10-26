@@ -1,0 +1,14 @@
+<section class="slide" data-layout="{{layout}}" aria-labelledby="{{headingId}}"{{?hidden}} hidden{{/hidden}}>
+  <div class="slide__head"></div>
+  <div class="slide__body slide__body--top slide__body--split">
+    <div class="slide__claim">
+      <h2 class="t-h1" id="{{headingId}}">{{heading}}</h2>
+      {{#body}}<p class="t-body">{{.}}</p>{{/body}}
+    </div>
+    <div class="slide__evidence">
+      {{#evidenceLabels}}{{#items}}<div class="slide__pair"><span class="t-label">{{label}}</span><span class="t-body">{{value}}</span></div>{{/items}}{{/evidenceLabels}}
+      {{#evidenceNumber}}<p class="t-lead slide__ev-number">{{value}}{{?unit}} <span class="slide__unit">{{unit}}</span>{{/unit}}</p>{{?source}}<p class="t-label slide__ev-source">{{source}}</p>{{/source}}{{/evidenceNumber}}
+    </div>
+  </div>
+  <div class="slide__foot"></div>
+</section>

@@ -73,4 +73,4 @@ No other host file. The sweep and the routes write neither the profile's patch n
 
 ## The checks
 
-The fixtures — `node packages/qoder/scripts/check-spend.mjs` and the wire checks among them, not in the package's `files` — hold the ledger's rows and the signed calls; `check-web-providers.mjs` is owner-run only, because it needs an extracted application tree.
+The fixtures — `node packages/qoder/scripts/check-spend.mjs` and the wire checks among them, not in the package's `files` — hold the ledger's rows, the signed calls, and the chat door's renewal and first-byte ceiling.

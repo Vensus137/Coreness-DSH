@@ -1,0 +1,14 @@
+<section class="s s-table" id="{{id}}"{{?band}} data-band="surface"{{/band}} aria-labelledby="{{headingId}}">
+  <div class="wrap stack">
+    {{?number}}<p class="ann ann--number" aria-hidden="true">{{number}}</p>{{/number}}
+    <h2 class="t-h1" id="{{headingId}}">{{heading}}</h2>
+    <div class="s-table__scroll" role="region" aria-label="{{tableLabel}}" tabindex="0">
+      <table>
+        <caption class="sr-only">{{caption}}</caption>
+        <thead><tr>{{#columns}}<th scope="col">{{.}}</th>{{/columns}}</tr></thead>
+        <tbody>{{#rows}}<tr>{{#cells}}<td{{?num}} class="num"{{/num}}>{{?label}}<span class="s-table__label">{{label}}</span>{{/label}}{{text}}</td>{{/cells}}</tr>{{/rows}}</tbody>
+      </table>
+    </div>
+    {{?source}}<p class="ann ann--source">{{source}}</p>{{/source}}
+  </div>
+</section>

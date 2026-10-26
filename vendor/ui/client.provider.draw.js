@@ -22,7 +22,6 @@ window.__ModuleLoader__.load({
        the field rather than in a row of the editor. */
     const CSS = `
 .coreness-qoder-title{margin:0;font-size:16px;font-weight:500;line-height:24px;color:var(--dsw-alias-label-primary)}
-.coreness-qoder-intro{color:var(--dsw-alias-label-tertiary);margin:8px 0 0;font-size:14px;line-height:22px}
 /* A hint line — this section's notes, hints and refusals: the page's small role, one pair for it everywhere,
    12/18 in label-tertiary, which stands once in the page's own sheet as coreness-dim and is worn beside this
    name. The name stays: this section's own readings select the line by it, and the head's rule below keeps its
@@ -44,9 +43,6 @@ window.__ModuleLoader__.load({
    which is why this sheet has no status rule left: the two rules that stood here — the reserved height
    the user took off the page, and the wrap that replaced it — are properties of the component now. */
 .coreness-qoder-head > .coreness-qoder-dim{flex:none}
-/* The answer strip stands at the head's right edge: the status word keeps its own place before it, and the
-   strip is drawn last however the words around it are silenced. */
-.coreness-qoder-head > .coreness-answer{order:2;margin-left:auto}
 /* A card's status is the one component's: its words, its tones and its place rule
    live there, and this sheet carries none of them. What stands here is the header's own furniture — a
    title, a tag, the line that names a node — while the mark and the sentence that answer for the state
@@ -149,31 +145,6 @@ window.__ModuleLoader__.load({
 
     /** The drawing's own functions, made once over the section's words and the parts beside them. */
     function create({ t, kit, picker, hold, ctx, shared }) {
-      /**
-       * The strip of a card of this section: one sentence about the press that was just made, in the room the answer
-       * of a press stands in, and empty when that press's news has gone.
-       *
-       * It is the page's own answer room: the class, the reserved width, the ellipsis and the tone colours are the
-       * page's sheet's (`--coreness-news-strip`, `.coreness-answer`), and this chunk writes no width and no colour of
-       * its own. It stands **drawn always**, empty while nothing is said, because a strip that appears with its word
-       * and goes with it moves the card it stands in — the MCP's own head paid for that lesson (its strip went
-       * 60 px → 98 px and the room under the name 404 px → 437 px while it was drawn only with a word in it).
-       *
-       * What it carries is the section's own dictionary and never a status word: a status is the card's state at its
-       * corner (`statusNode`, out of the one map), while news is a sentence the section owns — which is why the two
-       * stand apart on the page, the strip carrying no `data-status` and the corner carrying no `data-note`.
-       */
-      const answerStrip = (said = null) => h('span', {
-        key: 'answer',
-        className: 'coreness-answer',
-        'data-note': 'head',
-        /* The tone, in the attribute the instruments read: a press that wrote nothing is `plain`, the same tone the
-           sections' own no-op words carry, and an empty room carries none — a room with nothing in it states
-           nothing. */
-        'data-tone': said === null ? undefined : 'plain',
-        role: 'status',
-        'aria-live': 'polite',
-      }, said ?? '');
 
       /**
        * The section as it stands before the read answers: the frames of what is coming.
@@ -206,7 +177,6 @@ window.__ModuleLoader__.load({
         const frame = (label, subject) => h('div', { key: 'head', className: 'coreness-qoder-head coreness-card-head' }, [
           h('span', { key: 'name', className: 'coreness-qoder-name' }, label),
           subject === null || subject === undefined ? null : kit.statusNode({ subject, value: 'loading' }),
-          answerStrip(),
         ]);
         return [
           h('div', { key: 'credential', className: 'coreness-qoder-card' }, [
@@ -272,8 +242,8 @@ window.__ModuleLoader__.load({
        * fields a row is missing, the reason a read failed — is a fact about the product's configuration and not about
        * the reader's token, so it travels beside the value as `detail` and is said in the console rather
        * than on the face, which carries the state alone. The one sentence a press of the models card draws
-       * is not this value: it is the section's own words, and it stands in the card's answer room
-       * (`answerStrip`) beside the state.
+       * is not this value: it is the section's own words, and it stands as that card's own status — a note
+       * is the newer fact, so the corner carries it.
        */
       const SUBJECTS = { credential: 'status.subject.token', node: 'status.subject.node', models: 'status.subject.models', web: 'web.title' };
       const statusOf = (view, where) => {
@@ -354,7 +324,7 @@ window.__ModuleLoader__.load({
       function draw(view, act) {
         const head = [
           h('h4', { key: 'title', className: 'coreness-qoder-title' }, t('title')),
-          h('p', { key: 'intro', className: 'coreness-qoder-intro' }, t('intro')),
+          h('p', { key: 'intro', className: 'coreness-sectionIntro' }, t('intro')),
         ];
         const failed = (reason) => h('div', { className: 'coreness-still coreness-qoder coreness-sectionBody', 'data-status': 'failed' }, [...head,
           h('div', { key: 'failed', className: 'coreness-qoder-failed coreness-failed' }, [
@@ -426,13 +396,7 @@ window.__ModuleLoader__.load({
              newer fact. What the head drops, the dot carries out loud (`statusMark`). */
           const silent = (key === 'credential' || key === 'web') && (one.value === 'set' || one.value === 'unset');
           const word = silent ? null : kit.statusNode({ subject: one.subject, value: one.value, data: one.data });
-          /* The card's own strip: the room a press's sentence stands in, drawn on every card of this section as it
-             is on every card of the MCP's and the gate's — reserved and empty while that press's news is gone, so
-             the word arriving moves no box and the section's heads stay one shape. It carries a word only where a
-             press of this card made one (`line`, set by the press that made it — today the add of a model row). */
-          const said = view.note !== null && view.note !== undefined && view.note.where === key
-            ? view.note.line ?? null
-            : null;
+
           return h('div', { key: 'head', className: 'coreness-qoder-head coreness-card-head', 'data-state': key }, [
             h('span', { key: 'name', className: 'coreness-qoder-name' }, label),
             /* The connection's and the web switch's marks stand **beside the name of the thing they are
@@ -452,9 +416,7 @@ window.__ModuleLoader__.load({
             /* One component, one place, one value: the words, the tones and the place rule are
                the status component's, and the account this section learned travels beside the value. */
             word,
-            /* The strip stands last, at the card's right end: the corner's word keeps its own place (the
-               component's rule) and the strip is the page's own reserved room beside it. */
-            answerStrip(said),
+
           ]);
         };
 
@@ -492,7 +454,7 @@ window.__ModuleLoader__.load({
           ])]);
       }
 
-      return { draw, statusOf, answerStrip, readFailureOf, writableOf, SUBJECTS, useStyles };
+      return { draw, statusOf, readFailureOf, writableOf, SUBJECTS, useStyles };
     }
 
     return { create };

@@ -1,4 +1,5 @@
-# The bundle's rows: the page, the journal, the rules, MCP, OAuth, the Qoder route and the rate gate.
+# The bundle's rows: the page, the journal, the rules, MCP, OAuth, the Qoder route, the rate gate and
+# Page Studio's switch.
 - insert:
     - id: coreness-ui
       name: '@coreness/ui'
@@ -36,6 +37,12 @@
             jitterRatio: 0.1
     - id: coreness-rate-gate
       name: '@coreness/rate-gate'
+    - id: coreness-studio
+      name: '@coreness/studio'
+      # The namespace the General page's Page Studio card reads: a settings form is projected only
+      # for an entry that carries a config.
+      config:
+        enabled: false
 # The Agent Team's own rows belong to the platform's bundle: one row id has one owner, and a profile that
 # carries both bundles would declare `agent-team` twice — the Loader keeps the last, and the profile's
 # editor refuses to write a row two layers answer for. The product adds its ceiling door and its paragraph,

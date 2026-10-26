@@ -1,0 +1,368 @@
+/* Page Studio — the page sheet.
+ *
+ * The sheet is the base plus one look's colour set. A look region is a declaration list — no selector and
+ * no braces — held inside the :root block between a marker pair; the builder cuts every region out
+ * of the base and merges the chosen look's declarations into the emitted :root, so the page carries one
+ * :root rule and twelve colour roles once. The look's non-colour deltas are ordinary `.look-<id>` class
+ * rules in the base, as the token block's own look lines are.
+ *
+ * The rendering law the sheet encodes: a colour is a role, never a hue; a surface is a page-scale band,
+ * never a box; there is no shadow and no second fill but the one cta field; text is left-aligned
+ * everywhere; one accent job per page; motion is feedback on a control's state, never entrance.
+ */
+
+:root {
+  color-scheme: light;
+  /* colour: the six sets are the only difference between looks; role names never change */
+  --c-bg: #FFFFFF; --c-surface: #F5F6F7; --c-ink: #17181A; --c-muted: #5A5F66;
+  --c-line: #DADCE0; --c-strong: #8B9199; --c-accent: #1D4E89; --c-on-accent: #FFFFFF;
+  --c-success: #1B6B3A; --c-warning: #8A5A00; --c-danger: #A32B2B; --c-info: #1D4E89;
+  /* families */
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, "Noto Sans", sans-serif;
+  --font-serif: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --font-mono: ui-monospace, "Cascadia Code", Consolas, "Courier New", monospace;
+  --font-display: var(--font-sans); --font-body: var(--font-sans); --font-label: var(--font-sans);
+  /* site type */
+  --t-display: clamp(2.5rem, 5vw, 4.5rem);  --t-statement: clamp(2rem, 3.6vw, 3rem);
+  --t-h1: clamp(2rem, 2.9vw, 2.5rem);       --t-h2: clamp(1.5rem, 2.2vw, 2rem);
+  --t-h3: 1.25rem;                          --t-lead: clamp(1.25rem, 1.6vw, 1.5rem);
+  --t-brand: var(--t-h3);
+  --t-body: 1.0625rem;                      --t-small: 0.875rem; --t-label: 0.875rem;
+  --t-numeral: clamp(2.5rem, 5vw, 4.5rem);
+  --lh-display: 1.06; --lh-statement: 1.2; --lh-h1: 1.12; --lh-h2: 1.2; --lh-h3: 1.3;
+  --lh-lead: 1.5; --lh-body: 1.6; --lh-small: 1.5; --lh-label: 1.4; --lh-numeral: 1;
+  --tr-display: -0.02em; --tr-statement: -0.01em; --tr-h1: -0.02em; --tr-h2: -0.01em;
+  --tr-label: 0.08em; --tr-numeral: -0.02em;
+  --w-head: 600; --w-brand: 600;
+  /* space */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px; --sp-5: 24px;
+  --sp-6: 32px; --sp-7: 48px; --sp-8: 64px; --sp-9: 96px; --sp-10: 128px;
+  --pad-x: clamp(24px, 5vw, 96px); --pad-y: clamp(48px, 8vw, 128px);
+  /* layout */
+  --wrap: 1120px; --measure: 65ch; --measure-lead: 55ch; --gutter: 24px; --row-gap: 32px;
+  /* radius: the skip box is the only rounded object */
+  --r-sm: 6px;
+  /* borders, focus, targets */
+  --bw-rule: 1px; --bw-emphasis: 2px; --bw-focus: 3px; --focus-offset: 2px; --target: 44px;
+  /* cta field: overridden per look */
+  --field-bg: var(--c-accent); --field-ink: var(--c-on-accent);
+  /* motion: three durations, one easing; feedback only (120 / 180 / 240 ms, hard cap 240) */
+  --motion-fast: 120ms; --motion-base: 180ms; --motion-cap: 240ms;
+  --motion-ease: cubic-bezier(.2,0,.2,1);
+  /* no elevated layer exists on this page, so no shadow token is ever read */
+  --shadow: none;
+  /* look regions: the twelve colour roles of one look, merged into this block by the builder.
+     quiet's region is empty — the declarations above are its complete set. No region carries
+     anything but colour declarations. */
+  /*@look quiet*/
+  /*@end*/
+  /*@look editorial*/
+  --c-bg: #FBF8F1; --c-surface: #F4EFE5; --c-ink: #1B1A17; --c-muted: #5C574E;
+  --c-line: #E0D9CB; --c-strong: #8A8272; --c-accent: #8F3A1B; --c-on-accent: #FFFFFF;
+  --c-success: #1B6B3A; --c-warning: #8A5A00; --c-danger: #A32B2B; --c-info: #1D4E89;
+  /*@end*/
+  /*@look technical*/
+  --c-bg: #F8FAFB; --c-surface: #EEF3F6; --c-ink: #0E1720; --c-muted: #4B5A66;
+  --c-line: #D3DDE4; --c-strong: #7C8C99; --c-accent: #0E5C6B; --c-on-accent: #FFFFFF;
+  --c-success: #1B6B3A; --c-warning: #8A5A00; --c-danger: #A32B2B; --c-info: #1D4E89;
+  /*@end*/
+  /*@look corporate*/
+  --c-bg: #F7F8FA; --c-surface: #EEF0F4; --c-ink: #101828; --c-muted: #475467;
+  --c-line: #D0D5DD; --c-strong: #7C8698; --c-accent: #17427A; --c-on-accent: #FFFFFF;
+  --c-success: #1B6B3A; --c-warning: #8A5A00; --c-danger: #A32B2B; --c-info: #1D4E89;
+  /*@end*/
+  /*@look bold*/
+  --c-bg: #FFFFFF; --c-surface: #F6F6F8; --c-ink: #0F0F10; --c-muted: #56565C;
+  --c-line: #E2E2E6; --c-strong: #8C8C95; --c-accent: #B0184B; --c-on-accent: #FFFFFF;
+  --c-success: #1B6B3A; --c-warning: #8A5A00; --c-danger: #A32B2B; --c-info: #1D4E89;
+  /*@end*/
+  /*@look warm*/
+  --c-bg: #FFF8F2; --c-surface: #FBEFE6; --c-ink: #211A16; --c-muted: #6B5A4E;
+  --c-line: #EADFD3; --c-strong: #93826F; --c-accent: #A03A22; --c-on-accent: #FFFFFF;
+  --c-success: #1B6B3A; --c-warning: #8A5A00; --c-danger: #A32B2B; --c-info: #1D4E89;
+  /*@end*/
+}
+/* look deltas — one class on <body>; every value is a custom property, no colour value is copied here */
+.look-editorial { --font-display: var(--font-serif); --w-head: 700; --lh-body: 1.6;
+  --r-sm: 2px; --field-bg: var(--c-ink); --field-ink: var(--c-bg); }
+.look-technical { --font-label: var(--font-mono); --lh-body: 1.5; --r-sm: 4px;
+  --field-bg: var(--c-ink); --field-ink: var(--c-bg); }
+.look-corporate { --r-sm: 6px; --w-brand: 700; }
+.look-bold      { --w-head: 700; --r-sm: 0; --t-brand: var(--t-h2); }
+.look-warm      { --font-display: var(--font-serif); --font-body: var(--font-serif);
+  --font-label: var(--font-serif); --w-head: 700; --lh-body: 1.7; --r-sm: 10px; }
+/* foundation: shell and layout; the grid remap below is the whole responsive column rule */
+html { color-scheme: light; }
+body { margin: 0; background: var(--c-bg); color: var(--c-ink); font-family: var(--font-body);
+  font-size: var(--t-body); line-height: var(--lh-body); font-weight: 400; text-align: left; hyphens: none; }
+h1, h2, h3, h4, p, ul, ol, dl, dd, figure, blockquote, table, th, td { margin: 0; padding: 0; }
+.s { padding-block: var(--pad-y); }
+.s-header { padding-block: 20px; } .s-footer { padding-block: 32px; }
+.wrap { max-width: var(--wrap); margin-inline: auto; padding-inline: var(--pad-x); }
+.grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--row-gap) var(--gutter); }
+.span-2 { grid-column: span 2; } .span-3 { grid-column: span 3; } .span-4 { grid-column: span 4; }
+.span-5 { grid-column: span 5; } .span-6 { grid-column: span 6; }
+.span-7 { grid-column: span 7; } .span-8 { grid-column: span 8; } .span-12 { grid-column: 1 / -1; }
+.prose { max-width: var(--measure); }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.stack > * + * { margin-top: var(--sp-5); }   /* default 24; a section refines per the gap table */
+.row { display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--sp-5); flex-wrap: wrap; }
+.field { background: var(--field-bg); color: var(--field-ink); padding-block: var(--pad-y); }
+.field .t-small, .field .t-label { color: var(--field-ink); }
+@media (max-width: 1023px) {
+  .grid { grid-template-columns: repeat(6, 1fr); }
+  .span-4, .span-5, .span-6, .span-7, .span-8 { grid-column: 1 / -1; }
+  /* .span-2 and .span-3 keep their meaning in the six-column band: a third and a half */
+}
+@media (max-width: 767px) {
+  /* one column that may be narrower than its content: the auto minimum of a grid track would otherwise
+     widen the page to the longest word of a display line */
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .span-2, .span-3 { grid-column: 1 / -1; }
+  .s-hero { grid-template-columns: minmax(0, 1fr); }
+  .s { overflow-wrap: break-word; }
+}
+/* role classes */
+.t-display { font-family: var(--font-display); font-size: var(--t-display); line-height: var(--lh-display);
+  font-weight: var(--w-head); letter-spacing: var(--tr-display); text-wrap: balance; margin: 0; }
+.t-statement { font-family: var(--font-display); font-size: var(--t-statement); line-height: var(--lh-statement);
+  font-weight: var(--w-head); letter-spacing: var(--tr-statement); text-wrap: balance; margin: 0; }
+.t-h1 { font-family: var(--font-display); font-size: var(--t-h1); line-height: var(--lh-h1);
+  font-weight: var(--w-head); letter-spacing: var(--tr-h1); text-wrap: balance; margin: 0; }
+.t-h2 { font-family: var(--font-display); font-size: var(--t-h2); line-height: var(--lh-h2);
+  font-weight: var(--w-head); letter-spacing: var(--tr-h2); margin: 0; }
+.t-h3 { font-family: var(--font-body); font-size: var(--t-h3); line-height: var(--lh-h3);
+  font-weight: var(--w-head); margin: 0; }
+.t-lead  { font-size: var(--t-lead);  line-height: var(--lh-lead);  margin: 0; max-width: var(--measure-lead); }
+.t-body  { font-size: var(--t-body);  line-height: var(--lh-body);  margin: 0; }
+.t-small { font-size: var(--t-small); line-height: var(--lh-small); margin: 0; color: var(--c-muted); }
+.t-label { font-family: var(--font-label); font-size: var(--t-label); line-height: var(--lh-label);
+  font-weight: var(--w-head); letter-spacing: var(--tr-label); text-transform: uppercase; color: var(--c-muted); }
+.s-header__brand, .s-footer__brand { font-family: var(--font-body); font-size: var(--t-brand);
+  line-height: var(--lh-h3); font-weight: var(--w-brand); }
+.t-numeral { font-family: var(--font-display); font-size: var(--t-numeral); line-height: var(--lh-numeral);
+  font-weight: var(--w-head); letter-spacing: var(--tr-numeral); font-variant-numeric: tabular-nums; margin: 0; }
+.status { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--t-small); }
+.status__mark { flex: none; display: inline-block; width: 10px; height: 10px; border: 2px solid currentColor; }
+.status--ok   { color: var(--c-success); } .status--ok .status__mark { border-radius: 50%; }
+.status--warn { color: var(--c-warning); } .status--warn .status__mark { border-radius: 0; }
+.status--stop { color: var(--c-danger); }
+.status--stop .status__mark { width: 0; height: 0; border: 0; border-left: 5px solid transparent;
+  border-right: 5px solid transparent; border-bottom: 10px solid currentColor; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+/* selection is the only place the line colour sits behind text */
+::selection { background: var(--c-line); color: var(--c-ink); }
+/* the skip link is the only boxed object on the page: it appears on focus and never shifts layout */
+.s .wrap { position: relative; }
+.skip { position: fixed; top: var(--sp-3); left: var(--sp-3); z-index: 10; background: var(--c-bg);
+  color: var(--c-ink); padding: var(--sp-3) var(--sp-4); border: var(--bw-rule) solid var(--c-strong);
+  border-radius: var(--r-sm); }
+.skip:not(:focus) { clip-path: inset(50%); }
+/* focus: an instant ring, ink on paper, the field's own text colour inside a field */
+:focus { outline: var(--bw-focus) solid var(--c-ink); outline-offset: var(--focus-offset); }
+.field :focus { outline-color: var(--field-ink); }
+/* links: always underlined — the underline is the non-colour cue and the accent job is never the only one */
+a { color: inherit; text-decoration: underline; text-underline-offset: 0.18em; text-decoration-thickness: 1px; }
+a:visited { color: inherit; }
+a:hover { text-decoration-thickness: 2px; }
+a:active { text-decoration-thickness: 2px; }
+/* the one field keeps its own text colour whatever the look does with its links */
+.s.field a, .s.field a:visited, .s.field a:hover, .s.field a:active { color: var(--field-ink); }
+/* targets: a link outside a sentence keeps a 44px box; its own words may be short, the box may not */
+.s-header__nav a, .s-footer__links a, .s-hero__action a, .s-cta a {
+  display: inline-flex; align-items: center; min-height: var(--target); min-width: var(--target);
+  overflow-wrap: anywhere; }
+/* the annotation layer: caption, unit, source and the section number of two looks */
+.ann { display: block; font-size: var(--t-small); line-height: var(--lh-small); color: var(--c-muted); }
+.ann--unit, .ann--source { font-family: var(--font-label); }
+.ann--unit { display: inline; }
+.ann--caption, .ann--source { margin-top: var(--sp-3); }
+.ann--number { font-family: var(--font-label); font-size: var(--t-label); line-height: var(--lh-label);
+  font-weight: var(--w-head); letter-spacing: var(--tr-label); font-variant-numeric: tabular-nums; }
+.wrap > .ann--number { margin-bottom: var(--sp-2); }
+/* composition: rhythm refinements of the section sheet, from the required gaps */
+.s .stack > .t-h1 + * { margin-top: var(--sp-6); }   /* section heading to its first block: 32 */
+/* the hero's standfirst keeps the stack gap: .t-lead's own margin: 0 would otherwise win at equal specificity */
+.s .stack > .t-display + .t-lead { margin-top: var(--sp-5); }
+.stack > .t-body + .t-body { margin-top: var(--sp-4); }   /* paragraphs: 16 */
+.list-plain { list-style: none; }
+/* hero: one object in a wide field, vertically centred, never taller than its budget */
+.s-hero { display: grid; align-content: center; min-height: 60vh; box-sizing: border-box; }
+.s-hero > .wrap > .grid { column-gap: var(--sp-7); }
+.s-hero__action { margin-top: var(--sp-5); }
+.s-hero .ann--caption { margin-top: var(--sp-3); }
+.s-hero__object { align-self: center; }
+.s-hero[data-object="none"] .s-hero__object { display: none; }
+.s-hero[data-object="none"] > .wrap > .grid > .span-7 { grid-column: 1 / -1; }
+@media (min-width: 1024px) {
+  .s-hero[data-object="none"] > .wrap > .grid > .span-7 { grid-column: span 8; }
+}
+/* prose: the reading column and its one pull quote */
+.s-prose__pull { margin-block: var(--sp-5); border-left: var(--bw-rule) solid var(--c-line);
+  padding-left: var(--sp-5); }
+/* split: claim against proof, the gutter rule turning into a separator when the columns stack */
+.s-split > .wrap > .grid { align-items: start; }
+.s-split__evidence { border-left: var(--bw-rule) solid var(--c-line); padding-left: var(--sp-5); }
+.s-split__list { list-style: none; }
+.s-split__list > li + li { margin-top: var(--sp-5); }
+.s-split__list .ann + .t-body { margin-top: var(--sp-2); }
+.s-split__labels > div + div { margin-top: var(--sp-3); }
+@media (max-width: 1023px) {
+  .s-split__evidence { border-left: 0; border-top: var(--bw-rule) solid var(--c-line);
+    padding-left: 0; padding-top: var(--sp-5); }
+}
+/* cards: three across for three, two across for four to six, never a three-by-two grid */
+.s-cards__list { list-style: none; row-gap: var(--sp-5); }
+.s-cards__item { grid-column: 1 / -1; border-top: var(--bw-rule) solid var(--c-line);
+  padding-top: var(--sp-4); }
+.s-cards__item .t-h3 + .t-body, .s-cards__item .t-body + .t-small { margin-top: var(--sp-2); }
+@media (min-width: 768px) {
+  .s-cards__item { grid-column: span 3; }
+  .s-cards__list:has(> :nth-child(3):last-child) > .s-cards__item { grid-column: span 2; }
+}
+@media (min-width: 1024px) {
+  .s-cards__item { grid-column: span 6; }
+  .s-cards__list:has(> :nth-child(3):last-child) > .s-cards__item { grid-column: span 4; }
+  .s-cards__list:has(> .s-cards__lead) > .s-cards__item { grid-column: span 3; }
+  .s-cards__list:has(> .s-cards__lead) > .s-cards__lead { grid-column: span 6; }
+  .s-cards__list:has(> .s-cards__lead):has(> :nth-child(2):last-child) > .s-cards__item { grid-column: span 5; }
+  .s-cards__list:has(> .s-cards__lead):has(> :nth-child(2):last-child) > .s-cards__lead { grid-column: span 7; }
+}
+/* stats: one dominant number among two to four sourced ones */
+.s-stats__list { list-style: none; row-gap: var(--sp-6); }
+.s-stats__item { grid-column: 1 / -1; border-top: var(--bw-rule) solid var(--c-line);
+  padding-top: var(--sp-4); }
+.s-stats__item .ann--source { margin-top: var(--sp-3); }
+.s-stats__item:not(.s-stats__dominant) .t-numeral { font-size: var(--t-h2); line-height: var(--lh-h2); }
+@media (min-width: 768px) {
+  .s-stats__item { grid-column: span 3; }
+}
+@media (min-width: 1024px) {
+  .s-stats__list:has(> :nth-child(3):last-child) > .s-stats__item { grid-column: span 4; }
+  .s-stats__list:has(> :nth-child(2):last-child) > .s-stats__item { grid-column: span 6; }
+}
+/* timeline: a real sequence on a one-pixel spine */
+.s-timeline__list { list-style: none; max-width: var(--measure); border-left: var(--bw-rule) solid var(--c-line);
+  padding-left: var(--sp-5); }
+.s-timeline__item + .s-timeline__item { margin-top: var(--sp-5); }
+.s-timeline__item .t-label + .t-h3, .s-timeline__item .t-h3 + .t-body { margin-top: var(--sp-2); }
+/* quote: one exact quotation, no drawn mark, a short rule under it */
+.s-quote > .wrap > .grid { align-items: start; }
+.s-quote figcaption { margin-top: var(--sp-5); }
+.s-quote figcaption::before { content: ""; display: block; width: 48px; border-top: var(--bw-rule) solid var(--c-line);
+  margin-bottom: var(--sp-5); }
+.s-quote figcaption .ann { margin-top: var(--sp-1); }
+/* table: one message, row rules only, a labelled scroll region below the content width */
+.s-table__scroll { overflow-x: auto; }
+.s-table table { width: 100%; min-width: 560px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.s-table th, .s-table td { padding: 12px 16px; border-bottom: var(--bw-rule) solid var(--c-line);
+  text-align: left; vertical-align: top; }
+/* the first column starts where the heading starts and the last ends where the text ends */
+.s-table th:first-child, .s-table td:first-child { padding-left: 0; }
+.s-table th:last-child, .s-table td:last-child { padding-right: 0; }
+.s-table th { font-family: var(--font-label); font-size: var(--t-label); line-height: var(--lh-label);
+  font-weight: var(--w-head); letter-spacing: var(--tr-label); text-transform: uppercase; color: var(--c-muted); }
+.s-table td.num { text-align: right; }
+/* the stacked row's column name is real text — hidden while the header row carries the same name */
+.s-table__label { display: none; }
+.s-table .ann--source { margin-top: var(--sp-3); }
+/* below the table's own width the rows stack: the header would leave the screen, so each cell carries its
+   column's name and the scroll region never hides a column */
+@media (max-width: 599px) {
+  .s-table table, .s-table tbody, .s-table tr, .s-table td { display: block; }
+  .s-table table { min-width: 0; }
+  .s-table thead { display: none; }
+  .s-table tr { border-bottom: var(--bw-rule) solid var(--c-line); padding-block: var(--sp-3); }
+  .s-table td { display: grid; grid-template-columns: minmax(96px, 40%) 1fr; column-gap: var(--sp-3);
+    border-bottom: 0; padding: 0; }
+  .s-table td + td { margin-top: var(--sp-2); }
+  /* the stacked row has one alignment: a numeric cell's label and value start at the column's left edge */
+  .s-table td.num { text-align: left; }
+  .s-table .s-table__label { display: block; font-family: var(--font-label); font-size: var(--t-label);
+    line-height: var(--lh-label); font-weight: var(--w-head); letter-spacing: var(--tr-label);
+    text-transform: uppercase; color: var(--c-muted); }
+}
+/* gallery: captioned text tiles, no image and no frame */
+.s-gallery__list { list-style: none; row-gap: var(--sp-6); }
+.s-gallery__tile { grid-column: 1 / -1; border-top: var(--bw-rule) solid var(--c-line);
+  padding-top: var(--sp-3); }
+.s-gallery__tile .t-h3 + .t-small { margin-top: var(--sp-2); }
+@media (min-width: 768px) { .s-gallery__tile { grid-column: span 3; } }
+/* tiles land in complete rows: four as two rows of two, seven and eight as four across (4+3, 4+4);
+   three, five, six and nine keep the three-across band */
+@media (min-width: 1024px) {
+  .s-gallery__tile { grid-column: span 4; }
+  .s-gallery__list[data-count="4"] > .s-gallery__tile { grid-column: span 6; }
+  .s-gallery__list[data-count="7"] > .s-gallery__tile,
+  .s-gallery__list[data-count="8"] > .s-gallery__tile { grid-column: span 3; }
+}
+/* faq: every answer visible, a rule between items */
+.s-faq__item { border-top: var(--bw-rule) solid var(--c-line); padding-block: var(--sp-4); }
+.s-faq__item dt + dd { margin-top: var(--sp-2); }
+/* cta: the page's one filled field and one action */
+.s-cta > .wrap > .stack > .s-cta__action { margin-top: var(--sp-5); }
+/* header and footer: a content block inside the shell's landmark, never a landmark itself */
+.s-header { border-bottom: var(--bw-rule) solid var(--c-line); }
+.s-footer { border-top: var(--bw-rule) solid var(--c-line); }
+.s-header > .row { align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-5); }
+.s-header__nav, .s-footer__links { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); }
+.s-footer__links a { font-size: var(--t-small); }
+.s-footer > .row { gap: var(--sp-3) var(--sp-5); }
+.s-header .ann, .s-footer .ann { margin-top: 0; }
+@media (max-width: 767px) {
+  .s-footer > .row { flex-direction: column; align-items: flex-start; }
+}
+/* the one full-bleed surface band a look may carry; it is a band, never a box */
+[data-band="surface"] { background: var(--c-surface); }
+/* ---- looks: surface rules that change with the look class the body carries ------------------- */
+/* quiet: its one accent job is the closing field; links are ink and the underline is the cue, no section rule */
+/* editorial: type as image with an annotation rail — serif display, one accent rule, one band */
+.look-editorial .s-header { border-bottom: var(--bw-emphasis) solid var(--c-line); }
+.look-editorial .s-hero { border-top: var(--bw-emphasis) solid var(--c-accent); }
+.look-editorial .s-prose .t-body + .t-body { border-top: var(--bw-rule) solid var(--c-line);
+  padding-top: var(--sp-4); }
+.look-editorial .s-gallery__tile .t-h3 { font-family: var(--font-display); }
+/* technical: the annotated figure — a one-pixel rule grid, mono annotations, dense data blocks */
+.look-technical a, .look-technical a:visited { color: var(--c-accent); }
+.look-technical a:hover, .look-technical a:active { color: var(--c-ink); }
+.look-technical #main .s:not(.field) { border-top: var(--bw-rule) solid var(--c-line);
+  padding-top: var(--sp-5); }
+.look-technical .s-stats__list { row-gap: var(--sp-4); }
+.look-technical .s-stats__item + .s-stats__item { border-left: var(--bw-rule) solid var(--c-line);
+  padding-left: var(--sp-5); }
+.look-technical .s-table th, .look-technical .s-table td { padding-block: 16px; }
+.look-technical .s-timeline__list { max-width: var(--measure); }
+/* corporate: quiet lockup and one proof — a top rule per section, no accent rule */
+.look-corporate #main .s:not(.field) { border-top: var(--bw-rule) solid var(--c-line);
+  padding-top: var(--sp-5); }
+.look-corporate .s-cards__list { column-gap: var(--sp-6); }
+/* a surface band keeps the same inner space above and below its content: the rule offset a section gains
+   in these two looks is not the band's spacing */
+.look-corporate #main .s[data-band="surface"],
+.look-technical #main .s[data-band="surface"] { padding-block: var(--pad-y); }
+/* bold: flat field and giant type — no rules at all, one accent field, no object column */
+.look-bold .s-header, .look-bold .s-footer, .look-bold .s { border-top: 0; border-bottom: 0; }
+.look-bold .s-cards__item, .look-bold .s-stats__item, .look-bold .s-gallery__tile,
+.look-bold .s-faq__item, .look-bold .s-table th, .look-bold .s-table td { border: 0; }
+.look-bold .s-timeline__list, .look-bold .s-split__evidence, .look-bold .s-prose__pull {
+  border-left: 0; padding-left: 0; }
+.look-bold .s-quote figcaption::before { display: none; }
+.look-bold .s-hero > .wrap > .grid > .span-7,
+.look-bold .s-hero > .wrap > .grid > .s-hero__object { grid-column: 1 / -1; }
+/* warm: paper page and human caption — a thin rule per section, a left rule on the quotation */
+.look-warm #main .s:not(.field) { border-top: var(--bw-rule) solid var(--c-line); }
+.look-warm .s-quote blockquote { border-left: var(--bw-rule) solid var(--c-line); padding-left: var(--sp-5); }
+.look-warm .s-quote figcaption { padding-left: var(--sp-5); }
+.look-warm .s-quote figcaption::before { display: none; }
+/* the section number of the two looks that carry one: a rail at 1024 and up, above the heading below */
+@media (min-width: 1024px) {
+  .look-editorial .wrap > .ann--number { position: absolute; top: 0; left: 0; }
+  .look-technical .wrap > .ann--number { position: absolute; top: 0; right: var(--pad-x); }
+}
+/* ---- motion: feedback only — colour of a control between its resting values ----------------- */
+a { transition: color var(--motion-fast) var(--motion-ease); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; }
+}

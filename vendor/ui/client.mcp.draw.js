@@ -66,7 +66,7 @@ window.__ModuleLoader__.load({
           h('span', { key: 'count', className: 'coreness-sectionCount' }, countLine(rows)),
         ]);
 
-        const parts = [head, h('p', { key: 'intro', className: 'coreness-mcp-intro' }, t('intro'))];
+        const parts = [head, h('p', { key: 'intro', className: 'coreness-sectionIntro' }, t('intro'))];
 
         if (view.status === 'failed') {
           parts.push(h('div', { key: 'failed', className: 'coreness-mcp-failed coreness-failed' }, [

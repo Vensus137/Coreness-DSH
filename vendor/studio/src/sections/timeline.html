@@ -1,0 +1,9 @@
+<section class="s s-timeline" id="{{id}}"{{?band}} data-band="surface"{{/band}}{{?heading}} aria-labelledby="{{headingId}}"{{/heading}}>
+  <div class="wrap stack">
+    {{?number}}<p class="ann ann--number" aria-hidden="true">{{number}}</p>{{/number}}
+    {{?heading}}<h2 class="t-h1" id="{{headingId}}">{{heading}}</h2>{{/heading}}
+    <ol class="s-timeline__list">
+      {{#items}}<li class="s-timeline__item"><span class="t-label">{{label}}</span><h3 class="t-h3">{{title}}</h3>{{?body}}<p class="t-body">{{body}}</p>{{/body}}{{?source}}<span class="ann ann--source">{{source}}</span>{{/source}}</li>{{/items}}
+    </ol>
+  </div>
+</section>
