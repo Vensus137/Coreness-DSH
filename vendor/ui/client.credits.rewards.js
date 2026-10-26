@@ -108,7 +108,7 @@ window.__ModuleLoader__.load({
       function cardBlock(bar, key, note) {
         return h('span', { key, className: 'coreness-credits-seatRow' }, [
           h('span', { key: 'head', className: 'coreness-credits-rowHead' }, [
-            h('span', { key: 'label', className: 'coreness-credits-cardLabel' }, bar.label),
+            h('span', { key: 'label', className: 'coreness-credits-cardLabel coreness-name' }, bar.label),
             note === undefined ? null : h('span', { key: 'note', className: 'coreness-credits-rowNote' }, note),
           ]),
           barFill(bar),
@@ -138,7 +138,7 @@ window.__ModuleLoader__.load({
           return entry.claimable === true || status === 'CLAIMED';
         });
         const rows = [];
-        rows.push(h('p', { key: 'rewards', className: 'coreness-credits-blockTitle' }, t('rewards')));
+        rows.push(h('p', { key: 'rewards', className: 'coreness-credits-blockTitle coreness-name' }, t('rewards')));
         // A hidden list and an empty one are different things: hidden means the contour did not
         // recognise the desktop client, not that there is nothing to take.
         if (picture.shown === false) rows.push(h('p', { key: 'hidden', className: 'coreness-credits-dim' }, t('hidden')));

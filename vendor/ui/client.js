@@ -196,6 +196,10 @@ window.__ModuleLoader__.load({
     let pendingPulls = CHUNKS.length;
     /** Set by the mounted page: one chunk's pull settled — the pane re-reads and the empty word's grace restarts. */
     let settle = () => {};
+    /** The composition's last answer for the bundle's version, held for the package's life: a later mount paints
+        the title's tag in its first frame instead of reading again before it has one. A failed read writes
+        nothing. */
+    let lastVersion;
 
     /** The rail's rows: the sections the chunks registered, by order. The seat decides; this page does not. */
     function sectionRows() {
@@ -206,15 +210,48 @@ window.__ModuleLoader__.load({
       })).sort((a, b) => a.order - b.order);
     }
 
+    /**
+     * The bundle's version, read from the composition rather than from a manifest of this file, so the title and
+     * the installed bundle cannot drift apart — and one read for the whole package: the warm read at apply fills
+     * the hold, and the mounted page starts from the hold and reads again. A read that fails answers nothing
+     * and writes nothing: the version is not a status surface, and a made-up one would be worse than none.
+     */
+    async function readVersion() {
+      try {
+        const inventory = await ctx.remote.pluginInventory.list();
+        if (!inventory.ok) {
+          console.error(`${PACKAGE}: the version was not read: ${inventory.error.code}: ${inventory.error.message}`);
+          return undefined;
+        }
+        if (inventory.value.managementAvailable !== true) {
+          console.info(`${PACKAGE}: the version is not shown: the management gate is closed`);
+          return undefined;
+        }
+        const bundles = await ctx.remote.pluginManager.listBundles();
+        if (!bundles.ok) {
+          console.error(`${PACKAGE}: the version was not read: ${bundles.error.code}: ${bundles.error.message}`);
+          return undefined;
+        }
+        const bundle = bundles.value.find((item) => item.name === BUNDLE);
+        if (bundle?.version === undefined) return undefined;
+        lastVersion = bundle.version;
+        return lastVersion;
+      } catch (error) {
+        console.error(`${PACKAGE}: the version was not read: ${error?.message ?? error}`);
+        return undefined;
+      }
+    }
+
     /** The page: a rail of sections beside the body of the chosen one. */
     function CorenessPage(props) {
       const { renderSlot } = props;
       const [chosen, setChosen] = React.useState(null);
       const [, setRevision] = React.useState(0);
-      /* The bundle's version, read from the composition rather than held in this file, so the title and the
-         installed bundle cannot drift apart. A read that fails leaves the title without it: the version is
-         not a status surface, and a made-up one would be worse than none. */
-      const [version, setVersion] = React.useState(undefined);
+      /* The bundle's version, read from the composition rather than from a manifest of this file, so the title
+         and the installed bundle cannot drift apart. The page starts from the last answer the package read — the
+         warm read at apply fills it — and reads again on the mount; a read that fails leaves the title without
+         it: the version is not a status surface, and a made-up one would be worse than none. */
+      const [version, setVersion] = React.useState(lastVersion);
       /* How many chunk pulls have settled. A settle is the news an empty seat waits on: each one restarts the
          grace below, because a chunk that has applied is still assembling its own parts. */
       const [settled, setSettled] = React.useState(0);
@@ -249,26 +286,8 @@ window.__ModuleLoader__.load({
       React.useEffect(() => {
         let live = true;
         const read = async () => {
-          try {
-            const inventory = await ctx.remote.pluginInventory.list();
-            if (!inventory.ok) {
-              console.error(`${PACKAGE}: the version was not read: ${inventory.error.code}: ${inventory.error.message}`);
-              return;
-            }
-            if (inventory.value.managementAvailable !== true) {
-              console.info(`${PACKAGE}: the version is not shown: the management gate is closed`);
-              return;
-            }
-            const bundles = await ctx.remote.pluginManager.listBundles();
-            if (!bundles.ok) {
-              console.error(`${PACKAGE}: the version was not read: ${bundles.error.code}: ${bundles.error.message}`);
-              return;
-            }
-            const bundle = bundles.value.find((item) => item.name === BUNDLE);
-            if (live && bundle?.version !== undefined) setVersion(bundle.version);
-          } catch (error) {
-            console.error(`${PACKAGE}: the version was not read: ${error?.message ?? error}`);
-          }
+          const answered = await readVersion();
+          if (live && answered !== undefined) setVersion(answered);
         };
         void read();
         const disposers = [
@@ -358,6 +377,10 @@ window.__ModuleLoader__.load({
         /* The page's sheet stands here, with the package's life: its tokens and shared controls are read by
            surfaces that do not stand inside the page's mount, so the sheet cannot wait for one. */
         ctx.effect(() => holdStyles(), `${PACKAGE}: the page's sheet`);
+        /* The version is read once with the package's life rather than at each open: the reader opens the panel
+           seconds after the app, so this read has long answered and the first mount paints the tag in its first
+           frame. A failed read writes nothing, and the mount's own read retries and fills the hold. */
+        ctx.effect(() => { void readVersion(); }, `${PACKAGE}: the bundle's version`);
 
         ctx.slots.inject('main', () => ctx.slots.register({
           name: 'main',

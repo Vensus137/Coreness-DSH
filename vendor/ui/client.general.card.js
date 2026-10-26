@@ -81,8 +81,9 @@ window.__ModuleLoader__.load({
       const studio = drawStudio(state, act);
       const { value, draft, note, busy, prompt, promptBusy, promptFault, beatFault, readFault } = state;
       const loading = state.status === 'loading';
-      const editable = !loading && value?.editable === true && state.refreshing !== true && readFault !== true;
-      const writing = busy || promptBusy || state.refreshing === true;
+      /* A background read disables nothing: it corrects the picture that already stands behind the card. */
+      const editable = !loading && value?.editable === true && readFault !== true;
+      const writing = busy || promptBusy;
       /* A fault is the strip's word, never a line of its own: the strip stands in the card head with its room
          kept, so a read that failed says "Not read" without moving the page; the reason is said in the console,
          where a reader who has to act on it looks. The card's own conditions take the same room — one word, no

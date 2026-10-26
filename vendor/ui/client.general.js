@@ -250,12 +250,12 @@ window.__ModuleLoader__.load({
     /** The state a mount starts from: the last picture when one stands, and the skeleton when none does. */
     const startState = () => (lastRead === null
       ? {
-          status: 'loading', refreshing: true, value: null, draft: '', note: null, busy: false,
+          status: 'loading', value: null, draft: '', note: null, busy: false,
           prompt: null, promptBusy: false, promptFault: false, beatFault: false, readFault: false,
           studio: null, studioBusy: false, studioNote: null, studioFault: false, studioMissing: false,
         }
       : {
-          status: 'ready', refreshing: true, value: lastRead.value, draft: draftOf(lastRead.value), note: null, busy: false,
+          status: 'ready', value: lastRead.value, draft: draftOf(lastRead.value), note: null, busy: false,
           prompt: lastRead.prompt, promptBusy: false, promptFault: false, beatFault: false, readFault: false,
           studio: lastRead.studio, studioBusy: false, studioNote: null, studioFault: false, studioMissing: false,
         });
@@ -353,10 +353,12 @@ window.__ModuleLoader__.load({
             setState((now) => ({
               ...now,
               status: 'ready',
-              refreshing: false,
               readFault: false,
               value: answer.value,
-              draft: draftOf(answer.value),
+              /* The mount's read keeps the guard the reread and the beat keep: a draft the reader has changed
+                 is theirs; an unedited one follows the read. The controls stand live while this read runs, so
+                 a value typed into the field before the answer lands must not be replaced by it. */
+              draft: now.draft !== draftOf(now.value) ? now.draft : draftOf(answer.value),
               prompt: answer.prompt,
               promptFault: answer.promptFault,
             }));
@@ -369,7 +371,6 @@ window.__ModuleLoader__.load({
             setState((now) => ({
               ...now,
               status: now.status === 'ready' ? 'ready' : 'failed',
-              refreshing: false,
               readFault: true,
             }));
           },

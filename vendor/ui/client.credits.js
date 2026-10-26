@@ -110,9 +110,11 @@ window.__ModuleLoader__.load({
 .coreness-credits-card{background:var(--dsw-alias-bg-layer-3,#fff);border:.5px solid var(--dsw-alias-border-l2,#0000001f);border-radius:var(--dsw-radius-md);box-shadow:var(--coreness-elevation);color:var(--dsw-alias-label-primary);display:flex;flex-direction:column;font-size:12px;gap:10px;line-height:18px;max-width:320px;min-width:260px;padding:12px;position:fixed;z-index:1000}
 .coreness-credits-card .coreness-credits-bar{height:8px}
 .coreness-credits-cardHead{align-items:center;gap:8px;display:flex}
-.coreness-credits-cardTitle{flex:1;font-size:14px;font-weight:600;line-height:22px}
-.coreness-credits-blockTitle{margin:0;color:var(--dsw-alias-label-primary);font-size:12px;font-weight:600;line-height:18px}
-.coreness-credits-cardLabel{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-primary);font-size:12px;font-weight:600;line-height:18px}
+/* The popup's three names take the set's typography: its card's title is the set's card title and a block's
+   name the set's name line, worn beside these classes; each rule keeps only its own room and cut. */
+.coreness-credits-cardTitle{flex:1}
+.coreness-credits-blockTitle{margin:0}
+.coreness-credits-cardLabel{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .coreness-credits-icon{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;line-height:0;font:inherit;color:var(--dsw-alias-label-tertiary);background:0 0;border:0;border-radius:var(--dsw-radius-sm);cursor:pointer;text-decoration:none}
 /* The treatment the widget's three controls share, declared once with its state in the selector: the seat and the rail are one node under two names and the icon is the popover's own control, so the ring a keyboard visit draws and the ink and fill a pointer visit draws stand here, after the members' rules, where no member's own rule can take them back. */
 .coreness-credits-ring:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,#0f1115);outline-offset:1px}
@@ -364,7 +366,7 @@ window.__ModuleLoader__.load({
           : { left: view.anchor.left, bottom: view.anchor.bottom },
       }, [
         h('div', { key: 'head', className: 'coreness-credits-cardHead' }, [
-          h('span', { key: 'title', className: 'coreness-credits-cardTitle' }, t('usage')),
+          h('span', { key: 'title', className: 'coreness-credits-cardTitle coreness-sectionTitle' }, t('usage')),
           h('a', {
             key: 'usage',
             className: 'coreness-credits-icon coreness-credits-ring',
