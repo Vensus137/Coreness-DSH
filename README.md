@@ -1,78 +1,55 @@
 # Coreness for DeepSeek Harness
 
-**A page for a DeepSeek Harness profile.**
+[![Telegram](https://img.shields.io/badge/Telegram-%40Vensus137-26A5E4?logo=telegram&logoColor=white)](https://t.me/Vensus137)
 
-Coreness is the product for one DeepSeek Harness profile: a page with the profile's MCP servers, its Qoder provider and its rate limits and usage; and the rules of the tree in force. It installs as it is: the halves the browser loads are plain files, served where they lie — nothing is built, nothing is compiled, and what is installed is what runs. It refuses no DeepSeek Harness version: no minimum and no maximum.
+![The Coreness page: the rail with General, MCP, Qoder and Rate limiter, the MCP section open — one card per server](https://gist.githubusercontent.com/Vensus137/776e4d247aef014e32bceb810fdeae21/raw/410b202cc83345ebaeac891d46d8b23cb58c93c0/hero.png)
 
-## ⚡ Install
+Coreness is the product for one DeepSeek Harness profile: a panel in the application's sidebar, whose rail holds the sections for the profile's MCP servers, its Qoder provider, its rate limits and usage.
 
-**The application installs its own plugins.** *Plugins* → *Add plugin* takes a package name, a tarball, a git address or a local path, and the package goes into the profile the application is running — one door for the desktop application and for the web one, and no profile to name:
+## Install
+
+*Plugins* → *Add plugin*, in the application's own window, takes the package into the profile the application is running — no profile to name — and the address is:
 
 ```
 github:Vensus137/Coreness-DSH
 ```
 
-The same page switches the package off without removing it, and takes it off again.
-
-That address follows the newest release, and what stands published is a release — so the address and the newest release are one thing here. A fixed release is named by its own tag — `…Coreness-DSH#<tag>` — and that line gives the same code whenever it is run.
+The install lands in the running profile, and a restart is asked for only where the application cannot apply the change in place. Nothing is built on the way in: the package is plain files, and its manifest declares no Harness version bound. The address is a git repository, so the install reads it with git — a machine without git cannot install it.
 
 <details>
-<summary><b>By command line</b> — for a terminal; nothing above needs it</summary>
+<summary><b>By command line, and updates through the market</b></summary>
 
-The line is ready to run as it stands, because the desktop application's own profile carries that name:
+`dsh` is the application's own command and not one Windows or macOS comes with: the application puts it on the path from its own menu — **Application → Manage dsh Command…** in the window's title bar on Windows, the same item in the application menu on macOS — and a terminal opened before that act keeps the path it started with. The line then runs as it stands: the desktop application's own profile is `desktop`; another profile is named instead — the web surface's is `web` — and a name that does not stand yet is created:
 
 ```
 dsh plugin --profile desktop add github:Vensus137/Coreness-DSH
 ```
 
-Another profile is named by its own name instead — the web surface's is `web` — and naming a profile that does not stand yet creates it.
-
-`dsh` is the application's own command and is not one Windows or macOS comes with, so until the application puts it on the path a terminal answers *not recognized*. The application does that from its own menu: in the window's title bar beside the app icon, **Application** → **Manage dsh Command…** — the dialog shows the location it manages, and the same dialog takes the command off the path again. A terminal opened before that act keeps the path it started with; one opened afterwards finds the command.
+Updates go through the application's **Discover** tab: switch *Custom plugin markets* on once (**Plugins → More**), add `https://raw.githubusercontent.com/Vensus137/Coreness-DSH/main/market.json`, and the plugin stands listed with its versions, compared by the application itself: a newer one shows as *Update available*, whose press opens the installed plugin's page. The update itself is taking the plugin off and adding it again with the same address; *Add plugin* over the installed copy is refused. Nothing checks in the background; the address follows the newest release, and a fixed one is named by its tag, `github:Vensus137/Coreness-DSH#<tag>`.
 
 </details>
 
-The profile's composition is read when the application starts, so the package becomes live at the next start, and the platform says itself when a change it made needs a restart. Nothing is built on the way in and no permission for install scripts is asked: the package is plain files, and the address is fetched over the network the application already uses rather than by a git client — a machine without git installs it.
+## What a profile gets
 
-### Updates through the market
+- **The MCP servers, seen and edited** — one card per server: its kind, its address, the environment it needs, and switches whose effect lands in the profile rather than in a copy. A server behind OAuth is signed in from its card.
 
-The application has its own **Discover** tab: it reads a plugin market, and the market is a list the profile adds. *Custom plugin markets* is switched on once — **Plugins → More** beside *Experimental plugins* — and then this address is added in Discover:
+  ![A close-up of the notes card in the MCP section: its switch flipped on, its tools appearing, and the counter moving from two servers on to three](https://gist.githubusercontent.com/Vensus137/776e4d247aef014e32bceb810fdeae21/raw/410b202cc83345ebaeac891d46d8b23cb58c93c0/mcp-switch.gif)
 
-```
-https://raw.githubusercontent.com/Vensus137/Coreness-DSH/main/market.json
-```
+- **The Qoder models** — the account's own, each with the reasoning levels it accepts and the output budget it allows; the token is entered once, in the Qoder section, and kept by the platform's own store.
+- **A limiter that waits instead of refusing** — a call over a declared limit takes its turn in a queue; nothing is limited until a limit is declared.
 
-The plugin stands listed with its versions; the application compares them itself and shows when a newer one exists.
+  ![The Rate limiter section: the window, the longest wait, and a ceiling per model](https://gist.githubusercontent.com/Vensus137/776e4d247aef014e32bceb810fdeae21/raw/410b202cc83345ebaeac891d46d8b23cb58c93c0/rate-limiter.png)
 
-The market lists and compares; it does not upgrade. Its own note says so — *no upgrade action* — and its **Update available** press only opens the plugin's page. The update is the same act as the install: **Add plugin** with the same address picks up the newest release, and the application says when a restart is needed. A version that does not move after that is a pinned lockfile: the plugin is taken off and added again.
+- **The Agent team, on the General page** — how many teammates a session may hold, written through the platform's own editor, and two switches that put the product's paragraph in place of the platform's last team-policy sentence and add the review paragraph after it; the team is the platform's, and every other line stays as it wrote it.
 
-Nothing checks in the background and nothing notifies — the market is read when the page is opened.
+  ![The General page's Agent team card: the teammates ceiling, and the Team prompt and Review pass switches](https://gist.githubusercontent.com/Vensus137/776e4d247aef014e32bceb810fdeae21/raw/410b202cc83345ebaeac891d46d8b23cb58c93c0/general.png)
 
-A profile that mounts a working tree (`file:` dependency) is the development case: the market's install would replace that mount with the published copy, so a development profile updates by re-mounting instead.
+- **The rules of the tree, in force** — the conventions the product's own tree works by, as one prompt section in the platform's registry: every request of the profile carries them, and no compaction can take them out of the model's sight.
 
-## ✨ What a profile gets
+## What lands
 
-- 🗂 **A page of its own** — the profile's MCP servers as cards, its Qoder provider and its rate limits and usage; the sections stand in the rail, and the version stands beside the name.
-- 🔌 **The MCP servers, seen and edited** — one card per server: its kind, its address, the environment it needs, and switches whose effect lands in the profile rather than in a copy.
-- 🚦 **A limiter that waits instead of refusing** — a call over the limit takes its turn in a queue; nothing is limited as the package ships.
-- 🤝 **The Agent Team, on the page and on its own terms** — the platform's teammates, board and mailbox, and a card on the General page: how many teammates a session may hold, written through the platform's own editor, and two switches that put the product's paragraph in place of the platform's last team-policy sentence and add the review paragraph after it, while every other line of the policy stays as the platform wrote it and the platform's own text stands when the first switch is off.
-- 🧠 **A route to the Qoder models** — the account's own models, each with the reasoning levels it accepts and the output budget it allows. The account's token is entered once, in the Qoder section, and kept by the platform's own store; no value of it stands in the package. A token from either Qoder contour — the international one or the Chinese one — is accepted there the same way, and the route reads the account on its own contour. The credits foot reads the balance while the account is reachable; the Qoder section's node row carries one press that asks the vendor to turn sharing off, reports a plan that locks it, and keeps the state in its title.
-- 📜 **The rules of its own tree, in force** — one prompt section, registered through the platform's own prompt registry, so a session of the profile carries them in every request and no compaction can take them out of the model's sight.
+The repository is the bundle: behind it stand the packages it names — the panel, the rules, MCP, the OAuth sign-in, the Qoder route, the rate limiter and the team card — each its own plugin, so a profile switches off the ones it does not use on the application's own Plugins page. Nothing is fetched from the product's side; what the page shows is read from the profile and the account it names.
 
-## 🧩 What it needs
-
-- **DeepSeek Harness.** Any version: the manifest declares no version bound, so the application's check never leaves this plugin out on version grounds, and a break a version brings is repaired in the product.
-- **A Qoder account,** for the Qoder route and the credits foot; the token is entered in the Qoder section and kept by the platform's own store, from the international or the Chinese contour.
-
-## 📦 What lands
-
-Exactly the list the package's manifest names — the bundle and the seven packages, each with its own README beside its code. No part of the workshop they are built in: the contracts, the checks and the notes of this project stay where the work is done.
-
-## 🧭 What it deliberately does not do
-
-- It is not a second door to the platform's own acts: enabling, disabling, installing and removing belong to the application's Plugins page, and this package reports what stands rather than competing with it.
-- It does not own the MCP side: the platform owns the servers, the connection and the registry, while this package owns the picture and the form.
-- It limits nothing until a limit is declared.
-
-## 📄 License
+## License
 
 MIT.
