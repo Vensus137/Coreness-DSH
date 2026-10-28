@@ -1,9 +1,0 @@
-<section class="s s-stats" id="{{id}}"{{?band}} data-band="surface"{{/band}}{{?heading}} aria-labelledby="{{headingId}}"{{/heading}}>
-  <div class="wrap stack">
-    {{?number}}<p class="ann ann--number" aria-hidden="true">{{number}}</p>{{/number}}
-    {{?heading}}<h2 class="t-h1" id="{{headingId}}">{{heading}}</h2>{{/heading}}
-    <dl class="grid s-stats__list">
-      {{#items}}<div class="s-stats__item{{?isDominant}} s-stats__dominant{{/isDominant}}">{{?caption}}<dt class="ann ann--caption">{{caption}}</dt>{{/caption}}<dd><span class="t-numeral">{{value}}</span>{{?unit}} <span class="ann ann--unit">{{unit}}</span>{{/unit}}{{?source}}<span class="ann ann--source">{{source}}</span>{{/source}}</dd></div>{{/items}}
-    </dl>
-  </div>
-</section>

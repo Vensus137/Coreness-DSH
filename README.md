@@ -58,7 +58,6 @@ A profile that mounts a working tree (`file:` dependency) is the development cas
 - 🤝 **The Agent Team, on the page and on its own terms** — the platform's teammates, board and mailbox, and a card on the General page: how many teammates a session may hold, written through the platform's own editor, and two switches that put the product's paragraph in place of the platform's last team-policy sentence and add the review paragraph after it, while every other line of the policy stays as the platform wrote it and the platform's own text stands when the first switch is off.
 - 🧠 **A route to the Qoder models** — the account's own models, each with the reasoning levels it accepts and the output budget it allows. The account's token is entered once, in the Qoder section, and kept by the platform's own store; no value of it stands in the package. A token from either Qoder contour — the international one or the Chinese one — is accepted there the same way, and the route reads the account on its own contour. The credits foot reads the balance while the account is reachable; the Qoder section's node row carries one press that asks the vendor to turn sharing off, reports a plan that locks it, and keeps the state in its title.
 - 📜 **The rules of its own tree, in force** — one prompt section, registered through the platform's own prompt registry, so a session of the profile carries them in every request and no compaction can take them out of the model's sight.
-- 🖼 **Page Studio** — one request builds a static page (landing, portfolio, article, event page) or a five-to-nine screen HTML presentation from named looks, sections and recipes, with a checker for contrast, structure and link cues. Its four tools and its skill are off by default: the card **Page Studio** on the product's own General page switches them, the change applies from the session's next request and rebuilds the prompt cache, and no page reload or reinstall is involved. The folder the page lands in is the one the request or the project names, and it opens from `file://` with its assets beside it.
 
 ## 🧩 What it needs
 
@@ -67,7 +66,7 @@ A profile that mounts a working tree (`file:` dependency) is the development cas
 
 ## 📦 What lands
 
-Exactly the list the package's manifest names — the bundle and the nine packages, each with its own README beside its code. No part of the workshop they are built in: the contracts, the checks and the notes of this project stay where the work is done.
+Exactly the list the package's manifest names — the bundle and the eight packages, each with its own README beside its code. No part of the workshop they are built in: the contracts, the checks and the notes of this project stay where the work is done.
 
 ## 🧭 What it deliberately does not do
 

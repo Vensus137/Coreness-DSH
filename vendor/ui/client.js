@@ -356,8 +356,7 @@ window.__ModuleLoader__.load({
       /* What this entry reads: the slots and the locale for the frame and the seat, the two remotes the
          rail's version tag asks about the composition's own bundle, and the four the Qoder section, the
          rate gate and the General page read through the context a chunk borrows — this list is what waits
-         for a service. No settings form service stands here: the General page's Page Studio card writes
-         through its own host route, so the page works in a profile that mounts no platform settings surface. */
+         for a service. */
       inject: [
         'slots',
         'locale',

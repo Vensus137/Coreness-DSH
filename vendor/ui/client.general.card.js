@@ -23,62 +23,11 @@ window.__ModuleLoader__.load({
       }, note === null ? '' : note.text);
     }
 
-    /**
-     * The Page Studio card: this product's own switch, drawn in this page's frame beside the team's card.
-     *
-     * The section's picture carries it, and a composition that mounts no studio Host half answers no route:
-     * the card then stands with its missing sentence and the box disabled rather than offering a write that
-     * cannot land. Its state words are the frame's: the strip says a save, a refusal or the unread word, the
-     * check is the answer, and the check row carries the page's reading line while the first read is in
-     * flight, so the card stands from the first paint and the answer moves nothing.
-     */
-    function drawStudio(state, act) {
-      const picture = state.studio;
-      const ready = picture !== null && picture !== undefined;
-      const fault = state.studioFault === true;
-      const missing = state.studioMissing === true;
-      const busy = state.studioBusy === true;
-      /* A read that answers no namespace or no editor leaves the card standing and the box disabled: this
-         profile cannot write the switch from the page, and its value stands in the Cordis configuration. */
-      const unwritable = ready && (picture.ns === null || picture.editable !== true);
-      const writable = ready && !unwritable && !fault && !missing && !busy;
-      /* A failed read is the strip's word, said once; the reason is the console's. A Host half that is not
-         mounted is the card's own sentence in the body and takes no strip: the switch did not fail, it is not
-         here. */
-      const note = state.studioNote ?? (fault && missing === false ? { tone: 'fault', text: words('state.unread') } : null);
-      /* The check's word: its own name once a read answered, and the page's reading line while the first read
-         is in flight — a disabled box that says what it waits for, the page's shape for a control whose read
-         has not landed. A read that failed with no picture says the name, never "Reading" forever. */
-      const word = ready || fault || missing ? words('studio.check') : words('studio.reading');
-      return h('li', { key: 'studio', className: 'coreness-card-box' }, [
-        h('div', { key: 'cardhead', className: 'coreness-card-head coreness-general-head' }, [
-          h('h4', { key: 'title', className: 'coreness-sectionTitle' }, words('studio.title')),
-          answerStrip(note),
-        ]),
-        h('div', { key: 'body', className: 'coreness-card-body' }, [
-          h('label', { key: 'check', className: 'coreness-check' }, [
-            h('input', {
-              key: 'box',
-              type: 'checkbox',
-              checked: ready && picture.enabled === true,
-              disabled: !writable,
-              onChange: (event) => act.studio(event.target.checked),
-            }),
-            h('span', { key: 'word' }, word),
-          ]),
-          h('p', { key: 'hint', className: 'coreness-dim' }, [words('studio.description'), ' ', words('studio.cache')]),
-          unwritable ? h('p', { key: 'unavailable', className: 'coreness-dim' }, words('studio.unavailable')) : null,
-          missing ? h('p', { key: 'missing', className: 'coreness-dim' }, words('studio.missing')) : null,
-        ]),
-      ]);
-    }
-
-    /** The section as it draws: one picture, one set of acts, and the two cards the page carries. */
+    /** The section as it draws: one picture, one set of acts, and the card the page carries. */
     function draw(state, act) {
       const head = h('div', { key: 'head', className: 'coreness-sectionHead' }, [
         h('h4', { key: 'title', className: 'coreness-sectionTitle' }, words('section')),
       ]);
-      const studio = drawStudio(state, act);
       const { value, draft, note, busy, prompt, promptBusy, promptFault, beatFault, readFault } = state;
       const loading = state.status === 'loading';
       /* A background read disables nothing: it corrects the picture that already stands behind the card. */
@@ -163,7 +112,7 @@ window.__ModuleLoader__.load({
             ]) : null,
             switchStands ? h('p', { key: 'reviewHint', className: 'coreness-dim' }, words('team.reviewHint')) : null,
           ]),
-        ]), studio].filter(Boolean)),
+        ])]),
       ]);
     }
 
