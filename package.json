@@ -1,15 +1,14 @@
 {
   "name": "@coreness/dsh",
-  "version": "0.9.0",
+  "version": "0.10.2",
   "private": true,
   "type": "module",
   "description": "The Coreness product for a DeepSeek Harness profile.",
   "engines": {
-    "dsh": ">=0.2.1-rc.2"
+    "dsh": "*"
   },
   "dependencies": {
     "@coreness/ui": "file:./vendor/ui",
-    "@coreness/journal": "file:./vendor/journal",
     "@coreness/rules": "file:./vendor/rules",
     "@coreness/mcp": "file:./vendor/mcp",
     "@coreness/oauth": "file:./vendor/oauth",

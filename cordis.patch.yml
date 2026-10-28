@@ -1,9 +1,7 @@
-# The bundle's rows: the page, the journal, the rules, MCP, OAuth, the Qoder route and the rate gate.
+# The bundle's rows: the page, the rules, MCP, OAuth, the Qoder route and the rate gate.
 - insert:
     - id: coreness-ui
       name: '@coreness/ui'
-    - id: coreness-journal
-      name: '@coreness/journal'
     - id: coreness-rules
       name: '@coreness/rules'
     - id: coreness-mcp

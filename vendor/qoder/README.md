@@ -4,9 +4,9 @@ The Qoder provider host: the vendor's wire, the adapter the platform's model ser
 
 ## What the host owns
 
-`apply` creates the transport (`createTransport`, published as `qoderTransport`) and registers the adapter under the route id `qoder`: the display name `Qoder`, the row's models, the retry policy, the credential reference and the image inputs. It registers the configurable provider under the row's own namespace, registers the model discovery (`ctx.llm.registerModelDiscovery`), hands the adapter the image reader (`imageData`) and the spend journal (`journal`), and starts the credits sweep.
+`apply` creates the transport (`createTransport`, published as `qoderTransport`) and registers the adapter under the route id `qoder`: the display name `Qoder`, the row's models, the retry policy, the credential reference and the image inputs. It registers the configurable provider under the row's own namespace, registers the model discovery (`ctx.llm.registerModelDiscovery`), hands the adapter the image reader (`imageData`) and starts the credits sweep.
 
-The transport is one closure over the vendor's facts: the token's contour, the node map, the token exchange and refresh, the profile, the signed catalogue, the signed web search, the signed chat turn, the frames, and the machine id. The account's credits, the data policy and the search are read through it with the same job token. No token is captured: the row names a credential reference and the value is resolved per call. The vendor's effort menus are kept the same way: every catalogue read of the account's own node adds what it publishes to `qoder/model-menus.json`, one read at start does so again, and no read removes a level — so the declaration the platform's model picker reads carries the vendor's levels without waiting on the network, and a level the cache once published is never taken back from it. Where the vendor publishes a menu, the picker offers that menu and `Off`, and the platform's own `high`/`max` stand only for a model the catalogue publishes none for; the effort the row names is always declared, even where the menu lacks it, because the platform refuses a default that is not a member. The price of the short list: a session holding `high`/`max` on a model whose menu does not publish it is refused until a level from the menu is picked, since a stored choice is not visible to the declaration.
+The transport is one closure over the vendor's facts: the token's contour, the node map, the token exchange and refresh, the profile, the signed catalogue, the signed web search, the signed chat turn, the frames, and the machine id. The account's credits, the data policy and the search are read through it with the same job token. No token is captured: the row names a credential reference and the value is resolved per call. The vendor's effort menus are kept the same way: every catalogue read of the account's own node adds what it publishes to `coreness/qoder/model-menus.json`, one read at start does so again, and no read removes a level — so the declaration the platform's model picker reads carries the vendor's levels without waiting on the network, and a level the cache once published is never taken back from it. Where the vendor publishes a menu, the picker offers that menu and `Off`, and the platform's own `high`/`max` stand only for a model the catalogue publishes none for; the effort the row names is always declared, even where the menu lacks it, because the platform refuses a default that is not a member. The price of the short list: a session holding `high`/`max` on a model whose menu does not publish it is refused until a level from the menu is picked, since a stored choice is not visible to the declaration.
 
 The token calls of one contour live in `src/contour.js`; the transport keeps the caches and the calls that resolve through them. A token is exchanged on both contours together and kept on the one that answers — the choice is cached by the token's fingerprint, and `region` may pin it. The model defaults are `auto` 200,000, `dfmodel` 400,000, `qmodel_38max` 400,000 and `qfmodel` 400,000; `efficient` is not a default (the Chinese node refuses it) but the live catalogue still offers it on the international node. `DEFAULT_CONTEXT_WINDOW` (200,000) is the fallback for an undeclared model, never the declaration's window.
 
@@ -34,12 +34,12 @@ The row's schema is `Config`, declared in `src/config.js` and re-exported by `sr
 - `apiKeyEnv` — `QODER_PERSONAL_ACCESS_TOKEN` (a credential reference, never a value).
 - `models` — the four default models above, each with its window, `vision` and effort.
 - `defaultContextWindow` — 200,000.
-- `retryPolicy` — `normal`, 5 retries, the six retryable codes (`EMPTY_RESPONSE`, `RATE_LIMIT`, `SERVER`, `TIMEOUT`, `TRANSPORT`, `MALFORMED_RESPONSE`), backoff 500 ms → 10 s with jitter. A turn the contour cuts at its output ceiling with no text left is reported as `EMPTY_RESPONSE`, so the policy re-asks the step; the spend journal still records that request's ending as `max-tokens`.
+- `retryPolicy` — `normal`, 5 retries, the six retryable codes (`EMPTY_RESPONSE`, `RATE_LIMIT`, `SERVER`, `TIMEOUT`, `TRANSPORT`, `MALFORMED_RESPONSE`), backoff 500 ms → 10 s with jitter. A turn the contour cuts at its output ceiling with no text left is reported as `EMPTY_RESPONSE`, so the policy re-asks the step.
 - `centerOrigin` — `https://center.qoder.sh`; `openapiOrigin` — `https://openapi.qoder.sh`; a value other than these two makes a custom contour and skips the detection.
 - `region` — `auto`: the token's two exchanges decide; `global` or `cn` pins one and skips the detection. Not volatile.
 - `controlCeilingMs` 10,000; `firstByteCeilingMs` 15,000; `idleCeilingMs` 300,000 (the bundle row pins `firstByteCeilingMs` to 60,000).
 - `inferBase` — empty: the node map is asked; a pinned node is read per call.
-- `machineIdStoreDir` — empty: the harness home's `qoder/` is used.
+- `machineIdStoreDir` — empty: `coreness/qoder/` under the harness home is used.
 - `reasoningEffort` — empty: a model's own row names the level.
 - `credits` — `sweepMs` 600,000 (clamped to 60,000 … 86,400,000 with a warning), `autoClaim` true.
 - `webAccess` — `{ enabled: false }`: the one switch for the two web providers. Off by default; the providers stay registered but unavailable while it is off.
@@ -62,16 +62,13 @@ The account's data-sharing policy is server-side and account-level: `GET`/`PUT {
 
 ## Files under the home
 
-- `$DSH_HOME/qoder-requests.ndjson` — the spend journal: one append-only line per request that carried usage (time, model, the session and the ending, duration, counters, the vendor's credits and the dollars at the rate written with them); rotated at 64 MiB, two generations. `inputTokens` excludes the cache, `totalTokens` includes it; the ending is the platform's own object (`{kind: 'stop' | 'tool-calls' | 'max-tokens' | 'aborted' | 'error'}`).
-- `$DSH_HOME/qoder/qoder-machine-id` — the machine id: the plugin's own, generated here on first use and reused across runs; the vendor client's home is never read.
-- `$DSH_HOME/qoder/model-menus.json` — the vendor's effort menus, one growing list per model: a level every read of the account's own node has published, never removed by a later read; the model declaration answers from it, and clearing the file (with a restart — a running process keeps its levels) is how a level the vendor stopped publishing stops being offered.
+- `$DSH_HOME/coreness/qoder/qoder-machine-id` — the machine id: the plugin's own, generated here on first use and reused across runs; the vendor client's home is never read.
+- `$DSH_HOME/coreness/qoder/model-menus.json` — the vendor's effort menus, one growing list per model: a level every read of the account's own node has published, never removed by a later read; the model declaration answers from it, and clearing the file (with a restart — a running process keeps its levels) is how a level the vendor stopped publishing stops being offered.
+
+The machine id and the effort menus now live under `$DSH_HOME/coreness/qoder/`; the copies a previous version left under `$DSH_HOME/qoder/` are not read, moved or deleted.
 
 No other host file. The sweep and the routes write neither the profile's patch nor a log file.
 
-## The spend tool
-
-`spend` answers what the ledger holds for a window: dollars, credits, requests and tokens, and the same figures by day (UTC dates), by model or by the ending. The money splits by the vendor's `billable` flag — `usd` is everything, `billed` and `unbilled` its parts — and `failures` says how many rows the plugin failed to write since it started. Every row is one request; a row whose wire counted no credits adds no money, and the answer says how many lines of the ledger were not rows and which of its files were read. A ledger that stands nowhere is a refusal in words, never an empty answer. The reader sums the row's own figure: `usd` where it stands, else the credits at the row's own rate, else at the fixed rate.
-
 ## The checks
 
-The fixtures — `node packages/qoder/scripts/check-spend.mjs` and the wire checks among them, not in the package's `files` — hold the ledger's rows, the signed calls, and the chat door's renewal and first-byte ceiling.
+The fixtures — the wire checks among them, not in the package's `files` — hold the wire mapping, the signed calls, and the chat door's renewal and first-byte ceiling.

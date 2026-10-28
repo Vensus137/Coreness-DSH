@@ -275,7 +275,7 @@ export function createShutter(options = {}) {
     if (block === null) {
       if (!isMarkup(found.name, found.marked, lineStart)) {
         // A word of the answer that merely looks like a tag: it stays where it stands, counted, so
-        // that the decision is legible in the journal rather than invisible in the text.
+        // that the decision is legible in the session record rather than invisible in the text.
         count(counters.tagsQuoted, found.name)
         piece.text += found.raw
         shown(found.raw)

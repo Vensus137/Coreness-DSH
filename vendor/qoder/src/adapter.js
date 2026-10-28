@@ -228,14 +228,12 @@ function vendorFailure(error) {
  * @param {() => object} options.settings the row's settings, read per generation
  * @param {(ref: object, signal?: AbortSignal) => Promise<string>} [options.imageData] the reader of one attachment's bytes
  * @param {string} [options.displayName] the route's name in the platform's pages
- * @param {object} [options.journal] the spend journal, told what one request cost
  * @param {(message: string) => void} [options.log] where a wiring defect is reported
  * @returns {object} the adapter the platform registers
  */
 export function createAdapter(options) {
   const transport = options.transport
   const displayName = options.displayName ?? DISPLAY_NAME
-  const journal = options.journal
   const log = options.log ?? (() => {})
   const snapshot = () => {
     const raw = options.settings() ?? {}
@@ -328,9 +326,6 @@ export function createAdapter(options) {
       yield refusalOf('UNSUPPORTED_OPTION', `the Qoder contour executes no ${unsupported}: the request names it and the vendor would ignore it`, call.signal)
       return
     }
-    /* The attempt's own wall time, from before the pictures are read to the terminal: what a row of the
-       spend journal means by the duration of a turn. */
-    const startedAt = Date.now()
     let answer
     try {
       // The pictures of the request are resolved before the transport builds the body: the harness
@@ -355,7 +350,7 @@ export function createAdapter(options) {
       return
     }
     try {
-      yield* translate(answer.response, call, { transport, log, journal, startedAt })
+      yield* translate(answer.response, call, { transport, log })
     } catch (error) {
       yield { type: 'finish', reason: terminalOfFailure(error, call.signal) }
     }
@@ -374,12 +369,10 @@ export function createAdapter(options) {
  * @param {object} call the platform's `GenerateOptions`
  * @param {object} deps what the reading needs
  * @param {object} deps.transport the `qoderTransport` service, for its own ceilings on the read
- * @param {object} [deps.journal] the spend journal, told what this attempt cost
- * @param {number} [deps.startedAt] when the attempt left, for the row's own duration
  * @param {(message: string) => void} deps.log where a wiring defect is reported
  * @yields {object} the platform's chunks
  */
-async function* translate(response, call, { transport, log, journal, startedAt }) {
+async function* translate(response, call, { transport, log }) {
   const shutter = createShutter({ summary: call.purpose === 'compaction' ? 'keep' : 'drop' })
   /** The one open text-or-reasoning block, and the counter the block indices come from. */
   let open
@@ -522,33 +515,17 @@ async function* translate(response, call, { transport, log, journal, startedAt }
   yield* closeCalls()
 
   const counters = { ...shutter.counters(), unknownKeys, reasoningChars }
-  // The platform's journal is the only place a counter can be kept here, so anything the shutter had
+  // The platform's session log is the only place a counter can be kept here, so anything the shutter had
   // to take out of the visible channel is said once, by name — a mark with no word is a defect of the
   // card this module closes, not a quiet detail.
   if (Object.keys(counters.tagsNeutral).length > 0) {
     log(`qoder: markup met in the visible channel of route ${ROUTE}: ${JSON.stringify(counters.tagsNeutral)}${counters.summaryChars === 0 ? '' : `, a summary of ${counters.summaryChars} characters dropped`}`)
   }
 
-  /**
-   * One row of the spend journal, when this attempt is one the wire counted. A turn whose answer carried
-   * no usage frame spent nothing this route can name, and a row of zeros in a ledger of costs is worse
-   * than no row: the journal is told only what arrived. The write here is the last thing before the
-   * terminal leaves — a generator's code after a `yield` runs on the next `next()`, and a reader that
-   * stops at the terminal would leave the turn unrecorded — and it never throws.
-   */
-  function recordSpend(finish) {
-    if (usage === undefined) return
-    journal?.record({ model: call.model, session: call.sessionId, finish, durationMs: Date.now() - startedAt, usage })
-  }
-
   // The wire's terminal, held back until the usage has arrived: the harness's rule is that the usage
   // precedes the terminal, and the vendor writes its usage frame *after* `finish_reason` (measured).
   if (!sawTerminal && finishReason === undefined) {
     const reason = terminalOfFailure(Object.assign(new Error('the Qoder answer ended without a terminal: no finish reason and no sentinel'), { code: 'TRANSPORT' }), call.signal)
-    /* Counters that arrived before the stream broke are still what the vendor charged for, so the row
-       stands even though the platform is told the attempt failed: this ledger is the spend's, not the
-       platform's bookkeeping. A stream that sent no usage frame leaves no row at all. */
-    recordSpend(reason)
     yield { type: 'finish', reason }
     return
   }
@@ -569,9 +546,5 @@ async function* translate(response, call, { transport, log, journal, startedAt }
     }
   }
   const reason = reasonOf({ finishReason, sawTerminal, textChars, callCount, counters })
-  // The ledger records the wire's own ending: a `length` cut is the vendor's ceiling whether or not
-  // anything survived it. The platform is told the empty-turn code when nothing did, and re-asks the
-  // step; the money's row still says what the request was.
-  recordSpend(finishReason === 'length' ? { kind: 'max-tokens' } : reason)
   yield { type: 'finish', reason }
 }

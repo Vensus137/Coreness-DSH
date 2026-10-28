@@ -24,19 +24,15 @@
  * @module @coreness/qoder
  */
 
-import { homedir } from 'node:os'
-import { join } from 'node:path'
 import { QoderError } from './in.js'
 import { createTransport } from './transport.js'
 import { DISPLAY_NAME, ROUTE, createAdapter, liveValue } from './adapter.js'
 import { sweepMsOf } from './config.js'
 import { CATALOGUE_ACTION, VERIFY_ACTION, WEB_SEARCH_ACTION, answerOf, answerOfRoute } from './routes.js'
 import { createImageReader } from './images.js'
-import { menusPath } from './menus.js'
+import { ensureLayout, homeOf, machineIdDir, menusPath } from './home.js'
 import { createCredits } from './credits.js'
 import { createAccount } from './account.js'
-import { createSpendJournal } from './spend.js'
-import { spendTools } from './spendTool.js'
 import { PROBE_ACTION } from './probe.js'
 import { PROVIDER_ID, registerWebProviders } from './web.js'
 
@@ -58,7 +54,7 @@ export const name = 'coreness-qoder'
  * its startup cannot boot at all. The routes are registered in the scoped area in `apply` instead — the
  * platform's own idiom for a service that may be absent, `ctx.inject(["connection"], …)`.
  */
-export const inject = ['credentials', 'llm', 'tools']
+export const inject = ['credentials', 'llm']
 
 /** The service this plugin provides: the transport the adapter of this route consumes. */
 export const SERVICE = 'qoderTransport'
@@ -87,20 +83,6 @@ export const CREDITS_ROUTE = '/api/coreness.credits'
 export const PROBE_ROUTE = '/api/coreness.qoder'
 
 /**
- * The spend journal's own path under one home.
- *
- * The file is the donor provider's own, so its **name** is a fact about the ledger rather than about this
- * module: it is resolved here alone, and whoever needs the path — the route's own wiring, the live smoke
- * tool — asks for it instead of joining the two halves again. Two copies would drift the first time the
- * file ever moves, and the one that was forgotten would keep writing to a ledger nobody reads.
- * @param {string} home the harness home (`$DSH_HOME`)
- * @returns {string} the journal's path
- */
-export function spendJournalPath(home) {
-  return join(home, 'qoder-requests.ndjson')
-}
-
-/**
  * Mount the route: the transport, the adapter over it, the declaration that gives the user a door, and
  * the product's own door to the account's credits.
  *
@@ -117,20 +99,20 @@ export function spendJournalPath(home) {
  * it on a machine whose window is never open. The timer is an effect of this fiber; the two routes are
  * effects of the scoped area that owns them, so a reload of the profile leaves exactly one of each and
  * a composition without a connection carries none of them — with a line in the log saying which.
- *
- * The journal is mounted with them and handed to the adapter, so a turn writes its row wherever the route
- * is used — the harness's own sessions included — rather than only where a tool builds an adapter itself.
  * @param {object} ctx the cordis context
  * @param {object} config the row's config, resolved by the Loader against {@link Config}
  * @returns {void}
  */
 export function apply(ctx, config) {
-  /* The home, resolved once: the machine id's own folder and the spend journal hang off the same root,
-     and a second resolution of `DSH_HOME` is a second place that can drift from it. */
-  const home = process.env.DSH_HOME ?? join(homedir(), '.dsh')
+  /* The home, resolved once by the platform's own rule: every path this plugin writes hangs off it, and a
+     second resolution of `$DSH_HOME` would be a second place that can drift from it. The product's folder is
+     created here, at the mount, before any vendor call — a writer's own `mkdir` would leave the folder
+     absent until the first signed request. */
+  const home = homeOf()
+  ensureLayout(home)
   const storeDir = config.machineIdStoreDir !== ''
     ? config.machineIdStoreDir
-    : join(home, 'qoder')
+    : machineIdDir(home)
   const log = (message) => ctx.logger?.info?.(`coreness-qoder: ${message}`)
   const warn = (message) => ctx.logger?.warn?.(`coreness-qoder: ${message}`)
   /* The value the store holds, read per call and never captured — one thunk with two readers: the
@@ -158,17 +140,12 @@ export function apply(ctx, config) {
   })
   ctx.provide(SERVICE, transport)
 
-  /* The spend journal is the donor provider's own file, continued rather than started again: the account's
-     history reads as one ledger, and the boundary between its rows and ours is the time they carry. One
-     binding feeds both readers — the adapter that writes and the tool that answers. */
-  const journal = createSpendJournal({ path: spendJournalPath(home), log: warn })
   const adapter = createAdapter({
     transport,
     settings: () => config,
     displayName: DISPLAY_NAME,
     log,
     imageData: createImageReader(ctx),
-    journal,
   })
   ctx.llm.registerAdapter([ROUTE], adapter)
   /* The declaration answers from the cache; one read at start keeps the menus as fresh as the vendor's own
@@ -177,12 +154,6 @@ export function apply(ctx, config) {
   ctx.effect(() => {
     void transport.catalogue({}).catch((error) => warn(`the catalogue did not answer at start (${error?.message ?? String(error)}); the declared menus stay as the last read left them`))
   }, `${name}: the catalogue at start`)
-  /* The ledger's reader: the money one window holds, by day and model. It reads the file the adapter
-     writes, through the one place the path is resolved — a second join of the two halves would drift the
-     first time the ledger moves. */
-  for (const tool of spendTools(spendJournalPath(home), journal.failures)) {
-    ctx.effect(() => ctx.tools.register(tool))
-  }
   /* The row's own id is the settings namespace the platform's page reads the profile from: the config
      below is that namespace's schema, and `settingsPath: []` means the row itself. One name for both
      doors — the directory entry and the discovery below — so a row and its live catalogue cannot drift

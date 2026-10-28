@@ -1,8 +1,8 @@
 # Coreness for DeepSeek Harness
 
-**A page, a journal and a brake for a DeepSeek Harness profile.**
+**A page for a DeepSeek Harness profile.**
 
-Coreness is the product for one DeepSeek Harness profile: a page with the profile's MCP servers, its Qoder provider and its rate limits and usage; the journal of what the profile and its sessions do; and the rules of the tree in force. It installs as it is: the halves the browser loads are plain files, served where they lie — nothing is built, nothing is compiled, and what is installed is what runs.
+Coreness is the product for one DeepSeek Harness profile: a page with the profile's MCP servers, its Qoder provider and its rate limits and usage; and the rules of the tree in force. It installs as it is: the halves the browser loads are plain files, served where they lie — nothing is built, nothing is compiled, and what is installed is what runs. It refuses no DeepSeek Harness version: no minimum and no maximum.
 
 ## ⚡ Install
 
@@ -53,7 +53,6 @@ A profile that mounts a working tree (`file:` dependency) is the development cas
 
 - 🗂 **A page of its own** — the profile's MCP servers as cards, its Qoder provider and its rate limits and usage; the sections stand in the rail, and the version stands beside the name.
 - 🔌 **The MCP servers, seen and edited** — one card per server: its kind, its address, the environment it needs, and switches whose effect lands in the profile rather than in a copy.
-- 📓 **The journal** — the environment's memory: what changed in the profile and what a participant did, kept as records that carry a kind, an area, a name and an author.
 - 🚦 **A limiter that waits instead of refusing** — a call over the limit takes its turn in a queue; nothing is limited as the package ships.
 - 🤝 **The Agent Team, on the page and on its own terms** — the platform's teammates, board and mailbox, and a card on the General page: how many teammates a session may hold, written through the platform's own editor, and two switches that put the product's paragraph in place of the platform's last team-policy sentence and add the review paragraph after it, while every other line of the policy stays as the platform wrote it and the platform's own text stands when the first switch is off.
 - 🧠 **A route to the Qoder models** — the account's own models, each with the reasoning levels it accepts and the output budget it allows. The account's token is entered once, in the Qoder section, and kept by the platform's own store; no value of it stands in the package. A token from either Qoder contour — the international one or the Chinese one — is accepted there the same way, and the route reads the account on its own contour. The credits foot reads the balance while the account is reachable; the Qoder section's node row carries one press that asks the vendor to turn sharing off, reports a plan that locks it, and keeps the state in its title.
@@ -61,12 +60,12 @@ A profile that mounts a working tree (`file:` dependency) is the development cas
 
 ## 🧩 What it needs
 
-- **DeepSeek Harness.** The version this package was built against is declared in the manifest, and the application compares that declaration with its own before a profile imports a plugin: a mismatch leaves the plugin out and says so, instead of failing quietly later.
+- **DeepSeek Harness.** Any version: the manifest declares no version bound, so the application's check never leaves this plugin out on version grounds, and a break a version brings is repaired in the product.
 - **A Qoder account,** for the Qoder route and the credits foot; the token is entered in the Qoder section and kept by the platform's own store, from the international or the Chinese contour.
 
 ## 📦 What lands
 
-Exactly the list the package's manifest names — the bundle and the eight packages, each with its own README beside its code. No part of the workshop they are built in: the contracts, the checks and the notes of this project stay where the work is done.
+Exactly the list the package's manifest names — the bundle and the seven packages, each with its own README beside its code. No part of the workshop they are built in: the contracts, the checks and the notes of this project stay where the work is done.
 
 ## 🧭 What it deliberately does not do
 

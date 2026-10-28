@@ -149,7 +149,7 @@ export const Config = z.object({
   region: z.union([z.const('auto'), z.const('global'), z.const('cn')]).default('auto'),
   /** A pinned inference node; empty means the node map is asked. Read per call: the page pins it live. */
   inferBase: z.string().default('').volatile(),
-  /** Where the machine id is kept; empty means the harness home. */
+  /** Where the machine id is kept; empty means the product's folder under the harness home. */
   machineIdStoreDir: z.string().default(''),
   /**
    * The effort the route asks for; an empty string is "nothing is named", and `off` leaves the field out

@@ -256,24 +256,14 @@ export function usageOf(usage) {
 }
 
 /**
- * The numbers the contour reports about itself, which the harness contract has no field
- * for. They are observation, not a request: they go to the caller's journal.
+ * The reasoning count the contour reports about itself, which the harness usage object has no
+ * field of the vendor's name: the route reports it as `reasoningTokens`.
  * @param {object} usage the wire usage object
- * @returns {object} the contour's own counters, empty when it reported none
+ * @returns {object} the contour's own counter, empty when it reported none
  */
 export function vendorUsageOf(usage) {
-  const numbers = {
-    credits: usage?.credits,
-    originalCredits: usage?.original_credits,
-    reasoningTokens: usage?.completion_tokens_details?.reasoning_tokens,
-    cachedTokens: usage?.prompt_tokens_details?.cached_tokens,
-  }
-  const out = {}
-  for (const [key, value] of Object.entries(numbers)) {
-    if (Number.isFinite(value)) out[key] = value
-  }
-  if (typeof usage?.billable === 'boolean') out.billable = usage.billable
-  return out
+  const reasoningTokens = usage?.completion_tokens_details?.reasoning_tokens
+  return Number.isFinite(reasoningTokens) ? { reasoningTokens } : {}
 }
 
 /**

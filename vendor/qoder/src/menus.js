@@ -10,19 +10,10 @@
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname } from 'node:path'
 
 /** The file's own shape: a file written by another version is said and read as empty, never guessed at. */
 export const MENUS_VERSION = 1
-
-/**
- * The cache's path under one home: the plugin's own folder, where its machine id already lives.
- * @param {string} home the harness home (`$DSH_HOME`)
- * @returns {string} the cache's path
- */
-export function menusPath(home) {
-  return join(home, 'qoder', 'model-menus.json')
-}
 
 /**
  * Reads the cache: a map of model id to the levels the catalogue last published for it.

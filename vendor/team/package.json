@@ -12,15 +12,15 @@
     "README.md"
   ],
   "engines": {
-    "dsh": ">=0.2.1-rc.2"
+    "dsh": "*"
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "~3.18.4"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "~4.0.5",
-    "@deepseek-ai/dsh-client-connection": ">=0.2.1-rc.2",
-    "@deepseek-ai/dsh-experimental-agent-team": ">=0.2.1-rc.2",
-    "@deepseek-ai/dsh-experimental-tool-agent-team": ">=0.2.1-rc.2"
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-client-connection": "*",
+    "@deepseek-ai/dsh-experimental-agent-team": "*",
+    "@deepseek-ai/dsh-experimental-tool-agent-team": "*"
   }
 }
