@@ -209,7 +209,7 @@ export const VALUE_REFUSED_CODES = Object.freeze(['105', 'TOKEN_EXPIRE', 'BadReq
 /**
  * The stable code for a refusal, by the status the contour named.
  *
- * 401/403 read as an authentication failure, `429` as throttling, `5xx` as an upstream fault — and two
+ * 401/403 read as an authentication failure, `429` as throttling, `5xx` as an upstream fault — and some
  * shapes of this contour are **not** what their status says. A saturated queue is a rate limit, not an
  * authentication failure, even when it arrives with an authentication status: a fresh token does not
  * bypass a queue, and an authentication code is outside the platform's retry set. A counted allowance is
@@ -234,6 +234,9 @@ export function codeFor(status, text = '', { credentialDoor = false } = {}) {
     if (vendorCode !== null && TURN_REFUSED_CODES.includes(vendorCode)) return 'AUTH'
     return 'UPSTREAM'
   }
+  // The router's own words that no model answered: a repeated request may clear it, while `UPSTREAM`
+  // stands outside the platform's retry set and would show it as final.
+  if (/all models failed/iu.test(text)) return 'SERVER'
   if (status >= 500) return 'SERVER'
   return 'UPSTREAM'
 }
