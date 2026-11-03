@@ -1,0 +1,26 @@
+{
+  "name": "@coreness/proxy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The product's fetch proxy: a stored proxy URL, a reachability check, and the web_fetch call wrapped at tools/execute with a direct fallback.",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "dsh": "*"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "~3.18.4"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-client-connection": "*",
+    "@deepseek-ai/dsh-http-proxy": "*",
+    "@deepseek-ai/dsh-timeout": "*"
+  }
+}

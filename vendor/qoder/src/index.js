@@ -34,7 +34,7 @@ import { ensureLayout, homeOf, machineIdDir, menusPath } from './home.js'
 import { createCredits } from './credits.js'
 import { createAccount } from './account.js'
 import { PROBE_ACTION } from './probe.js'
-import { PROVIDER_ID, registerWebProviders } from './web.js'
+import { PROVIDER_ID, registerWebProvider } from './web.js'
 
 export { Config, DEFAULT_MODELS, DEFAULT_SWEEP_MS, MAX_SWEEP_MS, MIN_SWEEP_MS, sweepMsOf } from './config.js'
 export { CATALOGUE_ACTION, VALUE_REFUSED_CODES, VERIFY_ACTION, verifyToken } from './routes.js'
@@ -81,6 +81,96 @@ export const CREDITS_ROUTE = '/api/coreness.credits'
  * not otherwise offer the levels its model really admits.
  */
 export const PROBE_ROUTE = '/api/coreness.qoder'
+
+/** The platform's shared web row: the search and fetch selections both doors write. */
+const WEB_ROW = 'web'
+
+/** The platform's own search id: the standard DeepSeek search, the explicit "off" of the Qoder provider. */
+const PLATFORM_SEARCH = 'deepseek-official'
+
+/**
+ * The search selections that name no provider: the null the old switch could leave on its way off, and an
+ * empty value treated alike because it names no registered provider. `qoder` is not here — it selects a
+ * provider and only the switch's own flag decides whether it runs.
+ */
+const SELECTS_NOTHING = new Set([null, ''])
+
+/**
+ * The machine code the settings service answers a write whose expected revision the row has moved past.
+ * The fetch package's repair writes the same row at the same mount, so the first write here may meet it.
+ */
+const SETTINGS_CONFLICT = 'SETTINGS_CONFLICT'
+
+/**
+ * Rewrite a search selection the move to the search-only switch left stale.
+ *
+ * A nullish selection resolves through the platform's fallback rules, which with more than one usable search
+ * provider is an ambiguous search; an empty value names a provider that is not registered. The write carries
+ * the revision the read returned: a row saved through the other door between the two is refused as a
+ * conflict rather than overwritten. The fetch package's repair writes the same row at the same mount, so
+ * that refusal is not final — the row is read once more and the decision made again: a selection another
+ * door has just chosen is fresh and is not overwritten, and a still-stale one is written with the revision
+ * just read. A second refusal is said by the mount and left. `qoder` and any other name are another door's
+ * decision, and a row whose key is absent never chose: neither is touched. The row's fetch value is left as
+ * it stands — the fetch package owns it, and this repair owns the search value alone.
+ * @param {object} settings the platform's settings service
+ * @param {(message: string) => void} [warn] where the repair is said
+ * @returns {Promise<'repaired'|'fresh'|'absent'>} the stale value written away, a selection left as it
+ *   stands, or no shared row among the rows the service describes
+ */
+export async function repairSearchSelection(settings, warn = () => {}) {
+  try {
+    return await repairSearchSelectionOnce(settings, warn)
+  } catch (error) {
+    if (error?.code !== SETTINGS_CONFLICT) throw error
+  }
+  return repairSearchSelectionOnce(settings, warn)
+}
+
+/**
+ * One read, one decision, one write: the attempt whose conflict the repair re-reads once.
+ * @param {object} settings the platform's settings service
+ * @param {(message: string) => void} warn where the repair is said
+ * @returns {Promise<'repaired'|'fresh'|'absent'>} the attempt's outcome
+ */
+async function repairSearchSelectionOnce(settings, warn) {
+  const row = settings.describe().find((one) => one.ns === WEB_ROW)
+  if (row === undefined) return 'absent'
+  if (!SELECTS_NOTHING.has(row.value?.searchProvider)) return 'fresh'
+  await settings.mutate(WEB_ROW, [{ op: 'set', path: ['searchProvider'], value: PLATFORM_SEARCH }], row.revision)
+  warn(`the shared "${WEB_ROW}" row picked no search provider; its search selection was written to "${PLATFORM_SEARCH}"`)
+  return 'repaired'
+}
+
+/**
+ * Run the repair once the Loader has settled every row.
+ *
+ * The settings service describes a row only while that row's own fiber is active, and a plugin may apply
+ * before a row it reads does; the platform's own boot-time migration waits for the same settle. A
+ * composition without a Loader cannot wait, and one without the shared row has nothing to repair: both are
+ * said in words rather than passed over, so a skipped repair is never mistaken for one that found nothing.
+ * @param {object} ctx the cordis context
+ * @param {object} settings the platform's settings service
+ * @param {(message: string) => void} log where the conditions of the place are said
+ * @param {(message: string) => void} warn where the repair and its fault are said
+ * @returns {Promise<void>} the repair, its outcome said in the log
+ */
+async function repairSearchWhenSettled(ctx, settings, log, warn) {
+  try {
+    const settled = ctx.root?.loader?.await?.()
+    if (typeof settled?.then !== 'function') {
+      log(`this composition carries no Loader to wait for, so the shared "${WEB_ROW}" row is read without waiting for every row to settle`)
+    } else {
+      await settled
+    }
+    const outcome = await repairSearchSelection(settings, warn)
+    if (outcome === 'absent') {
+      log(`the shared "${WEB_ROW}" row is not in this composition, so no search selection was read`)
+    }
+  } catch (error) {
+    warn(`the shared "${WEB_ROW}" row's search selection could not be repaired: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
 
 /**
  * Mount the route: the transport, the adapter over it, the declaration that gives the user a door, and
@@ -180,17 +270,28 @@ export function apply(ctx, config) {
     log,
   })
 
-  /* The two web providers are an optional surface: a composition without `web` still mounts the model
-     route, and the providers remain registered but unavailable while the row's flag is off. */
+  /* The web search provider is an optional surface: a composition without `web` still mounts the model
+     route, and the provider remains registered but unavailable while the row's flag is off. */
   ctx.inject(['web'], (webCtx) => {
     webCtx.effect(() => {
-      const dispose = registerWebProviders(webCtx.web, { transport, config })
-      log(`the Qoder web providers are registered (search "${PROVIDER_ID}", fetch "${PROVIDER_ID}")`)
+      const dispose = registerWebProvider(webCtx.web, { transport, config })
+      log(`the Qoder web search provider is registered (search "${PROVIDER_ID}")`)
       return dispose
-    }, `${name}: the Qoder web providers`)
+    }, `${name}: the Qoder web search provider`)
   })
   if (ctx.get('web') === undefined) {
-    log('this composition carries no web service, so the Qoder web providers are not registered')
+    log('this composition carries no web service, so the Qoder web search provider is not registered')
+  }
+
+  /* The shared row's search selection is healed once at the mount, after the Loader settles: a profile saved
+     while the old switch wrote null on its way off carries a selection that names no provider, and with more
+     than one usable search provider the platform's fallback rules make the search ambiguous. The fetch
+     package heals the fetch side the same way; this repair owns the search value. */
+  ctx.inject(['settings'], (settingsCtx) => {
+    void repairSearchWhenSettled(ctx, settingsCtx.settings, log, warn)
+  })
+  if (ctx.get('settings') === undefined) {
+    log(`this composition carries no settings service, so the shared "${WEB_ROW}" row is not read: a search selection naming no provider is left as it stands`)
   }
 
   /* The two HTTP routes the page reads, in the scoped area Cordis gives a service that may be absent.

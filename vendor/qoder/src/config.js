@@ -190,9 +190,9 @@ export const Config = z.object({
     autoClaim: z.boolean().default(true),
   }).default({}),
   /**
-   * The product's one switch for the two web providers. It is volatile because the checkbox writes it
-   * while the route runs; the providers read it live and stay registered while it is off, so the
-   * platform's own provider choice is untouched on a profile that never opted in.
+   * The product's one switch for the web search provider. It is volatile because the checkbox writes it
+   * while the route runs; the provider reads it live and stays registered while it is off, so the
+   * platform's own search choice is untouched on a profile that never opted in.
    */
   webAccess: z.object({
     enabled: z.boolean().default(false),

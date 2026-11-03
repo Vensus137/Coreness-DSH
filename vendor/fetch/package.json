@@ -1,0 +1,22 @@
+{
+  "name": "@coreness/fetch",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The product's page fetch: the platform's HTTP fetch provider registered under the product's id, and the mount repair of the shared web row's fetch selection.",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "dsh": "*"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-web": "*",
+    "@deepseek-ai/dsh-web-fetch-http": "*"
+  }
+}

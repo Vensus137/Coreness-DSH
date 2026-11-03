@@ -1,17 +1,18 @@
 /**
- * The General page: the product's small settings, one card at a time.
+ * The General page: the product's small settings, one subject per card.
  *
- * The page exists for a setting that deserves a control but not a page of its own. Its card is the
- * Agent Team's: the ceiling the team row carries, and the two switches that let the product's own text —
- * and the review paragraph that rides inside it — stand in place of the platform's last sentence of the
- * team policy. The ceiling is read from the host's route and written back through it; the switches are
- * volatile fields of the team row, written through the platform's settings service, as the product's other
- * switches are.
+ * The page exists for a setting that deserves a control but not a page of its own, and it carries three
+ * subjects. The Agent Team's card is the ceiling the team row carries and the two switches that let the
+ * product's own text — and the review paragraph that rides inside it — stand in place of the platform's last
+ * sentence of the team policy. The Page fetch card is one check over the platform's shared `web` row: on,
+ * page fetches are served by the product's own provider; off, the platform's own fetch stands untouched. The
+ * proxy card writes the product row's switch and its URL, shows the URL back in its field and asks the
+ * proxy's own route to check it.
  *
- * The namespace the switches write is the host's own answer (`ns`): the row's id in the composition lives
- * in the composition, and a copy of it here would drift. A write is followed by a read of the route and
- * of the settings row — the card draws what the platform holds, never the word the press asked for — and
- * the platform's own announcement that the settings document moved re-reads the same two.
+ * The namespace each switch writes is the host's own answer (`ns`): the row's id in the composition lives in
+ * the composition, and a copy of it here would drift. Every write is followed by a read of what it wrote —
+ * the route's picture, the settings row or the proxy's own route — the cards draw what the platform holds,
+ * never the word the press asked for — and the platform's own announcements re-read them.
  *
  * A section chunk of the product's page, pulled by the entry with `require.async` and registered into the
  * seat the page declares. It draws with the page's own set — the card frame, the section title, the
@@ -33,11 +34,21 @@ window.__ModuleLoader__.load({
     const NS = 'coreness.general';
     /** The host route that reads and writes the team's ceiling, and reports the policy's outcome. */
     const ROUTE = '/api/coreness.team';
+    /** The host route that answers the proxy's picture and runs its check. */
+    const PROXY_ROUTE = '/api/coreness.proxy';
+    /** The platform's shared row the page fetch check writes: its id is the platform's own, not this page's. */
+    const WEB_NS = 'web';
+    /** The product's fetch provider in the shared row, and the platform's own provider the off state names. */
+    const FETCH_ON = 'coreness-fetch';
+    const FETCH_OFF = 'http';
     const STYLE_ID = 'coreness-ui-general-style';
     /** The module id the sheet is marked with, as the host marks its own (`data-plugin-css`). */
     const STYLE_TAG = '@coreness/ui/client.general.js';
-    /** The platform's announcements that invalidate what the card read. */
+    /** The platform's announcements that invalidate what the cards read. */
     const WATCHED = ['settings/document-updated'];
+    /** The credential store's announcement that a reference moved: the proxy URL is a reference, and a
+        record's own edit is a disjoint space that cannot change whether one is configured. */
+    const WATCHED_CREDENTIALS = ['credentials/reference-updated'];
 
     /** The page's own words. One namespace, one dictionary; the rail's label is a thunk so it follows the language. */
     const EN = {
@@ -52,6 +63,32 @@ window.__ModuleLoader__.load({
       'team.reviewHint': 'On, the paragraph about reviews follows the team text in the Lead\'s prompt: a reviewer is a fresh agent with a clean eye, called on every circle of work and not on small tasks; it holds the work against the spec and the traces, asks where it is weak, where it is extra and what is missing, and every finding carries a path and a quote; it does not edit and does not accept, and the review does not replace the acceptance that closes the task. The paragraph stands inside the text the Team prompt switch supplies, so it changes nothing while that switch is off.',
       'team.off': 'Enable Agent Teams',
       'team.unwritable': 'Not writable',
+      /* The fetch feature's two cards. A hint is one paragraph; a verdict is one word, because the reason
+         behind it names the proxy's address and belongs to the console. */
+      'fetch.title': 'Page fetch',
+      'fetch.label': 'Use the improved page fetch',
+      'fetch.hint': 'On, page fetches go through the product\'s own fetch: the platform\'s HTTP fetch with a browser identity and a wider body.',
+      'proxy.title': 'Proxy',
+      'proxy.label': 'Proxy for page fetch',
+      'proxy.hint': 'On, a fetch goes through the proxy first and is repeated without it if the proxy fails on the network; only HTTP and HTTPS proxies are available. The switch waits for the proxy URL.',
+      'proxy.field': 'Proxy URL',
+      'proxy.placeholder': 'http://user:pass@host:port',
+      'proxy.save': 'Save proxy',
+      'proxy.saving': 'Saving…',
+      'proxy.check': 'Check proxy',
+      'proxy.checking': 'Checking…',
+      'proxy.notAvailable': 'Not available',
+      /* The one sentence a refused URL repeats — the same shape the host's check parses from the value in
+         force. */
+      'proxy.reason': 'The proxy URL must be an http or https address: http(s)://[user:pass@]host:port.',
+      /* What only the console carries: a route that is gone, the store's refusal after it took the call, and
+         a check that answered no word of its three. */
+      'proxy.unreachable': 'The proxy route could not be reached.',
+      'proxy.notConfigured': 'The credential store took the call but no URL is configured: reading the picture back says nothing is there, so the save did not stand.',
+      'proxy.noVerdict': 'The check answered no verdict of its three.',
+      'verdict.works': 'Works',
+      'verdict.refused': 'Refused',
+      'verdict.unanswered': 'No answer',
       'state.unread': 'Not read',
       'state.saved': 'Saved',
       'state.refused': 'Not saved',
@@ -61,10 +98,13 @@ window.__ModuleLoader__.load({
     };
 
     /* The card's own look: the frame, its head, the strip's room, the field's box, its label and the check
-       are the page's; a section keeps only what is its own — the title that takes the growing space, the row
-       the field shares with its button, and the field's share of that row. */
+       are the page's; a section keeps only what is its own — the title that takes the growing space and
+       carries the mark of what the card is about, the row the field shares with its buttons, and the field's
+       share of that row. The strip takes the head's last place after the corner's word: the word carries the
+       one auto margin the row needs, and a strip drawn before it would stand away from the card's edge. */
     const CSS = `
-.coreness-general-head .coreness-sectionTitle{flex:1 1 auto}
+.coreness-general-head .coreness-sectionTitle{flex:1 1 auto;display:flex;align-items:center;gap:10px;min-width:0}
+.coreness-general-head>.coreness-answer{order:2}
 .coreness-general-field{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .coreness-general-input{flex:1 1 0;min-width:0}
 .coreness-general-input:disabled{opacity:.5}
@@ -119,16 +159,17 @@ window.__ModuleLoader__.load({
      * a failure as an empty row.
      */
     /**
-     * One request to the host's route. A transport failure — the route gone, the page's own connection down —
-     * is the card's sentence, not the browser's: "Failed to fetch" is what a raw throw reads like, and the
-     * card is no place for a message nothing on the page can act on. The cause goes to the console.
+     * One request to one of the host's routes. A transport failure — the route gone, the page's own
+     * connection down — is the card's sentence, not the browser's: "Failed to fetch" is what a raw throw
+     * reads like, and the card is no place for a message nothing on the page can act on. The cause goes to
+     * the console; the sentence is the route owner's, because one route's outage is not another's.
      */
-    async function reach(init, path = ROUTE) {
+    async function reach(init, path = ROUTE, unreachable = t('reason.unreachable')) {
       try {
         return await fetch(path, init);
       } catch (error) {
         console.error(`${PACKAGE}: ${path} could not be reached: ${reasonOf(error)}`);
-        throw new Error(t('reason.unreachable'));
+        throw new Error(unreachable);
       }
     }
 
@@ -160,18 +201,47 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * The switches' row from the platform's settings mirror: its revision and its two values, or `null`
-     * when the composition addresses no row or the row carries no namespace — a page that drew a switch
-     * there would offer a write that cannot land. `on` is the first switch, whose text the second one's
-     * paragraph rides in.
+     * The platform's settings mirror: every row the page may write, and whether the profile lets this page
+     * write the document at all. One door carries all three cards' rows; each card asks it for its own.
      */
-    async function readSwitch(remote, ns) {
-      if (typeof ns !== 'string' || ns === '') return null;
+    async function readDocument(remote) {
       const described = await remote.settings.describe();
       if (!described.ok) throw new Error(described.error?.message ?? 'the settings service refused the read');
-      const row = described.value.namespaces.find((one) => one.ns === ns);
-      if (row === undefined) return null;
-      return { ns, revision: row.revision, on: row.value?.prompt === true, review: row.value?.review === true };
+      return { rows: described.value.namespaces, writable: described.value.writable === true };
+    }
+
+    /** The row a namespace names, or `undefined` when the composition addresses none. */
+    const rowOf = (document, ns) => (typeof ns === 'string' && ns !== ''
+      ? document.rows.find((one) => one.ns === ns)
+      : undefined);
+
+    /**
+     * The team switch's row: its revision and its two values, or `null` when the composition addresses no
+     * row — a page that drew a switch there would offer a write that cannot land. `on` is the first switch,
+     * whose text the second one's paragraph rides in.
+     */
+    function teamRowOf(document, ns) {
+      const row = rowOf(document, ns);
+      return row === undefined
+        ? null
+        : { ns: row.ns, revision: row.revision, on: row.value?.prompt === true, review: row.value?.review === true };
+    }
+
+    /**
+     * The page fetch card's row: the shared `web` row's fetch selection. `on` is the product's own provider
+     * by name, the same string the write uses; a composition that mounts no such row answers `null`, and the
+     * card says it cannot be changed here rather than drawing a control with nowhere to write.
+     */
+    function fetchRowOf(document) {
+      const row = rowOf(document, WEB_NS);
+      return row === undefined
+        ? null
+        : { ns: row.ns, revision: row.revision, on: row.value?.fetchProvider === FETCH_ON, writable: document.writable === true };
+    }
+
+    /** The shared `web` row's live selection, or `null` when the composition addresses no such row. */
+    async function readFetchRow(remote) {
+      return fetchRowOf(await readDocument(remote));
     }
 
     /**
@@ -192,6 +262,112 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * One write of the shared `web` row's fetch selection. The value is explicit on both ways: a nullish one
+     * resolves through the platform's fallback rules, and this profile carries more than one usable provider.
+     */
+    async function writeFetch(remote, row, on) {
+      const written = await remote.settings.mutate(row.ns, [
+        { op: 'set', path: ['fetchProvider'], value: on ? FETCH_ON : FETCH_OFF },
+      ], row.revision);
+      if (!written.ok) throw new Error(written.error?.message ?? 'the settings service refused the write');
+      return written.value;
+    }
+
+    /**
+     * The proxy's picture from its own route: the row's switch, the URL the picture carries, whether a URL
+     * is configured, the reference that names it and whether this profile may write either. The URL is the
+     * card's field text, shown as it stands. A route that is not served is a composition without the host
+     * half, and the card says so in its strip; any other refusal is a read that failed.
+     */
+    async function readProxy() {
+      const answer = await reach({ method: 'GET' }, PROXY_ROUTE, t('proxy.unreachable'));
+      if (answer.status === 404) return { missing: true, value: null };
+      if (!answer.ok) throw new Error(`${PROXY_ROUTE} answered ${answer.status} ${answer.statusText}`);
+      const payload = await answer.json();
+      if (payload?.ok !== true) throw new Error(payload?.error?.message ?? `${PROXY_ROUTE} refused the read`);
+      return { missing: false, value: payload.value };
+    }
+
+    /** The URL a picture carries into the field: the stored value, or nothing while none is configured. */
+    const urlOf = (picture) => (typeof picture?.url === 'string' ? picture.url : '');
+
+    /** The one reachability check of the configured proxy: the body names the action and nothing else. */
+    async function checkProxy() {
+      const answer = await reach({
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'check' }),
+      }, PROXY_ROUTE, t('proxy.unreachable'));
+      if (!answer.ok) throw new Error(`${PROXY_ROUTE} answered ${answer.status} ${answer.statusText}`);
+      const payload = await answer.json();
+      if (payload?.ok !== true) throw new Error(payload?.error?.message ?? `${PROXY_ROUTE} refused the check`);
+      return payload.value;
+    }
+
+    /**
+     * One write of the proxy's switch. The revision is read at the press, not carried from the card's
+     * picture: the row's volatile field is reachable from the platform's own settings too, and the picture
+     * the card holds may be older than the press.
+     */
+    async function writeProxySwitch(remote, ns, on) {
+      const document = await readDocument(remote);
+      const row = rowOf(document, ns);
+      if (row === undefined) throw new Error(`${String(ns)} is not a settings row this profile carries`);
+      const written = await remote.settings.mutate(ns, [{ op: 'set', path: ['enabled'], value: on }], row.revision);
+      if (!written.ok) throw new Error(written.error?.message ?? 'the settings service refused the write');
+      return written.value;
+    }
+
+    /**
+     * One write of the proxy URL, through the credential store's own door: the value travels one way, and
+     * the picture the card reads back is what says it landed.
+     */
+    async function writeProxyUrl(remote, ref, value) {
+      const written = await remote.credentials.set(ref, value);
+      if (!written.ok) throw new Error(written.error?.message ?? 'the credential store refused the value');
+    }
+
+    /**
+     * The shape a proxy URL must have, refused before the value is handed to the store.
+     *
+     * The card cannot import the host's own reader, and a value the check would refuse is better refused
+     * here, where it never leaves the browser: the same shape — an `http` or `https` URL, a host, an explicit
+     * port, no path, no query and no fragment. A value of any other scheme is refused with the same sentence,
+     * because the sentence names the rule the reader has to meet.
+     */
+    function shapeProblemOf(text) {
+      const value = String(text).trim();
+      if (value === '') return t('proxy.reason');
+      let url;
+      try {
+        url = new URL(value);
+      } catch {
+        return t('proxy.reason');
+      }
+      const protocol = url.protocol.toLowerCase();
+      if (protocol !== 'http:' && protocol !== 'https:') return t('proxy.reason');
+      if (url.hostname === '') return t('proxy.reason');
+      /* WHATWG's `URL` drops a port equal to the scheme's default, so the raw text answers whether the
+         reader named one: the shape names a port, and `https://proxy:443` names it. */
+      const authority = /^[a-z][a-z0-9+.-]*:\/\/(?:[^/@]*@)?(?:\[[^\]]+\]|[^:/?#]+)(?::(\d+))?/iu.exec(value);
+      const port = authority === null ? NaN : Number(authority[1]);
+      if (!Number.isInteger(port) || port < 1 || port > 65_535) return t('proxy.reason');
+      if (url.pathname !== '/' && url.pathname !== '') return t('proxy.reason');
+      if (url.search !== '' || url.hash !== '') return t('proxy.reason');
+      return null;
+    }
+
+    /**
+     * The host's three verdicts as the strip's one word each. The tone is the page's, the word is the
+     * section's, and the host's reason — the proxy named as `host:port` — is the console's alone.
+     */
+    const VERDICT_NOTES = {
+      works: () => ({ tone: 'done', text: t('verdict.works') }),
+      refused: () => ({ tone: 'fault', text: t('verdict.refused') }),
+      unavailable: () => ({ tone: 'fault', text: t('verdict.unanswered') }),
+    };
+
+    /**
      * The answer to a press, in the card head's own strip: the page's room for exactly this word, drawn
      * always and empty while nothing is said, so a word that comes and goes moves nothing. Its tone is the
      * page's (`done` / `fault`).
@@ -199,9 +375,9 @@ window.__ModuleLoader__.load({
     /**
      * What the last settled read answered: the browser half is materialised once per application session, so a
      * section left and entered again has this beside it, and the mount paints it at once while the read
-     * corrects it behind. It holds the route's picture and the switch — never the visit's own state, the draft,
-     * a note, a press in flight or a read that failed — and the session's first mount has nothing, which is the
-     * honest skeleton.
+     * corrects it behind. It holds the cards' pictures — the route's, the two switches' rows and the proxy's —
+     * never the visit's own state, the draft, a note, a press in flight or a read that failed — and the
+     * session's first mount has nothing, which is the honest skeleton.
      */
     let lastRead = null;
 
@@ -210,67 +386,155 @@ window.__ModuleLoader__.load({
       ? {
           status: 'loading', value: null, draft: '', note: null, busy: false,
           prompt: null, promptBusy: false, promptFault: false, beatFault: false, readFault: false,
+          fetch: null, fetchBusy: false, fetchRead: 'loading', fetchNote: null,
+          proxy: null, proxyMissing: false, proxyFault: false, proxyBusy: null, proxyNote: null,
+          proxyField: '', proxyInvalid: false,
         }
       : {
           status: 'ready', value: lastRead.value, draft: draftOf(lastRead.value), note: null, busy: false,
           prompt: lastRead.prompt, promptBusy: false, promptFault: false, beatFault: false, readFault: false,
+          fetch: lastRead.fetch, fetchBusy: false, fetchRead: 'loading', fetchNote: null,
+          proxy: lastRead.proxy, proxyMissing: lastRead.proxyMissing, proxyFault: false, proxyBusy: null,
+          proxyNote: null, proxyField: urlOf(lastRead.proxy), proxyInvalid: false,
         });
 
-    /** The page as it stands: the card reads on its own path, and a press is read back. */
-    function GeneralSection({ kit, ctx, hold, card }) {
+    /** The page as it stands: every card reads on its own path, and every press is read back. */
+    function GeneralSection({ kit, ctx, hold, card, more }) {
       useStyles();
-      /** The card is a module with a factory: the drawing it hands back closes over the section's words. */
-      const draw = React.useMemo(() => card.create({ t }).draw, [card]);
+      /* The dot and the corner word the fetch cards draw are the kit's status surface, and its sheet is
+         inserted only by the hold: a section that drew them without it would paint an unstyled span. */
+      kit.useStatusStyles();
+      /** The cards are modules with factories: the drawing they hand back closes over the section's words. */
+      const draw = React.useMemo(() => {
+        const team = card.create({ t });
+        const fetchCards = more.create({ t, kit });
+        return (state, act) => team.draw(state, act, fetchCards.cards(state, act));
+      }, [card, more, kit]);
       const [state, setState] = React.useState(startState);
 
       /** The console's door is the kit's: one subject, one place, said where the answer arrived. */
       const say = React.useCallback((reason) => kit.statusDetail(t('team.title'), reason), [kit]);
+      const sayFetch = React.useCallback((reason) => kit.statusDetail(t('fetch.title'), reason), [kit]);
+      const sayProxy = React.useCallback((reason) => kit.statusDetail(t('proxy.title'), reason), [kit]);
 
-      /** Which read of the card is the newest: an answer that is no longer the newest does not publish. */
-      const newestRead = React.useRef({ team: 0 });
-      const nextTeamRead = React.useCallback(() => {
-        newestRead.current.team += 1;
-        return newestRead.current.team;
+      /** Which read of a card is the newest: an answer that is no longer the newest does not publish. */
+      const newestRead = React.useRef({ team: 0, fetch: 0, proxy: 0 });
+      const nextRead = React.useCallback((card) => {
+        newestRead.current[card] += 1;
+        return newestRead.current[card];
       }, []);
 
-      /** The answer's lifetime is the page's hold, not the next render: every note — a save and a refusal —
-       * goes by itself, and a second note replaces the first without leaving a timer behind. It is armed
-       * after the state was set and never inside an updater. */
-      const noteTimer = React.useRef(null);
-      const armHold = React.useCallback(() => {
-        if (noteTimer.current !== null) clearTimeout(noteTimer.current);
-        noteTimer.current = setTimeout(() => setState((now) => ({ ...now, note: null })), hold.NOTE_HOLD_MS);
+      /** The answer's lifetime is the page's hold, not the next render: every note — a save, a refusal and a
+       * verdict — goes by itself, and a second note in the same card replaces the first without leaving a
+       * timer behind. Each card owns its timer, so one card's word never takes another's. It is armed after
+       * the state was set and never inside an updater. */
+      const noteTimers = React.useRef({ team: null, fetch: null, proxy: null });
+      const armHold = React.useCallback((which = 'team') => {
+        const timer = noteTimers.current[which];
+        if (timer !== null) clearTimeout(timer);
+        noteTimers.current[which] = setTimeout(() => {
+          noteTimers.current[which] = null;
+          setState((now) => (which === 'team'
+            ? { ...now, note: null }
+            : which === 'fetch' ? { ...now, fetchNote: null } : { ...now, proxyNote: null }));
+        }, hold.NOTE_HOLD_MS);
       }, [hold]);
       React.useEffect(() => () => {
-        if (noteTimer.current !== null) clearTimeout(noteTimer.current);
+        for (const timer of Object.values(noteTimers.current)) {
+          if (timer !== null) clearTimeout(timer);
+        }
       }, []);
 
-      /** The picture a later mount paints: a settled read, a save and a flip alike leave it standing, and a
-       * failure leaves the last picture alone rather than replacing knowledge with a sentence about a moment. */
+      /** The pictures a later mount paints: a settled read, a save and a flip alike leave them standing, and
+       * a failure leaves the last picture alone rather than replacing knowledge with a sentence about a
+       * moment. */
       React.useEffect(() => {
         if (state.status !== 'ready') return;
-        lastRead = { value: state.value, prompt: state.prompt };
-      }, [state.status, state.value, state.prompt]);
+        lastRead = {
+          value: state.value,
+          prompt: state.prompt,
+          fetch: state.fetch,
+          proxy: state.proxy,
+          proxyMissing: state.proxyMissing,
+        };
+      }, [state.status, state.value, state.prompt, state.fetch, state.proxy, state.proxyMissing]);
 
       /** The team card's read: the route's picture, and the switch's row in the namespace it names. The
        * settings row failing is said on the console and costs only the switch: the ceiling was read, and a card
-       * that failed whole there would hide a value the route carries. */
+       * that failed whole there would hide a value the route carries. A route that names no namespace has no
+       * row to ask for: a read there would put a fault on the card for a row the composition never carried. */
       const readTeam = React.useCallback(async () => {
         const value = await read();
         let prompt = null;
         let promptFault = false;
-        try {
-          prompt = await readSwitch(ctx.remote, value?.ns ?? null);
-        } catch (error) {
-          promptFault = true;
-          say(`${t('reason.unreadable')}: ${reasonOf(error)}`);
+        const ns = value?.ns ?? null;
+        if (typeof ns === 'string' && ns !== '') {
+          try {
+            prompt = teamRowOf(await readDocument(ctx.remote), ns);
+          } catch (error) {
+            promptFault = true;
+            say(`${t('reason.unreadable')}: ${reasonOf(error)}`);
+          }
         }
         return { value, prompt, promptFault };
       }, [ctx, say]);
 
+      /**
+       * The page fetch card's read: the shared `web` row's live selection. It is a read of its own — a team
+       * route that is down leaves this card's value standing — and its failure is this card's word. The
+       * card's own status travels with the read, so the corner is never asserted over an unfinished one: an
+       * unfinished or failed read is `Not read`, and the row's condition waits for a settled answer.
+       */
+      const readFetchNow = React.useCallback(async () => {
+        const ticket = nextRead('fetch');
+        try {
+          const row = await readFetchRow(ctx.remote);
+          if (newestRead.current.fetch === ticket) {
+            setState((now) => ({ ...now, fetch: row, fetchRead: 'ready' }));
+          }
+          return row;
+        } catch (error) {
+          if (newestRead.current.fetch === ticket) {
+            sayFetch(`${t('reason.unreadable')}: ${reasonOf(error)}`);
+            setState((now) => ({ ...now, fetchRead: 'failed' }));
+          }
+          throw error;
+        }
+      }, [ctx, nextRead, sayFetch]);
+
+      /**
+       * The proxy card's read: its own route's picture. A route that is not served is a composition without
+       * the host half — the card says `Not available` — not a read that failed. The picture's URL is the
+       * field's text: a reader's edit is theirs, and an untouched field follows what the read answers.
+       */
+      const readProxyNow = React.useCallback(async () => {
+        const ticket = nextRead('proxy');
+        try {
+          const answer = await readProxy();
+          if (newestRead.current.proxy === ticket) {
+            setState((now) => (answer.missing
+              ? { ...now, proxy: null, proxyMissing: true, proxyFault: false }
+              : {
+                  ...now,
+                  proxy: answer.value,
+                  proxyMissing: false,
+                  proxyFault: false,
+                  proxyField: now.proxyField !== urlOf(now.proxy) ? now.proxyField : urlOf(answer.value),
+                }));
+          }
+          return answer;
+        } catch (error) {
+          if (newestRead.current.proxy === ticket) {
+            sayProxy(reasonOf(error));
+            setState((now) => ({ ...now, proxyFault: true }));
+          }
+          throw error;
+        }
+      }, [nextRead, sayProxy]);
+
       React.useEffect(() => {
         let live = true;
-        const teamTicket = nextTeamRead();
+        const teamTicket = nextRead('team');
         readTeam().then(
           (answer) => {
             if (!live || newestRead.current.team !== teamTicket) return;
@@ -301,7 +565,7 @@ window.__ModuleLoader__.load({
         return () => {
           live = false;
         };
-      }, [nextTeamRead, readTeam, say]);
+      }, [nextRead, readTeam, say]);
 
       /* The platform's announcement that the settings document moved — a hand's edit of the profile's
          patch, or another page's write — is the same event for the switch: the route and the switch are read
@@ -309,7 +573,7 @@ window.__ModuleLoader__.load({
       React.useEffect(() => {
         let live = true;
         const reread = () => {
-          const teamTicket = nextTeamRead();
+          const teamTicket = nextRead('team');
           readTeam().then(
             (answer) => {
               if (!live || newestRead.current.team !== teamTicket) return;
@@ -341,7 +605,37 @@ window.__ModuleLoader__.load({
           for (const dispose of disposers) dispose();
           offReset();
         };
-      }, [ctx, nextTeamRead, readTeam, say]);
+      }, [ctx, nextRead, readTeam, say]);
+
+      /* The two fetch cards ask their own doors when the section mounts: a failure lands on its own card,
+         and the console keeps the reason the strip's word cannot carry. */
+      React.useEffect(() => {
+        void readFetchNow().catch(() => {});
+        void readProxyNow().catch(() => {});
+      }, [readFetchNow, readProxyNow]);
+
+      /* The settings document's move is both fetch cards' news — the platform's own page writes the shared
+         selection, and the proxy's switch is a settings row too — while the credential store's announcements
+         change only whether a URL is configured. A route that is not served answers the same as a picture
+         every time, so the read is repeated with the rest. */
+      React.useEffect(() => {
+        const reread = () => {
+          void readFetchNow().catch(() => {});
+          void readProxyNow().catch(() => {});
+        };
+        const rereadProxy = () => {
+          void readProxyNow().catch(() => {});
+        };
+        const disposers = [
+          ctx.remote.$on('settings/document-updated', reread),
+          ...WATCHED_CREDENTIALS.map((name) => ctx.remote.$on(name, rereadProxy)),
+        ];
+        const offReset = ctx.on('connection/reset', reread);
+        return () => {
+          for (const dispose of disposers) dispose();
+          offReset();
+        };
+      }, [ctx, readFetchNow, readProxyNow]);
 
       /* The patch's outcome changes at the next team assembly, and no client announcement follows it: while
          the switch is on, the route is asked on the page's own beat, so "the patch is inactive" appears with
@@ -413,7 +707,7 @@ window.__ModuleLoader__.load({
               note: { tone: 'done', text: t('state.saved'), subject: field },
             }));
             armHold();
-            const ticket = nextTeamRead();
+            const ticket = nextRead('team');
             void readTeam().then(
               ({ value, prompt, promptFault }) => {
                 if (newestRead.current.team !== ticket) return;
@@ -442,8 +736,8 @@ window.__ModuleLoader__.load({
               note: { tone: 'fault', text: t('state.refused'), subject: field },
             }));
             armHold();
-            void readSwitch(ctx.remote, row.ns).then(
-              (next) => setState((now) => ({ ...now, prompt: next, promptFault: false })),
+            void readDocument(ctx.remote).then(
+              (document) => setState((now) => ({ ...now, prompt: teamRowOf(document, row.ns), promptFault: false })),
               (error) => {
                 say(`${t('reason.unreadable')}: ${reasonOf(error)}`);
                 setState((now) => ({ ...now, promptFault: true }));
@@ -451,6 +745,142 @@ window.__ModuleLoader__.load({
             );
           },
         );
+      };
+
+      /**
+       * The page fetch switch: the shared row's selection, written explicitly on both ways and read back
+       * after the write. The box reports the row, never the press; a failed write leaves the box at the
+       * platform's value and says `Not saved`, and the reason is the console's.
+       */
+      const setFetch = async (on) => {
+        const row = state.fetch;
+        if (row === null) return;
+        setState((now) => ({ ...now, fetchBusy: true, fetchNote: null }));
+        let wrote = false;
+        try {
+          await writeFetch(ctx.remote, row, on);
+          wrote = true;
+        } catch (error) {
+          sayFetch(reasonOf(error));
+        }
+        setState((now) => ({
+          ...now,
+          fetchNote: wrote
+            ? { tone: 'done', text: t('state.saved') }
+            : { tone: 'fault', text: t('state.refused') },
+        }));
+        armHold('fetch');
+        try {
+          await readFetchNow();
+        } catch (error) {
+          /* The read's own failure is the card's `Not read`; the write's word keeps its hold. */
+        }
+        setState((now) => ({ ...now, fetchBusy: false }));
+      };
+
+      /**
+       * The proxy switch: the product row's volatile enable. A failed write leaves the switch at the
+       * platform's value; the word is `Not saved` and the reason is the console's.
+       */
+      const setProxy = async (on) => {
+        const picture = state.proxy;
+        if (picture === null || picture.editable !== true) return;
+        setState((now) => ({ ...now, proxyBusy: 'switch', proxyNote: null }));
+        let wrote = false;
+        try {
+          await writeProxySwitch(ctx.remote, picture.ns, on);
+          wrote = true;
+        } catch (error) {
+          sayProxy(reasonOf(error));
+        }
+        setState((now) => ({
+          ...now,
+          proxyNote: wrote
+            ? { tone: 'done', text: t('state.saved') }
+            : { tone: 'fault', text: t('state.refused') },
+        }));
+        armHold('proxy');
+        try {
+          await readProxyNow();
+        } catch (error) {
+          /* The card says `Not read`; the write's word keeps its hold. */
+        }
+        setState((now) => ({ ...now, proxyBusy: null }));
+      };
+
+      /**
+       * One check of the configured URL: the verdict stands in the card's strip for the page's hold, and the
+       * host's reason goes to the console. The check writes nothing, so the dot and the switches keep the
+       * values they were read with.
+       */
+      const runCheck = async () => {
+        setState((now) => ({ ...now, proxyBusy: 'check', proxyNote: null }));
+        try {
+          const verdict = await checkProxy();
+          const known = typeof verdict?.verdict === 'string' && Object.hasOwn(VERDICT_NOTES, verdict.verdict)
+            ? verdict.verdict
+            : null;
+          if (known === null) {
+            sayProxy(t('proxy.noVerdict'));
+            setState((now) => ({ ...now, proxyNote: { tone: 'fault', text: t('verdict.unanswered') } }));
+          } else {
+            if (typeof verdict.reason === 'string' && verdict.reason !== '') sayProxy(verdict.reason);
+            setState((now) => ({ ...now, proxyNote: VERDICT_NOTES[known]() }));
+          }
+        } catch (error) {
+          /* The check settled nothing: the card's third word stands, and the route's own sentence is the
+             console's. */
+          sayProxy(reasonOf(error));
+          setState((now) => ({ ...now, proxyNote: { tone: 'fault', text: t('verdict.unanswered') } }));
+        }
+        armHold('proxy');
+        setState((now) => ({ ...now, proxyBusy: null }));
+      };
+
+      /**
+       * Save proxy: the shape is refused before anything leaves the browser, the value is written through
+       * the store, and the picture read back is what confirms it — a confirmed write leaves the field on the
+       * value just stored. The write that landed runs the check in the same press, and the strip reports the
+       * check's verdict rather than the store's word: a configured URL and a working proxy are two facts.
+       */
+      const saveProxyUrl = async () => {
+        const picture = state.proxy;
+        const value = state.proxyField.trim();
+        if (picture === null || value === '') return;
+        const problem = shapeProblemOf(value);
+        if (problem !== null) {
+          sayProxy(problem);
+          setState((now) => ({ ...now, proxyInvalid: true, proxyNote: { tone: 'fault', text: t('state.refused') } }));
+          armHold('proxy');
+          return;
+        }
+        setState((now) => ({ ...now, proxyBusy: 'save', proxyNote: null, proxyInvalid: false }));
+        try {
+          await writeProxyUrl(ctx.remote, picture.proxyRef, value);
+        } catch (error) {
+          sayProxy(reasonOf(error));
+          setState((now) => ({ ...now, proxyBusy: null, proxyNote: { tone: 'fault', text: t('state.refused') } }));
+          armHold('proxy');
+          return;
+        }
+        /* The store's call is not the value's confirmation: the picture read back says whether a URL is
+           configured and which one, so the field takes its text from the re-read and never from the call's
+           own word. */
+        let after;
+        try {
+          after = await readProxyNow();
+        } catch (error) {
+          setState((now) => ({ ...now, proxyBusy: null }));
+          return;
+        }
+        if (after.missing || after.value?.configured !== true) {
+          sayProxy(t('proxy.notConfigured'));
+          setState((now) => ({ ...now, proxyBusy: null, proxyNote: { tone: 'fault', text: t('state.refused') } }));
+          armHold('proxy');
+          return;
+        }
+        setState((now) => ({ ...now, proxyField: urlOf(after.value), proxyInvalid: false }));
+        await runCheck();
       };
 
       const act = {
@@ -491,7 +921,7 @@ window.__ModuleLoader__.load({
                 note: { tone: 'fault', text: t('state.refused'), subject: 'ceiling' },
               }));
               armHold();
-              const ticket = nextTeamRead();
+              const ticket = nextRead('team');
               void readTeam().then(
                 ({ value: picture, prompt, promptFault }) => {
                   if (newestRead.current.team !== ticket) return;
@@ -515,6 +945,16 @@ window.__ModuleLoader__.load({
         },
         prompt: (on) => flip('prompt', on),
         review: (on) => flip('review', on),
+        fetch: (on) => void setFetch(on),
+        proxy: (on) => void setProxy(on),
+        /* A draft is the reader's: typing drops the press's word and the field's invalid mark, and nothing
+           in the card writes the value until the save is pressed. */
+        proxyField: (text) => setState((now) => ({ ...now, proxyField: text, proxyInvalid: false, proxyNote: null })),
+        saveProxy: () => void saveProxyUrl(),
+        checkProxy: () => {
+          if (state.proxy?.configured !== true) return;
+          void runCheck();
+        },
       };
       return draw(state, act);
     }
@@ -523,8 +963,10 @@ window.__ModuleLoader__.load({
     const KIT = require.async('./client.kit.js');
     /** The page's shared lifetime of a temporary answer. */
     const HOLD = require.async('./client.hold.js');
-    /** The card's own drawing. */
+    /** The team card's own drawing. */
     const CARD = require.async('./client.general.card.js');
+    /** The two fetch cards' own drawing. */
+    const CARDS = require.async('./client.general.fetch.js');
 
     return {
       /** Register the page into the seat the entry declares. */
@@ -539,8 +981,8 @@ window.__ModuleLoader__.load({
         pluginCtx.effect(() => {
           let live = true;
           let armed = null;
-          Promise.all([KIT, HOLD, CARD]).then(
-            ([kit, hold, card]) => {
+          Promise.all([KIT, HOLD, CARD, CARDS]).then(
+            ([kit, hold, card, more]) => {
               if (!live) return;
               armed = pluginCtx.slots.inject(SEAT, () => pluginCtx.slots.register({
                 name: SEAT,
@@ -548,7 +990,7 @@ window.__ModuleLoader__.load({
                 order: 0,
                 label: () => t('section'),
                 locale: NS,
-              }, () => h(GeneralSection, { kit, hold, card, ctx: pluginCtx })));
+              }, () => h(GeneralSection, { kit, hold, card, more, ctx: pluginCtx })));
             },
             (error) => {
               console.error(`${PACKAGE}: a chunk for the General section did not arrive: ${error?.message ?? error}`);

@@ -4,7 +4,7 @@
 
 ![The Coreness page: the rail with General, MCP, Qoder and Rate limiter, the MCP section open — one card per server](https://gist.githubusercontent.com/Vensus137/776e4d247aef014e32bceb810fdeae21/raw/410b202cc83345ebaeac891d46d8b23cb58c93c0/hero.png)
 
-Coreness is the product for one DeepSeek Harness profile: a panel in the application's sidebar, whose rail holds the sections for the profile's MCP servers, its Qoder provider, its rate limits and usage.
+Coreness is the product for one DeepSeek Harness profile: a panel in the application's sidebar, whose rail holds the sections for its General page, the profile's MCP servers, its Qoder provider, its rate limits and usage.
 
 ## Install
 
@@ -44,11 +44,13 @@ Updates go through the application's **Discover** tab: switch *Custom plugin mar
 
   ![The General page's Agent team card: the teammates ceiling, and the Team prompt and Review pass switches](https://gist.githubusercontent.com/Vensus137/776e4d247aef014e32bceb810fdeae21/raw/410b202cc83345ebaeac891d46d8b23cb58c93c0/general.png)
 
+- **Two more switches on the General page** — *Use the improved page fetch* sends page fetches through the product's own provider: the platform's HTTP fetch with a browser identity and a wider body. *Send page fetches through the proxy* takes an HTTP proxy URL, kept as a secret, checked from its card, and a fetch goes through the proxy first and is repeated without it when the proxy fails on the network. Both are off by default, and the platform's own fetch stands untouched until the first is on.
+
 - **The rules of the tree, in force** — the conventions the product's own tree works by, as one prompt section in the platform's registry: every request of the profile carries them, and no compaction can take them out of the model's sight.
 
 ## What lands
 
-The repository is the bundle: behind it stand the packages it names — the panel, the rules, MCP, the OAuth sign-in, the Qoder route, the rate limiter and the team card — each its own plugin, so a profile switches off the ones it does not use on the application's own Plugins page. Nothing is fetched from the product's side; what the page shows is read from the profile and the account it names.
+The repository is the bundle: behind it stand the packages it names — the panel, the rules, MCP, the OAuth sign-in, the Qoder route, the rate limiter, the team card, the page fetch and its proxy — each its own plugin, so a profile switches off the ones it does not use on the application's own Plugins page. Nothing is fetched from the product's side; what the page shows is read from the profile and the account it names.
 
 ## License
 

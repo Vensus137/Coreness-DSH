@@ -108,7 +108,7 @@ window.__ModuleLoader__.load({
     const EN = {
       section: 'Qoder',
       title: 'The Qoder route',
-      intro: 'The provider this product ships: the state of its credential, the node its requests go to, the models it offers and its web switch. The token is written to the platform\'s credential store under the reference the profile names, the route\'s own settings are written through the platform\'s settings section, and the platform\'s own Settings → Models is the other door to the same values.',
+      intro: 'The provider this product ships: the state of its credential, the node its requests go to, the models it offers and its web search switch. The token is written to the platform\'s credential store under the reference the profile names, the route\'s own settings are written through the platform\'s settings section, and the platform\'s own Settings → Models is the other door to the same values.',
       'state.failed': 'The route could not be read',
       'state.undeclared': 'This profile declares no Qoder route, so there is nowhere here to keep a token',
       'state.undeclared.hint': 'Without the plugin that provides the route there is nothing to write a token to, and a place invented here would be one the route never reads.',
@@ -239,10 +239,10 @@ window.__ModuleLoader__.load({
       'reset': 'Reset to defaults',
       'cancel': 'Cancel',
       'apply': 'Apply',
-      'web.title': 'Web access',
-      'web.label': 'Use Qoder for web search and fetch',
-      'web.unread': 'The web settings could not be read',
-      'web.footnote': 'On replaces the DeepSeek web search and fetch with Qoder. The DeepSeek search URL, API key and result count stay stored but are not used. Off returns the standard DeepSeek search. The platform\'s Web search page is the DeepSeek page; the latest save of the shared web settings wins. Off by default.',
+      'web.title': 'Web search',
+      'web.label': 'Use Qoder for web search',
+      'web.unread': 'The web search settings could not be read',
+      'web.footnote': 'On replaces the DeepSeek web search with Qoder\'s. The DeepSeek search URL, API key and result count stay stored but are not used. Off returns the standard DeepSeek search. The platform\'s Web search page is the DeepSeek page; the latest save of the shared web settings wins. Off by default.',
     };
     /* The section's own sheet: the rules this section draws with. The card frame, the card head, the section
        head, the field, the check, the button, the hint line, the tag and the answer strip are the page's and

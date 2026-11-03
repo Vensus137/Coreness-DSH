@@ -23,8 +23,9 @@ window.__ModuleLoader__.load({
       }, note === null ? '' : note.text);
     }
 
-    /** The section as it draws: one picture, one set of acts, and the card the page carries. */
-    function draw(state, act) {
+    /** The section as it draws: one picture, one set of acts, the team's card and the cards the section's
+     * other parts hand in — one list, so every card stands on the page's own rhythm. */
+    function draw(state, act, more = []) {
       const head = h('div', { key: 'head', className: 'coreness-sectionHead' }, [
         h('h4', { key: 'title', className: 'coreness-sectionTitle' }, words('section')),
       ]);
@@ -112,7 +113,7 @@ window.__ModuleLoader__.load({
             ]) : null,
             switchStands ? h('p', { key: 'reviewHint', className: 'coreness-dim' }, words('team.reviewHint')) : null,
           ]),
-        ])]),
+        ]), ...more]),
       ]);
     }
 

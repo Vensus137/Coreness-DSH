@@ -1,12 +1,13 @@
 /**
- * The Qoder section's web switch: one card, one checkbox, one footnote, no fields and no test controls.
+ * The Qoder section's web search switch: one card, one checkbox, one footnote, no fields and no test controls.
  *
- * The card reports the live `web` row and the Qoder row's `webAccess.enabled` rather than a second
- * selection kept in the Qoder row: both providers must name `qoder` and the flag must be on, because
- * the flag is what makes the registered providers usable. The writes follow the documented order: the flag first when turning on, the two
- * provider values first when turning off. The row is read as part of the section's own settings read
- * (`readState`), so the platform's `settings/document-updated` refreshes the box with no second watcher;
- * `readWeb` exists for the one thing a write needs that a render does not: a fresh revision.
+ * The card reports the live `web` row's search selection and the Qoder row's `webAccess.enabled` rather than a
+ * second selection kept in the Qoder row: the provider must name `qoder` for search and the flag must be on,
+ * because the flag is what makes the registered provider usable. The shared row's fetch selection is another
+ * card's subject and is neither read nor written here. The writes follow the documented order: the flag first
+ * when turning on, the search value first when turning off. The row is read as part of the section's own
+ * settings read (`readState`), so the platform's `settings/document-updated` refreshes the box with no second
+ * watcher; `readWeb` exists for the one thing a write needs that a render does not: a fresh revision.
  */
 window.__ModuleLoader__.load({
   id: '@coreness/ui/client.provider.web.js',
@@ -45,10 +46,9 @@ window.__ModuleLoader__.load({
         return rowOf(described.value);
       }
 
-      /** Whether both provider values name Qoder. */
+      /** Whether the shared row names Qoder for search. */
       function checkedOf(value) {
-        return value !== null && value !== undefined
-          && value.searchProvider === 'qoder' && value.fetchProvider === 'qoder';
+        return value !== null && value !== undefined && value.searchProvider === 'qoder';
       }
 
       /**

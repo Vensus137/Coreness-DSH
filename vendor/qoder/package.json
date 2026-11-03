@@ -22,7 +22,6 @@
     "@deepseek-ai/dsh-client-connection": "*",
     "@deepseek-ai/dsh-home-paths": "*",
     "@deepseek-ai/dsh-timeout": "*",
-    "@deepseek-ai/dsh-web": "*",
-    "@deepseek-ai/dsh-web-fetch-http": "*"
+    "@deepseek-ai/dsh-web": "*"
   }
 }
