@@ -1,7 +1,7 @@
 /**
  * The proxy's door: the picture the card draws, and the check it presses.
  *
- * The picture is the one place the stored URL leaves the host: the card draws it in a masked, editable
+ * The picture is the one place the stored URL leaves the host: the card draws it in a plain, editable
  * field so a configured proxy does not have to be retyped. Everywhere else — a log line, a tool error, a
  * refusal's reason — the URL stays host-side and a proxy is named as `host:port` only. The check reads
  * the stored value here, runs exactly one reachability probe, and answers the card's three words.
@@ -13,8 +13,9 @@
  * @module @coreness/proxy/src/route
  */
 
+import { rowIdOf } from './config.js'
 import { live } from './live.js'
-import { checkProxy, redact, resolveStored } from './proxy.js'
+import { checkProxy, resolveStored } from './proxy.js'
 
 /** The path the card reads and presses. */
 export const ROUTE = '/api/coreness.proxy'
@@ -31,11 +32,6 @@ const messageOf = (error) => (error instanceof Error ? error.message : String(er
 /** A refusal with the code the answer carries. */
 function failure(message, code) {
   return Object.assign(new Error(message), { code })
-}
-
-/** The row this plugin's fiber answers for, as the profile's own config editor addresses it. */
-function rowIdOf(ctx) {
-  return ctx.fiber?.entry?.options?.id ?? null
 }
 
 /**
@@ -57,10 +53,11 @@ function editableIn(ctx) {
 /**
  * The picture the card draws.
  *
+ * `enabled` and `allTraffic` are the two live switches, read here so the card never draws a stale box.
  * `configured` is asked of the credential store — the same answer its own configuration surfaces show —
  * so a stored value, an environment fallback and an unset name read distinctly; a store that refuses to
  * describe the reference is a fault in words, not a silent `false`. `url` is the resolved value itself,
- * read once for the picture, because the card's field shows it masked and editable; a profile with
+ * read once for the picture, because the card's field shows it plain and editable; a profile with
  * nothing stored, or a store that cannot answer the resolve, reads `url: null`. The credential service
  * is not optional here: the web composition that serves this route carries it, so a missing one is a
  * read that failed, not a second answer code.
@@ -74,13 +71,15 @@ export async function stateOf(ctx, config) {
   let described
   try {
     described = await credentials.describe(proxyRef)
-  } catch (error) {
-    throw failure(`the stored proxy URL could not be read: ${redact(messageOf(error))}`, 'READ_REFUSED')
+  } catch {
+    /* A store's own words may quote the record; the refusal names no value. */
+    throw failure('the credential record could not be read', 'READ_REFUSED')
   }
   const url = await resolveStored(credentials, proxyRef).catch(() => null)
   const ns = rowIdOf(ctx)
   return {
     enabled: live(config.enabled) === true,
+    allTraffic: live(config.allTraffic) === true,
     configured: described?.configured === true,
     proxyRef,
     url,
@@ -106,8 +105,9 @@ export async function checkOf(ctx, config) {
   let stored
   try {
     stored = await resolveStored(credentials, proxyRef)
-  } catch (error) {
-    throw failure(`the stored proxy URL could not be read: ${redact(messageOf(error))}`, 'READ_REFUSED')
+  } catch {
+    /* A store's own words may quote the value; the refusal names no value. */
+    throw failure('the stored proxy URL could not be read', 'READ_REFUSED')
   }
   if (stored === null) {
     throw failure('no proxy URL is stored, so there is nothing to check', 'NO_PROXY')
@@ -120,17 +120,26 @@ export async function checkOf(ctx, config) {
  *
  * The status is 200 in both cases — `{ok:true, value}` or `{ok:false, error}` — as the product's other
  * routes answer: a refusal is a state of the page, and its words are what the page shows.
+ *
+ * A check POST also reconciles the standing policy after its answer is settled: the card's Save writes the
+ * credential and then presses this action, so re-resolving the stored URL here is what makes a saved URL
+ * take effect while the whole-traffic switch is on. The reconciliation is the controller's — it compares
+ * the resolved URL with the one the standing install holds and re-installs only when they differ; a body
+ * that was never the check action does not touch the policy.
  * @param {object} ctx the cordis context
  * @param {Request} request the request
  * @param {(message: string) => void} [warn] where a refusal is said
  * @param {object} config the plugin's resolved config
+ * @param {() => Promise<void>} [reconcile] the standing policy's reconciliation, run after a check answered
  * @returns {Promise<Response>} the answer
  */
-export async function answerOf(ctx, request, warn = () => {}, config) {
+export async function answerOf(ctx, request, warn = () => {}, config, reconcile = async () => {}) {
   const json = (payload) => new Response(JSON.stringify(payload), {
     status: 200,
     headers: { 'content-type': 'application/json; charset=utf-8' },
   })
+  let acted = false
+  let answer
   try {
     if (request.method === 'GET') return json({ ok: true, value: await stateOf(ctx, config) })
     const body = await bodyOf(request)
@@ -138,11 +147,14 @@ export async function answerOf(ctx, request, warn = () => {}, config) {
     if (fields.length !== 1 || fields[0] !== 'action' || body.action !== CHECK_ACTION) {
       throw failure(`the proxy route's body carries only {"action":"${CHECK_ACTION}"}: the check reads the stored URL`, 'BAD_REQUEST')
     }
-    return json({ ok: true, value: await checkOf(ctx, config) })
+    acted = true
+    answer = json({ ok: true, value: await checkOf(ctx, config) })
   } catch (error) {
     warn(`the proxy route refused a ${request.method}: ${codeOf(error)} — ${messageOf(error)}`)
-    return json({ ok: false, error: { code: codeOf(error), message: messageOf(error) } })
+    answer = json({ ok: false, error: { code: codeOf(error), message: messageOf(error) } })
   }
+  if (acted) await reconcile()
+  return answer
 }
 
 /**

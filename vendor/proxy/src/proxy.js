@@ -183,11 +183,12 @@ function safeDecode(value) {
  * The environment one install publishes: both schemes point at the one proxy.
  *
  * `no_proxy` is left out on purpose — the platform merges its loopback bypass into every policy, and a
- * launch environment's own bypass list is not this product's to hand to a window it opens.
+ * launch environment's own bypass list is not this product's to hand to a window it opens. Shared by the
+ * one-call window and the standing policy, so both installs publish the same names.
  * @param {{raw: string}} parsed the stored proxy
  * @returns {Map<string, {value: string}>} the synthetic launch environment
  */
-function environmentOf(parsed) {
+export function proxyEnvironmentOf(parsed) {
   return new Map([
     ['http_proxy', { value: parsed.raw }],
     ['https_proxy', { value: parsed.raw }],
@@ -264,7 +265,7 @@ export async function withProxy(parsed, run) {
     try {
       /* The synthetic environment carries two values this module parsed itself, so the platform's
          rejected-candidate report has nothing to say about them. */
-      dispose = await installProxyFromEnvironment(environmentOf(parsed))
+      dispose = await installProxyFromEnvironment(proxyEnvironmentOf(parsed))
     } catch (error) {
       throw new ProxyInstallRefusal(error, restoreEnvironment(environment))
     }

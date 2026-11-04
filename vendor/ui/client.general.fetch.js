@@ -81,8 +81,11 @@ window.__ModuleLoader__.load({
       }
 
       /**
-       * The proxy card: the row's switch, the URL its field shows and writes back, and the two presses
-       * whose answers stand in the strip.
+       * The proxy card: the URL line on top, then the two switches with their hints.
+       *
+       * The order is the reader's: the URL is what both switches depend on, so its label, field and buttons
+       * stand first, then "Proxy for page fetch" and the hint of its own repeat, then "Proxy all traffic"
+       * and the hint of its scope. The two switches are stored independently and neither writes the other.
        *
        * The field's text is the picture's URL — the page's own field, showing the value as it stands and
        * letting the reader change it; a confirmed write leaves the re-read's value standing, a refusal keeps
@@ -99,6 +102,9 @@ window.__ModuleLoader__.load({
         const fault = state.proxyFault === true;
         const missing = state.proxyMissing === true;
         const configured = picture?.configured === true;
+        /* The picture is read defensively: a route that does not carry the second switch yet reads as off,
+           which is the switch's default. */
+        const allTraffic = typeof picture?.allTraffic === 'boolean' ? picture.allTraffic : false;
         /* Both write doors are the card's condition: the settings row the switch lives in and the store the
            save writes through. A surface this profile does not let the page write says so in the corner and
            every control waits, the check included — a read-only surface is not a proxy to try. */
@@ -120,16 +126,6 @@ window.__ModuleLoader__.load({
           : null;
         const field = state.proxyField ?? '';
         return cardOf('proxy', headOf(words('proxy.title'), mark, corner, stripNote), [
-          h('label', { key: 'check', className: 'coreness-check' }, [
-            h('input', {
-              key: 'box',
-              type: 'checkbox',
-              checked: picture?.enabled === true,
-              disabled: !editable || writing || !configured,
-              onChange: (event) => act.proxy(event.target.checked),
-            }),
-            h('span', { key: 'word' }, words('proxy.label')),
-          ]),
           h('div', { key: 'field', className: 'coreness-field' }, [
             h('div', { key: 'label', className: 'coreness-fieldLabel' }, [
               h('label', { key: 'word', htmlFor: 'general-proxy-url' }, words('proxy.field')),
@@ -162,8 +158,33 @@ window.__ModuleLoader__.load({
                 onClick: () => act.checkProxy(),
               }, busy === 'check' ? words('proxy.checking') : words('proxy.check')),
             ]),
+            h('p', { key: 'urlHint', className: 'coreness-dim' }, words('proxy.url.hint')),
+          ]),
+          h('label', { key: 'check', className: 'coreness-check' }, [
+            h('input', {
+              key: 'box',
+              type: 'checkbox',
+              checked: picture?.enabled === true,
+              disabled: !editable || writing || !configured,
+              onChange: (event) => act.proxy(event.target.checked),
+            }),
+            h('span', { key: 'word' }, words('proxy.label')),
           ]),
           h('p', { key: 'hint', className: 'coreness-dim' }, words('proxy.hint')),
+          h('label', { key: 'all', className: 'coreness-check' }, [
+            h('input', {
+              key: 'box',
+              type: 'checkbox',
+              checked: allTraffic,
+              /* The switch waits for the URL: it cannot be turned on while none is configured, and it can
+                 always be turned off — a switch stuck on over a URL that went away is a route nobody can
+                 leave. */
+              disabled: !editable || writing || (!configured && !allTraffic),
+              onChange: (event) => act.proxyAll(event.target.checked),
+            }),
+            h('span', { key: 'word' }, words('proxy.all.label')),
+          ]),
+          h('p', { key: 'allHint', className: 'coreness-dim' }, words('proxy.all.hint')),
         ]);
       }
 

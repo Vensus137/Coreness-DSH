@@ -6,8 +6,8 @@
  * product's own text — and the review paragraph that rides inside it — stand in place of the platform's last
  * sentence of the team policy. The Page fetch card is one check over the platform's shared `web` row: on,
  * page fetches are served by the product's own provider; off, the platform's own fetch stands untouched. The
- * proxy card writes the product row's switch and its URL, shows the URL back in its field and asks the
- * proxy's own route to check it.
+ * proxy card writes the product row's two switches and its URL, shows the URL back in its field and asks
+ * the proxy's own route to check it.
  *
  * The namespace each switch writes is the host's own answer (`ns`): the row's id in the composition lives in
  * the composition, and a copy of it here would drift. Every write is followed by a read of what it wrote —
@@ -70,9 +70,14 @@ window.__ModuleLoader__.load({
       'fetch.hint': 'On, page fetches go through the product\'s own fetch: the platform\'s HTTP fetch with a browser identity and a wider body.',
       'proxy.title': 'Proxy',
       'proxy.label': 'Proxy for page fetch',
-      'proxy.hint': 'On, a fetch goes through the proxy first and is repeated without it if the proxy fails on the network; only HTTP and HTTPS proxies are available. The switch waits for the proxy URL.',
+      'proxy.hint': 'On, a fetch goes through the proxy first and is repeated without it if the proxy fails on the network, unless the whole traffic is on.',
+      'proxy.all.label': 'Proxy all traffic',
+      'proxy.all.hint': 'On, every request the harness itself makes goes through the proxy: the model, search, page fetch, MCP connections and the market — at once. The app\'s own pages, its built-in browser included, are not proxied.',
       'proxy.field': 'Proxy URL',
       'proxy.placeholder': 'http://user:pass@host:port',
+      /* The URL's own facts: the schemes the proxy takes and the wait both switches share. They stand under the
+         field, not under either switch, because neither switch owns them. */
+      'proxy.url.hint': 'Only HTTP and HTTPS proxies are available. Both switches wait for this URL.',
       'proxy.save': 'Save proxy',
       'proxy.saving': 'Saving…',
       'proxy.check': 'Check proxy',
@@ -274,10 +279,11 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * The proxy's picture from its own route: the row's switch, the URL the picture carries, whether a URL
-     * is configured, the reference that names it and whether this profile may write either. The URL is the
-     * card's field text, shown as it stands. A route that is not served is a composition without the host
-     * half, and the card says so in its strip; any other refusal is a read that failed.
+     * The proxy's picture from its own route: the page-fetch switch, the all-traffic switch, the URL the
+     * picture carries, whether a URL is configured, the reference that names it and whether this profile may
+     * write the row at all. The URL is the card's field text, shown as it stands. A route that is not served
+     * is a composition without the host half, and the card says so in its strip; any other refusal is a read
+     * that failed.
      */
     async function readProxy() {
       const answer = await reach({ method: 'GET' }, PROXY_ROUTE, t('proxy.unreachable'));
@@ -305,15 +311,16 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * One write of the proxy's switch. The revision is read at the press, not carried from the card's
-     * picture: the row's volatile field is reachable from the platform's own settings too, and the picture
-     * the card holds may be older than the press.
+     * One write of one proxy switch. The revision is read at the press, not carried from the card's
+     * picture: the row's volatile fields are reachable from the platform's own settings too, and the picture
+     * the card holds may be older than the press. The field is the caller's — one switch writes its own and
+     * never the other's.
      */
-    async function writeProxySwitch(remote, ns, on) {
+    async function writeProxySwitch(remote, ns, field, on) {
       const document = await readDocument(remote);
       const row = rowOf(document, ns);
       if (row === undefined) throw new Error(`${String(ns)} is not a settings row this profile carries`);
-      const written = await remote.settings.mutate(ns, [{ op: 'set', path: ['enabled'], value: on }], row.revision);
+      const written = await remote.settings.mutate(ns, [{ op: 'set', path: [field], value: on }], row.revision);
       if (!written.ok) throw new Error(written.error?.message ?? 'the settings service refused the write');
       return written.value;
     }
@@ -779,16 +786,20 @@ window.__ModuleLoader__.load({
       };
 
       /**
-       * The proxy switch: the product row's volatile enable. A failed write leaves the switch at the
-       * platform's value; the word is `Not saved` and the reason is the console's.
+       * One proxy switch's press: only its own row field is written, so the two switches are stored
+       * independently and neither can rewrite, disable or reset the other. A failed write leaves the switch
+       * at the platform's value; the word is `Not saved` and the reason is the console's.
+       *
+       * The name is its own, deliberately: the module-level `writeSwitch` is the team path's write, and a
+       * shadowing name here made a team press run the proxy write with the remote as its field.
        */
-      const setProxy = async (on) => {
+      const pressProxySwitch = async (field, on) => {
         const picture = state.proxy;
         if (picture === null || picture.editable !== true) return;
         setState((now) => ({ ...now, proxyBusy: 'switch', proxyNote: null }));
         let wrote = false;
         try {
-          await writeProxySwitch(ctx.remote, picture.ns, on);
+          await writeProxySwitch(ctx.remote, picture.ns, field, on);
           wrote = true;
         } catch (error) {
           sayProxy(reasonOf(error));
@@ -946,7 +957,13 @@ window.__ModuleLoader__.load({
         prompt: (on) => flip('prompt', on),
         review: (on) => flip('review', on),
         fetch: (on) => void setFetch(on),
-        proxy: (on) => void setProxy(on),
+        proxy: (on) => void pressProxySwitch('enabled', on),
+        proxyAll: (on) => {
+          /* The switch waits for the URL: no write to on while none is configured, as the Check press
+             already waits for its own door. Turning it off is always allowed. */
+          if (on === true && state.proxy?.configured !== true) return;
+          void pressProxySwitch('allTraffic', on);
+        },
         /* A draft is the reader's: typing drops the press's word and the field's invalid mark, and nothing
            in the card writes the value until the save is pressed. */
         proxyField: (text) => setState((now) => ({ ...now, proxyField: text, proxyInvalid: false, proxyNote: null })),

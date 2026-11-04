@@ -60,7 +60,7 @@ const CAUSE_DEPTH = 5
 const NETWORK_CODES = new Set([
   'ECONNRESET', 'ECONNREFUSED', 'ECONNABORTED', 'EPIPE', 'ETIMEDOUT',
   'ENOTFOUND', 'EAI_AGAIN', 'EHOSTUNREACH', 'ENETUNREACH', 'ENETDOWN',
-  'UND_ERR_SOCKET', 'UND_ERR_CLOSED', 'UND_ERR_CONNECT_TIMEOUT',
+  'UND_ERR_ABORTED', 'UND_ERR_SOCKET', 'UND_ERR_CLOSED', 'UND_ERR_CONNECT_TIMEOUT',
   'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT', 'UND_ERR_PRX_TLS',
   'ERR_TLS_CERT_ALTNAME_INVALID',
 ])
@@ -289,9 +289,11 @@ async function directAttempt(exec, next, ms) {
  * @param {object} ctx the cordis context of the injected `tools` scope
  * @param {object} config the plugin's resolved config
  * @param {(level: 'info'|'warn', message: string) => void} [sink] where a line goes
+ * @param {{holds?: () => boolean}} [standing] the standing policy's controller: the gate stands down only
+ *   while a policy it installed actually stands, not merely while the switch's word is on
  * @returns {(exec: object, next: Function) => Promise<object>} the `tools/execute` listener
  */
-export function createGate(ctx, config, sink = () => {}) {
+export function createGate(ctx, config, sink = () => {}, standing = {}) {
   const said = new Set()
   const say = (level, key, message) => {
     if (said.has(key)) return
@@ -300,6 +302,11 @@ export function createGate(ctx, config, sink = () => {}) {
   }
   return async function gate(exec, next) {
     if (exec?.name !== TOOL) return next()
+    /* The whole harness traffic runs under one standing policy: a window installed here would nest above
+       it, and the direct repeat would run through that standing policy anyway. The call runs once. The
+       controller's state decides, not the switch's word alone: an install that failed or a URL that could
+       not be read leaves the page-fetch behavior to its own switch, and the failure stays warned. */
+    if (live(config.allTraffic) === true && standing.holds?.() === true) return next()
     /* The budget is the call's, so its clock starts at the gate's door: the credential resolve and the
        install are spent from the same budget the caller's timeout bounds. */
     const started = now()
@@ -325,8 +332,8 @@ export function createGate(ctx, config, sink = () => {}) {
     let stored
     try {
       stored = await resolveStored(credentials, ref)
-    } catch (error) {
-      say('warn', 'unreadable', `the stored proxy URL could not be read (${redact(messageOf(error))}); page fetches go direct.`)
+    } catch {
+      say('warn', 'unreadable', 'the stored proxy URL could not be read; page fetches go direct.')
       return next()
     }
     if (stored === null) return next()
@@ -351,9 +358,10 @@ export function createGate(ctx, config, sink = () => {}) {
       first = await underPolicy(exec, next, parsed, target, { budget, started, say })
     } catch (error) {
       if (error instanceof ProxyInstallRefusal) {
+        /* The platform's own words may quote the URL; the sentence names the proxy as `host:port` only. */
         say('warn', 'install', error.restored
-          ? `${redact(messageOf(error))}; the proxy environment stands as it was and the page fetch went direct.`
-          : `${redact(messageOf(error))}; the proxy environment could not be put back, so later page fetches and child processes may still see it.`)
+          ? `the proxy policy could not be installed at ${parsed.hostPort}; the proxy environment stands as it was and the page fetch went direct.`
+          : `the proxy policy could not be installed at ${parsed.hostPort}; the proxy environment could not be put back, so later page fetches and child processes may still see it.`)
         return next()
       }
       throw error

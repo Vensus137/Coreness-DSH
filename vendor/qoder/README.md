@@ -34,7 +34,7 @@ The row's schema is `Config`, declared in `src/config.js` and re-exported by `sr
 - `apiKeyEnv` — `QODER_PERSONAL_ACCESS_TOKEN` (a credential reference, never a value).
 - `models` — the four default models above, each with its window, `vision` and effort.
 - `defaultContextWindow` — 200,000.
-- `retryPolicy` — `normal`, 5 retries, the six retryable codes (`EMPTY_RESPONSE`, `RATE_LIMIT`, `SERVER`, `TIMEOUT`, `TRANSPORT`, `MALFORMED_RESPONSE`), backoff 500 ms → 10 s with jitter. A turn the contour cuts at its output ceiling with no text left is reported as `EMPTY_RESPONSE`, so the policy re-asks the step.
+- `retryPolicy` — `normal`, 5 retries, the six retryable codes (`EMPTY_RESPONSE`, `RATE_LIMIT`, `SERVER`, `TIMEOUT`, `TRANSPORT`, `MALFORMED_RESPONSE`), backoff 500 ms → 10 s with jitter. A turn the contour cuts at its output ceiling with no text left is reported as `EMPTY_RESPONSE`, so the policy re-asks the step. A proxy's refused `CONNECT` — `fetch failed` with cause `UND_ERR_ABORTED` — is `TRANSPORT` and retryable under this policy while the caller still waits; with an aborted caller the same code stays `ABORTED` and terminal, and a certificate cause stays permanent.
 - `centerOrigin` — `https://center.qoder.sh`; `openapiOrigin` — `https://openapi.qoder.sh`; a value other than these two makes a custom contour and skips the detection.
 - `region` — `auto`: the token's two exchanges decide; `global` or `cn` pins one and skips the detection. Not volatile.
 - `controlCeilingMs` 10,000; `firstByteCeilingMs` 15,000; `idleCeilingMs` 300,000 (the bundle row pins `firstByteCeilingMs` to 60,000).

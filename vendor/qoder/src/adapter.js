@@ -99,7 +99,8 @@ export function resolveRetryPolicy(config = {}) {
  * The outer `TypeError: fetch failed` is the same for a reset, a refused connection and a dead DNS; the
  * reason a reader routes on is one level down, in `cause.code` — and, for a host with several addresses,
  * in `cause.errors[].code`. Only these causes are transport: a certificate failure is permanent, and a
- * retry would spend the budget without healing it.
+ * retry would spend the budget without healing it. A proxy's refused CONNECT is not in the set because its
+ * code also words a caller's own abort; `transportCause` reads the signal to tell the two apart.
  */
 const TRANSPORT_CAUSES = new Set([
   'ECONNRESET', 'ECONNREFUSED', 'ECONNABORTED', 'EPIPE', 'ETIMEDOUT',
@@ -109,17 +110,36 @@ const TRANSPORT_CAUSES = new Set([
 ])
 
 /**
+ * The code undici gives a request the proxy's CONNECT refused, and the one it gives a request the caller
+ * aborted: the code alone cannot tell a flaky tunnel from a deliberate cancellation, so it is transport
+ * only while the caller's signal is still live.
+ */
+const TUNNEL_ABORT = 'UND_ERR_ABORTED'
+
+/**
+ * Whether a cause code names a transport failure for a call whose caller still waits.
+ * @param {string} code the code a node of the cause chain carried
+ * @param {boolean} live whether the caller's signal is still live
+ * @returns {boolean} whether a retry can heal this code
+ */
+function transportCause(code, live) {
+  return TRANSPORT_CAUSES.has(code) || (live && code === TUNNEL_ABORT)
+}
+
+/**
  * The transport reason in an error and its cause chain, and whether any node at all carried a code.
  *
  * The walk is breadth-first, bounded and skips a node it has already seen: an `AggregateError` with
  * several addresses, a self-referencing cause and a cycle all return. The `coded` flag is what keeps a
  * permanent cause — a certificate failure, whose code is not transport — from falling into the generic
- * `fetch failed` door.
+ * `fetch failed` door. A tunnel abort is transport only for a caller whose signal is still live: the same
+ * code also words the caller's own abort, which must stay terminal.
  * @param {unknown} error what was thrown
  * @param {number} [depth] how many cause levels to read
+ * @param {boolean} [live] whether the caller's signal is still live
  * @returns {{code?: string, first?: string, coded: boolean}} the first transport code, the first code seen, and whether any node carried one
  */
-export function causesOf(error, depth = 5) {
+export function causesOf(error, depth = 5, live = false) {
   let level = [error]
   const seen = new Set()
   let coded = false
@@ -132,7 +152,7 @@ export function causesOf(error, depth = 5) {
       if (typeof node.code === 'string' && node.code !== '') {
         coded = true
         first ??= node.code
-        if (TRANSPORT_CAUSES.has(node.code)) return { code: node.code, first, coded: true }
+        if (transportCause(node.code, live)) return { code: node.code, first, coded: true }
       }
       if (node.cause !== undefined) next.push(node.cause)
       if (Array.isArray(node.errors)) next.push(...node.errors)
@@ -157,16 +177,20 @@ function fetchFailure(error) {
  *
  * A transport failure from Node's `fetch` is the case the outer value cannot name: its `TypeError` has no
  * `code`, and the reason is in the cause chain (or `cause.errors`), so the code travels from there. An
- * explicit code still wins; a cause code outside the transport set is not turned into one.
+ * explicit code still wins; a cause code outside the transport set is not turned into one. The tunnel abort
+ * is the one cause the caller's own signal decides: while the signal is live it is a flaky proxy's CONNECT
+ * and a retry may heal it, and once the caller has aborted the same code stays outside the retry set,
+ * where the terminal is the caller's `aborted` anyway.
  * @param {unknown} error what was thrown
  * @param {AbortSignal} [signal] the caller's signal
  * @returns {{kind: 'aborted' | 'error', failure: object}} the terminal reason
  */
 export function terminalOfFailure(error, signal) {
+  const live = signal?.aborted !== true
   const explicit = typeof error?.code === 'string' && error.code !== ''
-  const causes = causesOf(error)
+  const causes = causesOf(error, 5, live)
   const code = error instanceof FrameError ? 'MALFORMED_RESPONSE'
-    : explicit ? PLATFORM_CODES[error.code] ?? (TRANSPORT_CAUSES.has(error.code) ? 'TRANSPORT' : error.code)
+    : explicit ? PLATFORM_CODES[error.code] ?? (transportCause(error.code, live) ? 'TRANSPORT' : error.code)
       : causes.code !== undefined || (fetchFailure(error) && !causes.coded) ? 'TRANSPORT'
         : 'UNKNOWN'
   const aborted = signal?.aborted === true || code === 'ABORTED'
