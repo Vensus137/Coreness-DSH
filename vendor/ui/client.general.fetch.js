@@ -84,7 +84,7 @@ window.__ModuleLoader__.load({
        * The proxy card: the URL line on top, then the two switches with their hints.
        *
        * The order is the reader's: the URL is what both switches depend on, so its label, field and buttons
-       * stand first, then "Proxy for page fetch" and the hint of its own repeat, then "Proxy all traffic"
+       * stand first, then "Proxy for page fetch" and the hint of its pre-flight, then "Proxy all traffic"
        * and the hint of its scope. The two switches are stored independently and neither writes the other.
        *
        * The field's text is the picture's URL — the page's own field, showing the value as it stands and

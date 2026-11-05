@@ -70,7 +70,7 @@ window.__ModuleLoader__.load({
       'fetch.hint': 'On, page fetches go through the product\'s own fetch: the platform\'s HTTP fetch with a browser identity and a wider body.',
       'proxy.title': 'Proxy',
       'proxy.label': 'Proxy for page fetch',
-      'proxy.hint': 'On, a fetch goes through the proxy first and is repeated without it if the proxy fails on the network, unless the whole traffic is on.',
+      'proxy.hint': 'On, a fetch goes through the proxy once the proxy answers a quick reachability check; a proxy that fails the check leaves the fetch direct, and one that fails during the fetch is reported as the error, not retried. A call left with no time for the check runs through the proxy unchecked. Unless the whole traffic is on.',
       'proxy.all.label': 'Proxy all traffic',
       'proxy.all.hint': 'On, every request the harness itself makes goes through the proxy: the model, search, page fetch, MCP connections and the market — at once. The app\'s own pages, its built-in browser included, are not proxied.',
       'proxy.field': 'Proxy URL',

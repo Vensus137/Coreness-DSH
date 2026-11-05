@@ -1,6 +1,15 @@
 /**
- * The `web_fetch` gate: one `tools/execute` listener that sends the call through the stored proxy first
- * and repeats it directly when the network refuses the proxied attempt.
+ * The `web_fetch` gate: one `tools/execute` listener that sends the call through the stored proxy when the
+ * proxy answers a pre-flight, and lets the call go direct when it does not.
+ *
+ * The dispatch continuation belongs to the one dispatch this listener makes: the platform makes a
+ * waterfall's `next()` single-use, so a second one is not a plan this module may hold. What a repeat would
+ * buy — a proxy that is down must not cost the call its result — is bought before the call instead. The
+ * stored proxy is probed with the same `CONNECT` the card's check makes; a probe that does not answer
+ * `works` says why once and the call runs direct, in one dispatch and with no policy installed; a probe
+ * that answers `works` has the policy installed and the call runs once through it. A call that then fails
+ * on the network is returned as it is, with one line saying the proxy was reachable and the failure stands:
+ * a proxy that dies mid-call is not covered, and no line claims a repeat, because none happens.
  *
  * The seam is the platform's own documented wrapper point for a call's timeout or retry. It hands the
  * listener the one execution view that may replace the call's signal, which is how an attempt gets a
@@ -23,8 +32,10 @@ import { deadline, timeoutOf } from '@deepseek-ai/dsh-timeout'
 
 import { live } from './live.js'
 import {
+  CHECK_TIME_LIMIT_MS,
   PROXY_ATTEMPT,
   ProxyInstallRefusal,
+  checkProxy,
   hostPortOf,
   parseProxyUrl,
   proxiedFor,
@@ -44,9 +55,6 @@ const REMOTE_FETCH = 'deepseek-fetch-api'
 
 /** How much of the declared call budget the proxied attempt may spend. */
 const ATTEMPT_SHARE = 2 / 3
-
-/** The least budget a direct repeat is worth spending: below it the first answer stands. */
-const RETRY_FLOOR_MS = 5_000
 
 /** How deep the cause walk goes before it stops: an AggregateError plus a cause chain fits well below. */
 const CAUSE_DEPTH = 5
@@ -70,14 +78,14 @@ const NETWORK_CODES = new Set([
  * `translateAbortOrNetwork` deliberately collapses a reset, a refused connection and a dead DNS into
  * `WEB_PROVIDER_ERROR` before the result crosses `tools/execute`, so the cause codes never reach this
  * seam. For a refusal that is not the caller's abort and not one of the provider's own decision codes,
- * this code therefore *is* the network classification. The price is one bounded direct attempt on a
- * failure the provider files here for its own reasons; without it the direct fallback could never run
- * against the platform's provider.
+ * this code therefore *is* the network classification. The price is one proxy line on a failure the
+ * provider files here for its own reasons; without it, a fetch that failed through the proxy against the
+ * platform's provider could not be told from one the page itself decided.
  */
 const COLLAPSED_NETWORK_CODES = new Set(['WEB_PROVIDER_ERROR'])
 
 /**
- * A refusal that says the call itself is wrong or decided; a repeat would spend the budget for nothing.
+ * A refusal that says the call itself is wrong or decided: the page decided, so the proxy line is not for it.
  * `WEB_BLOCKED_URL` is not here but needs no entry: it is simply not a network signal, so it stands.
  */
 const FINAL_CODES = new Set([
@@ -128,7 +136,7 @@ function codesOf(result) {
 }
 
 /**
- * Whether one settled attempt failed on the network — the only class the direct repeat is for.
+ * Whether one settled attempt failed on the network — the class the gate reports as the proxy's failure.
  *
  * The attempt's own deadline is read first, from the state the attempt observed rather than from a code:
  * the deadline's abort arrives as the platform's cancellation code, and a code cannot tell the caller's
@@ -136,7 +144,7 @@ function codesOf(result) {
  * failure. Neither is a caller's abort, nor any of the provider's own decision codes.
  * @param {object} result the settled tool result
  * @param {{timedOut?: boolean, callerAborted?: boolean}} [state] what the attempt itself observed
- * @returns {boolean} true when the call may be repeated without the proxy
+ * @returns {boolean} true when the failure came from the transport, not from the page
  */
 export function isNetworkFailure(result, state = {}) {
   if (result?.isError !== true) return false
@@ -151,20 +159,20 @@ export function isNetworkFailure(result, state = {}) {
 }
 
 /**
- * How informative an error result is, for choosing between two failed attempts.
+ * The pre-flight's ceiling: the card's own bound, capped by what the declared budget still holds.
  *
- * Both attempts failed: the proxied one's own deadline and the direct one's cancellation both arrive as
- * `WEB_ABORTED`, which tells a reader nothing about the page; a provider's refusal names a cause. The
- * weight therefore ranks an abort below a named failure, and a tie goes to the second attempt — the one
- * the caller would have got without the proxy.
- * @param {object} result the settled tool result
- * @returns {number} the rank
+ * The probe is spent from the call's budget like the install is, so it may not outlive it: a budget with
+ * less than a millisecond left buys no probe at all (`null`), and that call then runs once under the
+ * installed policy, with no gate deadline beyond the single millisecond a sub-millisecond remainder can
+ * arm. A `null` budget is the tool's own word that it declares none: the card's ceiling stands alone.
+ * @param {number|null} budget milliseconds the wrapped tool declared, or `null`
+ * @param {number} started the call's start on the gate clock
+ * @returns {number|null} milliseconds the probe may take, or `null` when the budget holds nothing to spend
  */
-function weightOf(result) {
-  if (result?.isError !== true) return 3
-  const code = result.error?.info?.code
-  if (code === 'WEB_ABORTED' || code === 'ABORTED_BEFORE_DISPATCH') return 1
-  return 2
+function preflightLimit(budget, started) {
+  if (budget === null) return CHECK_TIME_LIMIT_MS
+  const remaining = Math.floor(budget - (now() - started))
+  return remaining >= 1 ? Math.min(CHECK_TIME_LIMIT_MS, remaining) : null
 }
 
 /**
@@ -183,7 +191,7 @@ function declaredBudget(ctx, exec) {
  *
  * The row is the platform's, and both the product's page and the platform's Web search page write it; a
  * call whose fetch is served by the platform's server-side API never reaches a local transport, so
- * proxying it would spend the budget and, on the fallback, a second paid request for nothing.
+ * proxying it would spend the call for nothing.
  *
  * The selection is what the platform itself resolves: the row's value when it is not nullish, otherwise
  * `DSH_WEB_FETCH_PROVIDER` from the launch environment. The read goes through the settings service, which
@@ -225,8 +233,8 @@ function targetOf(exec) {
  * provider consults. A policy that does not route this URL — loopback, or a URL the platform keeps
  * direct — leaves the call direct; it is not a failure, and the window closes as usual.
  *
- * The attempt's share is taken from what the install left of the declared budget, not from the budget
- * the call began with: installing the policy costs time of its own, and that time is the caller's.
+ * The attempt's share is taken from what the pre-flight and the install left of the declared budget, not
+ * from the budget the call began with: both cost time of their own, and that time is the caller's.
  * @param {object} exec the execution view
  * @param {Function} next the rest of the dispatch
  * @param {ReturnType<typeof parseProxyUrl>} parsed the stored proxy
@@ -258,30 +266,12 @@ async function underPolicy(exec, next, parsed, target, options) {
 }
 
 /**
- * Run one direct call under a deadline for what the declared budget has left.
- * @param {object} exec the execution view
- * @param {Function} next the rest of the dispatch
- * @param {number} ms the remaining budget
- * @returns {Promise<object>} the settled result
- */
-async function directAttempt(exec, next, ms) {
-  const timer = deadline(exec.signal, ms, PROXY_ATTEMPT)
-  const upstream = exec.signal
-  exec.signal = timer.signal
-  try {
-    return await next()
-  } finally {
-    exec.signal = upstream
-    timer[Symbol.dispose]()
-  }
-}
-
-/**
  * Build the gate.
  *
  * The log a caller passes receives one line per subject, not one per page fetch: a condition that stands
- * across calls — a missing credential store, an unreadable record, a URL the policy keeps direct — is
- * said once and then left to stand, because a line repeated per fetch tells a reader nothing new.
+ * across calls — a missing credential store, an unreadable record, a URL the policy keeps direct, a proxy
+ * that answered the pre-flight and then failed — is said once and then left to stand, because a line
+ * repeated per fetch tells a reader nothing new.
  *
  * `ctx` must be a context that declares `tools` — the injected scope the listener is registered under.
  * Cordis throws on a service property read from a context that did not declare it, so the plugin's outer
@@ -289,11 +279,15 @@ async function directAttempt(exec, next, ms) {
  * @param {object} ctx the cordis context of the injected `tools` scope
  * @param {object} config the plugin's resolved config
  * @param {(level: 'info'|'warn', message: string) => void} [sink] where a line goes
- * @param {{holds?: () => boolean}} [standing] the standing policy's controller: the gate stands down only
- *   while a policy it installed actually stands, not merely while the switch's word is on
+ * @param {object} [seams] the gate's two collaborators
+ * @param {{holds?: () => boolean}} [seams.standing] the standing policy's controller: the gate stands down
+ *   only while a policy it installed actually stands, not merely while the switch's word is on
+ * @param {Function} [seams.probe] the reachability probe the pre-flight asks, `(raw, {timeLimitMs})`; a
+ *   caller that must not open a socket passes its own, and a mount passes nothing
  * @returns {(exec: object, next: Function) => Promise<object>} the `tools/execute` listener
  */
-export function createGate(ctx, config, sink = () => {}, standing = {}) {
+export function createGate(ctx, config, sink = () => {}, seams = {}) {
+  const { standing = {}, probe = checkProxy } = seams
   const said = new Set()
   const say = (level, key, message) => {
     if (said.has(key)) return
@@ -303,12 +297,12 @@ export function createGate(ctx, config, sink = () => {}, standing = {}) {
   return async function gate(exec, next) {
     if (exec?.name !== TOOL) return next()
     /* The whole harness traffic runs under one standing policy: a window installed here would nest above
-       it, and the direct repeat would run through that standing policy anyway. The call runs once. The
-       controller's state decides, not the switch's word alone: an install that failed or a URL that could
-       not be read leaves the page-fetch behavior to its own switch, and the failure stays warned. */
+       it, and the call's one dispatch would run through that standing policy anyway. The controller's
+       state decides, not the switch's word alone: an install that failed or a URL that could not be read
+       leaves the page-fetch behavior to its own switch, and the failure stays warned. */
     if (live(config.allTraffic) === true && standing.holds?.() === true) return next()
-    /* The budget is the call's, so its clock starts at the gate's door: the credential resolve and the
-       install are spent from the same budget the caller's timeout bounds. */
+    /* The budget is the call's, so its clock starts at the gate's door: the credential resolve, the
+       pre-flight and the install are spent from the same budget the caller's timeout bounds. */
     const started = now()
     if (live(config.enabled) !== true) return next()
 
@@ -348,10 +342,33 @@ export function createGate(ctx, config, sink = () => {}, standing = {}) {
 
     const target = targetOf(exec)
     if (target === null) return next()
-    /* A call the caller has already cancelled is not worth an install or a queue wait. */
+    /* A call the caller has already cancelled is not worth a probe, an install or a queue wait. */
     if (exec.signal?.aborted === true) return next()
 
     const budget = declaredBudget(ctx, exec)
+
+    /* The pre-flight is the only place a dead proxy can be met before the call: the dispatch continuation
+       belongs to the one dispatch, so a proxy discovered dead by it would leave nothing to dispatch again.
+       A probe that cannot answer `works` therefore sends the call direct before any policy is installed. A
+       budget with nothing left buys no probe, and that call runs once under the installed policy. */
+    const limit = preflightLimit(budget, started)
+    if (limit !== null) {
+      let verdict
+      try {
+        verdict = await probe(stored, { timeLimitMs: limit })
+      } catch (error) {
+        verdict = { verdict: 'unavailable', hostPort: parsed.hostPort, reason: redact(messageOf(error)) }
+      }
+      if (verdict?.verdict !== 'works') {
+        /* The probe's own reason already names the proxy as `host:port` and ends its sentence; a thrown
+           probe's message does not, so the line closes it before the clause that follows. */
+        const words = typeof verdict?.reason === 'string' && verdict.reason.trim() !== ''
+          ? redact(verdict.reason).trim()
+          : `The proxy at ${parsed.hostPort} did not answer the pre-flight check.`
+        say('warn', `before:${parsed.hostPort}`, `${/[.!?]$/u.test(words) ? words : `${words}.`} The page fetch went direct without it.`)
+        return next()
+      }
+    }
 
     let first
     try {
@@ -368,13 +385,15 @@ export function createGate(ctx, config, sink = () => {}, standing = {}) {
     }
     if (!first.routed) return first.result
 
+    /* The one dispatch has happened; there is no second one to plan. A failure on the network is the
+       call's answer, and the line says what stood before it — a proxy that answered the pre-flight, or a
+       budget that bought none — and never that the fetch was repeated. */
     const callerAborted = exec.signal.aborted === true
-    const remaining = budget === null ? null : budget - (now() - started)
-    if (remaining === null || remaining < RETRY_FLOOR_MS) return first.result
-    if (callerAborted || !isNetworkFailure(first.result, { timedOut: first.timedOut, callerAborted })) return first.result
-
-    say('warn', `fallback:${parsed.hostPort}`, `the proxy ${parsed.hostPort} failed on the network; the page fetch was repeated directly, and later failures fall back the same way.`)
-    const second = await directAttempt(exec, next, Math.max(1, Math.floor(remaining)))
-    return weightOf(second) >= weightOf(first.result) ? second : first.result
+    if (!callerAborted && isNetworkFailure(first.result, { timedOut: first.timedOut, callerAborted })) {
+      say('warn', `through:${parsed.hostPort}`, limit === null
+        ? 'the budget declared for the call was already spent, so the proxy was not probed; the page fetch then failed on the network through it, and the failure stands as the result of the call and was not repeated.'
+        : `the proxy ${parsed.hostPort} answered the pre-flight, but the page fetch failed on the network through it; the failure stands as the result of the call and was not repeated.`)
+    }
+    return first.result
   }
 }

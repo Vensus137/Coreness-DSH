@@ -100,7 +100,7 @@ export async function apply(ctx, config) {
        on a context that did not declare it throws in Cordis, not `undefined`. The controller comes along so
        the gate stands down only while a policy it installed actually stands. */
     toolsCtx.effect(() => {
-      const dispose = toolsCtx.on('tools/execute', createGate(toolsCtx, config, say, standing))
+      const dispose = toolsCtx.on('tools/execute', createGate(toolsCtx, config, say, { standing }))
       return () => {
         void dispose()
       }

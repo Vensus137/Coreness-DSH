@@ -13,6 +13,12 @@
  * the row's own parent, by the id that group knows (`removeRow` below), and every write is confirmed
  * by reading the tree back, because a silence is exactly what this defect produces.
  *
+ * Persistence is asked by shape, not by release: a tree that writes its file whole exposes `write()`,
+ * and a tree that reports the change to an include which owns the file exposes `commit(change)`. The
+ * change is the one the platform's own `remove` reports — the row's id, the group that held it and
+ * the options that left — and a tree that exposes `flush()` is awaited, so a file the include could
+ * not write is not answered as done.
+ *
  * @module @coreness/mcp/src/tree
  */
 
@@ -116,13 +122,26 @@ export function updateRow(ctx, entryId, options) {
  * Remove a row from the servers file.
  *
  * The removal is asked of the row's own parent group by the id that group knows, then the tree the
- * group belongs to writes its file — the same two steps `EntryTree.remove` takes, with the id it
- * cannot look up replaced by the one it can.
+ * group belongs to is asked to persist it — the same two steps `EntryTree.remove` takes, with the id
+ * it cannot look up replaced by the one it can.
+ *
+ * The persistence call is chosen by what the tree carries: a tree whose file it writes itself exposes
+ * `write()`, and a tree that hands every change to an include exposes `commit(change)`. The change
+ * is the one the platform's own `remove` reports — the row's id inside the group, the group itself,
+ * and the options that left — so an include records the removal the way it records its own. A tree
+ * that exposes `flush()` is awaited: the include writes on a timer and reports a failed write only to
+ * the log, and a removal whose write is lost is the one save that comes back at the next boot.
  * @param {object} entry the row as the tree holds it
- * @returns {void}
+ * @returns {Promise<void>} when the tree took the removal and, where it can be observed, its file
  */
-export function removeRow(entry) {
+export async function removeRow(entry) {
   const group = entry.parent
+  const tree = group.tree
   group.remove(entry.options.id)
-  group.tree.write()
+  if (typeof tree.write === 'function') {
+    tree.write()
+    return
+  }
+  tree.commit({ id: entry.options.id, group, legacy: entry.options })
+  if (typeof tree.flush === 'function') await tree.flush()
 }

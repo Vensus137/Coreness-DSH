@@ -16,7 +16,9 @@
  * The file's own write is the include's, debounced on a timer of its own, and a write that fails reaches
  * only the log: a save on a read-only file therefore answers through the tree and says so beside the
  * result. That is the seam the platform offers; the door does not pretend to a file it cannot read
- * back.
+ * back. A removal is answered the same way, with one difference the platform itself offers: a tree that
+ * exposes a flush is awaited, so a removal the include could not write is refused rather than answered
+ * as done — it is the one save whose lost write comes back at the next boot.
  *
  * @module @coreness/mcp/src/write
  */
@@ -275,13 +277,16 @@ async function setEnabled(ctx, include, row, enabled) {
  *
  * The removal is asked of the row's own parent group, and then the same tree is asked
  * again for the row: the platform's own spelling of this call is silent when it misses, and this is
- * the one save where that silence would read as success.
+ * the one save where that silence would read as success. The tree also decides how the removal
+ * reaches the file, and a tree that can report its file write is awaited before the answer: a file the
+ * include could not write is a refusal, because the row comes back at the next boot.
  * @param {object} include the include entry
  * @param {object} row the row as the file holds it
- * @returns {object} what was done
- * @throws {Refusal} `not-an-mcp-row`, `no-row` or `not-saved`
+ * @returns {Promise<object>} what was done
+ * @throws {Refusal} `not-an-mcp-row`, `no-row`, or `not-saved` when the tree holds the row still or
+ *   its file was not written
  */
-function removeServer(include, row) {
+async function removeServer(include, row) {
   /* A removal shapes no config, so a row holding an expression in a drawn field is still a row this
      door can take away: the shape rule belongs to the saves that write the config, and applying it here
      would leave a row the page offers to remove with no press that could ever take it. */
@@ -289,7 +294,11 @@ function removeServer(include, row) {
     throw new Refusal('not-an-mcp-row', `the row "${row.id}" is a "${row.module}" row, and this form shapes MCP client rows only`)
   }
   if (row.live === null) throw new Refusal('no-row', `the servers file holds no tree row for "${row.entryId}"`)
-  removeRow(row.live)
+  try {
+    await removeRow(row.live)
+  } catch (error) {
+    throw new Refusal('not-saved', `the removal of "${row.id}" reached the tree and the file did not take it: ${reasonOf(error)} — the row is gone from this run's tree and comes back at the next boot`)
+  }
   const still = entryOf(include, row.id)
   if (still !== null) {
     throw new Refusal('not-saved', `the removal of "${row.id}" did not stand: the Loader reported no error and the servers file still holds the row. A removal is asked of the row's own group by the id that group knows — a row addressed by its path from the root is resolved, missed and left in the file in silence.`)
@@ -308,19 +317,28 @@ function removeServer(include, row) {
  * never reads. A row that already carries a hand-written expression under the reference header is
  * refused as well: the file owns that text, and this form does not write over it.
  *
- * The option is written before the header, in a write of its own: the Loader evaluates a row's
- * configuration as the write lands, so a header expression that reads the credential service is refused
- * while the option that puts that service in the row's own context is not there yet — measured at this
- * door, where one write carrying both answered `cannot get property "credentials" without inject`. An
- * option the file holds as an expression is refused rather than replaced.
+ * The option and the config go in one update, and that update is made while the row is stopped. The
+ * Loader evaluates a row's configuration as a write lands, against the inject the row was activated
+ * under — the one from before this save — so a header expression that reads the credential service is
+ * refused even when the option is written first, in a write of its own. A row that stands switched off
+ * is not evaluated at all: both options land together, and the switch back on is the activation that
+ * reads them together. A row the file already holds switched off takes the one update and stays off;
+ * a live row is switched off and on around it, and the include's own file write coalesces the three
+ * changes, so the file need not carry the intermediate switch.
  *
- * What is confirmed is what the tree holds: the expression under the header, and the option beside it.
+ * A live row whose enablement stands as an expression is refused: the save cannot stop such a row
+ * without writing over the text the file owns, and it will not.
+ *
+ * The answer is what the tree holds: the option beside the expression, the expression under the header,
+ * and the switch the save promised — the row it found switched off is still off, and the row it restarted
+ * is on again. A save that cannot read that state back refuses rather than claims it.
  * @param {object} ctx the plugin's context
  * @param {object} include the include entry
  * @param {object} row the row as the file holds it
  * @param {object} body the request's body: the credential key and the expression the page drew
  * @returns {Promise<object>} what was done
- * @throws {Refusal} `not-an-mcp-row`, `bad-value`, `config-ref`, or a refusal of the confirmation
+ * @throws {Refusal} `not-an-mcp-row`, `bad-value`, `config-ref`, `disabled-ref`, or a refusal of the
+ *   confirmation
  */
 async function setReference(ctx, include, row, body) {
   if (row.module !== MCP_MODULE) {
@@ -352,24 +370,70 @@ async function setReference(ctx, include, row, body) {
     throw new Refusal('config-ref', `the row "${row.id}" carries a hand-written authorization expression, and the form does not write over a value the file owns`)
   }
 
-  const headers = { ...(typeof row.config.headers === 'object' && row.config.headers !== null ? row.config.headers : {}), [REFERENCE_HEADER]: { __jsExpr: expected.expression } }
-  const next = { ...row.config, headers }
   const current = readAgain(ctx, row.entryId)
   if (current.injectRef === true) {
     throw new Refusal('config-ref', `the row "${row.id}" carries its inject as an expression, and the save does not write over the option a reference needs beside it`)
   }
-
-  if (!current.inject.includes('credentials')) {
-    await updateRow(ctx, row.entryId, { inject: [...new Set([...current.inject, ...REFERENCE_OPTION])] })
+  const needsOption = !current.inject.includes('credentials')
+  if (!needsOption && referenceOf(current.config) === expected.expression) {
+    /* The tree already carries what this save would write: nothing is written and the row is not
+       restarted, because a restart for a save that changes nothing breaks a connection the person did
+       not ask to break. */
+    return { result: 'reference-updated', entryId: row.entryId, server, reference: expected.key, confirmed: 'tree' }
   }
-  await updateRow(ctx, row.entryId, { config: next })
+
+  const headers = { ...(typeof row.config.headers === 'object' && row.config.headers !== null ? row.config.headers : {}), [REFERENCE_HEADER]: { __jsExpr: expected.expression } }
+  const change = { config: { ...row.config, headers } }
+  if (needsOption) change.inject = [...new Set([...current.inject, ...REFERENCE_OPTION])]
+
+  let writeFailure = null
+  const staysOff = current.disabled === true
+  if (staysOff) {
+    /* The row stands stopped: the Loader evaluates no expression of a disabled row, so the option and
+       the header land in one update and the row's next activation has both. */
+    try {
+      await updateRow(ctx, row.entryId, change)
+    } catch (error) {
+      /* A write that answers an error may still have changed the tree; the confirmation below decides. */
+      writeFailure = error
+    }
+  } else {
+    if (current.disabledRef === true) {
+      throw new Refusal('disabled-ref', `the row "${row.id}" carries its enablement as an expression, and a reference save restarts the row: the save does not write over the switch the file owns`)
+    }
+    try {
+      await updateRow(ctx, row.entryId, { disabled: true })
+    } catch (error) {
+      throw new Refusal('not-saved', `the reference of "${row.id}" was not written: switching the row off failed: ${reasonOf(error)} — the row may stand switched off until it is switched on by hand`)
+    }
+    try {
+      await updateRow(ctx, row.entryId, change)
+    } catch (error) {
+      writeFailure = error
+    }
+    try {
+      await updateRow(ctx, row.entryId, { disabled: null })
+    } catch (error) {
+      throw new Refusal('not-saved', writeFailure === null
+        ? `the reference of "${row.id}" landed, and the row may stand switched off — switching it back on failed: ${reasonOf(error)}`
+        : `the save of the reference for "${row.id}" answered "${reasonOf(writeFailure)}", and the row may stand switched off — switching it back on failed too: ${reasonOf(error)}`)
+    }
+  }
+  if (writeFailure !== null) ctx.logger?.warn?.(`coreness-mcp: the write of the reference into "${row.entryId}" answered "${reasonOf(writeFailure)}"; the tree's answer follows`)
 
   const back = readAgain(ctx, row.entryId)
   if (back.injectRef === true || !back.inject.includes('credentials')) {
     throw new Refusal('not-saved', `the save of the reference for "${row.id}" did not stand: the row now reads the store without the row option that puts the credential service in its own context, so the platform would refuse it at its next activation. A row option is set by a save that names it — creation sets a row's options whole, and an update sets the keys it is given.`)
   }
   if (referenceOf(back.config) !== expected.expression) {
-    throw new Refusal('not-saved', disagreement(`the reference of "${row.id}"`, { [REFERENCE_HEADER]: expected.expression }, referenceOf(back.config)))
+    throw new Refusal('not-saved', writeFailure === null
+      ? disagreement(`the reference of "${row.id}"`, { [REFERENCE_HEADER]: expected.expression }, referenceOf(back.config))
+      : `the save of the reference for "${row.id}" did not land: the Loader answered "${reasonOf(writeFailure)}", and the tree now reads ${JSON.stringify(referenceOf(back.config))} instead of ${JSON.stringify(expected.expression)}`)
+  }
+  if (back.disabled !== staysOff) {
+    throw new Refusal('not-saved', staysOff
+      ? `the reference of "${row.id}" landed, and the tree now holds the row switched on: the file held it switched off, and this save does not switch a row on`
+      : `the reference of "${row.id}" landed, and the tree holds the row switched off: the switch back on did not take, so the row serves nothing until it is switched on`)
   }
   return { result: held === null ? 'reference' : 'reference-updated', entryId: row.entryId, server, reference: expected.key, confirmed: 'tree' }
 }

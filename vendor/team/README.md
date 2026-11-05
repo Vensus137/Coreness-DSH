@@ -9,7 +9,7 @@ The Agent Team's product side: the team's ceiling, read and written through the 
 - `src/live.js` — a volatile field's live value: the box a write reaches, or the plain value.
 - `src/policy.js` — the section's name, the platform's anchor sentence, the approved text, the patch and the outcome the last team assembly left.
 
-The ceiling is `maxMembers` on the platform's `agent-team` row — an ordinary Config field, which the platform's settings service does not project into a form. The route reads the value in force from the row's resolved config and writes a new one through `ctx.configEditor.edit`: the same door a hand-edited Cordis file goes through — validated by the row's schema, persisted to the profile's patch and re-applied by the Loader. A row whose fiber has not resolved has no ceiling in force, and the answer says `null` rather than substituting the raw patch.
+The ceiling is `maxMembers` on the platform's `agent-team` row — an ordinary Config field, which the platform's settings service does not project into a form. The route reads the value in force from the row's resolved config, telling the platform's two shapes apart by the fiber's own property: where the validated object is published beside the raw input kept on `fiber.config`, the `effectiveConfig` getter is present — `undefined` while a first activation has not resolved — and it is read; where the platform assigns the validated object to `fiber.config` itself, no such getter exists and `fiber.config` is read. The property, not the value, is the probe, so a row whose first activation failed answers `null` and the one warning rather than the raw input the schema never accepted. The route writes a new value through `ctx.configEditor.edit`: the same door a hand-edited Cordis file goes through — validated by the row's schema, persisted to the profile's patch and re-applied by the Loader. A row whose object carries no numeric ceiling has no ceiling in force: the answer says `null` and the route warns once that the resolved config was not readable.
 
 A write re-applies the row: running teammates are stopped, and the roster and the board recover from the Lead's session log.
 
@@ -38,4 +38,4 @@ A refusal answers `{ok:false, error:{code, message}}` with status 200 and the pr
 
 ## Checks
 
-The fixture `node packages/team/scripts/check-policy.mjs` holds the switch's states, the role branch and the outcome the last assembly left.
+The fixture `node packages/team/scripts/check-policy.mjs` holds the switch's states, the role branch, the outcome the last assembly left, and the ceiling read against both platform shapes a fiber can meet, including a row whose first activation never resolved.

@@ -12,7 +12,7 @@
 import z from '@deepseek-ai/schemastery'
 
 export const Config = z.object({
-  /** Whether a page fetch is sent through the stored proxy first, with a direct repeat when that fails. */
+  /** Whether a page fetch is sent through the stored proxy when the proxy answers a pre-flight check. */
   enabled: z.boolean().default(false).volatile(),
   /** Whether one standing policy sends every request the harness makes through the stored proxy. */
   allTraffic: z.boolean().default(false).volatile(),

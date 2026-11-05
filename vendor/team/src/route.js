@@ -1,10 +1,14 @@
 /**
  * The ceiling door: what the row carries now, and what a write leaves in force.
  *
- * The value is read from the row's **resolved** config (`fiber.config`): the schema's default is part of
- * what stands, and a row that names no ceiling still has one. A row whose fiber has not resolved has no
- * ceiling in force — the answer says `null` rather than substituting the raw patch, which may name a
- * value the row never validated.
+ * The value is read from the row's **resolved** config — the object the platform validated against the
+ * row's schema. Where a release keeps the raw plugin input on `fiber.config`, the validated object is
+ * published through the fiber's own `effectiveConfig` property, which is present before a first
+ * activation has resolved and is then `undefined`; where a release assigns the validated object to
+ * `fiber.config` itself, no such property exists. The property tells the shapes apart, not its value:
+ * a row whose first activation failed must not answer the raw input the schema never accepted. The
+ * schema's default is part of what stands, so a row that names no ceiling still has one. A row whose
+ * object carries no numeric ceiling has none in force: the answer says `null` and a line says why.
  */
 
 import { outcomeOf } from './policy.js'
@@ -45,13 +49,21 @@ function failure(message, code) {
 export function stateOf(ctx, config, warn = () => {}) {
   const editor = ctx.get('configEditor')
   const entry = editor === undefined ? undefined : rowOf(editor)
-  const resolved = entry?.fiber?.config
-  /* The row is addressable but its resolved config was not read: `null` is then the honest answer — a raw
-     patch may name a value the row never validated — but a silent null reads as "no ceiling in force". */
-  if (entry !== undefined && (resolved === null || typeof resolved !== 'object')) {
+  const fiber = entry?.fiber
+  /* The fiber's own property tells the shapes apart: the getter stands on a fiber whose first activation
+     has not resolved yet (and answers `undefined`), while the shape without it keeps the validated object
+     on `config` and never a raw input. Reading by value would answer the raw input as validated input for
+     a row that failed to activate. */
+  const shaped = fiber !== undefined && fiber !== null && 'effectiveConfig' in fiber
+  const resolved = shaped ? fiber.effectiveConfig : fiber?.config
+  const value = resolved?.maxMembers
+  /* The row's schema defaults the ceiling, so the object the platform validated always carries a number:
+     a missing or non-numeric one means the validated config was not read — the row has not resolved, or
+     its first activation failed — and `null` is then the honest answer, but a silent null reads as
+     "no ceiling in force". */
+  if (entry !== undefined && typeof value !== 'number') {
     warn(`the "${ROW}" row was found but its resolved config is not readable: the ceiling answers null while the write still validates against the row`)
   }
-  const value = resolved?.maxMembers
   return {
     mounted: ctx.get('agentTeams') !== undefined,
     editable: entry !== undefined,
