@@ -1,24 +1,16 @@
 /**
- * The ceiling door: what the row carries now, and what a write leaves in force.
+ * The team picture: what a surface reads, and what the patch last left.
  *
- * The value is read from the row's **resolved** config — the object the platform validated against the
- * row's schema. Where a release keeps the raw plugin input on `fiber.config`, the validated object is
- * published through the fiber's own `effectiveConfig` property, which is present before a first
- * activation has resolved and is then `undefined`; where a release assigns the validated object to
- * `fiber.config` itself, no such property exists. The property tells the shapes apart, not its value:
- * a row whose first activation failed must not answer the raw input the schema never accepted. The
- * schema's default is part of what stands, so a row that names no ceiling still has one. A row whose
- * object carries no numeric ceiling has none in force: the answer says `null` and a line says why.
+ * The answer is assembled at the moment the page asks, never held: the platform's team service may be
+ * absent from a composition, the two switches move through the platform's settings service while the
+ * page stands open, and the policy outcome changes at the next team assembly. Nothing of the platform's
+ * own team row is read: the release this product follows removed the member ceiling from the row and
+ * refuses to activate with it, so the page has no field left to show, only the team's presence and the
+ * product's own switches.
  */
 
 import { outcomeOf } from './policy.js'
 import { live } from './live.js'
-
-/** The row the product's bundle inserts; its config carries the ceiling. */
-export const ROW = 'agent-team'
-
-/** The fields the platform's own agent-team row carries beside the ceiling: what one press pins. */
-export const PINNED = ['maxTasks', 'maxMessageBytes', 'disposalTimeoutMs']
 
 /** The code a thrown value carries, or the one this door gives a value that carries none. */
 const codeOf = (error) => (typeof error?.code === 'string' && error.code !== '' ? error.code : 'UNKNOWN')
@@ -26,167 +18,51 @@ const codeOf = (error) => (typeof error?.code === 'string' && error.code !== '' 
 /** The reason of a thrown value, in words. */
 const messageOf = (error) => (error instanceof Error ? error.message : String(error))
 
-/** A refusal with the code the answer carries. */
-function failure(message, code) {
-  return Object.assign(new Error(message), { code })
-}
-
 /**
  * The team as a surface reads it.
  *
- * `mounted` is the platform's team service — the roster, the mailbox and the board — and not this
- * plugin: the row may stand while a composition has switched the service off. `editable` says whether
- * the profile's own config editor can address the row at all, so a page knows whether the value it
- * shows can be written here. `maxMembers` is the resolved config of the row, so a row that names no
- * value answers with the schema's default, and a row that has not resolved answers `null`. `prompt` and
- * `review` are the two switches as the page draws them: the review one stands inside the text the prompt
- * one supplies, and the page says so rather than refusing the write.
+ * `mounted` is the platform's team service — the roster, the mailbox and the board — and not this plugin:
+ * a composition may carry the plugin while the service is absent. `prompt` and `review` are the two
+ * switches as the page draws them; the review one stands inside the text the prompt one supplies. `policy`
+ * is the outcome of the last team assembly the patch met, or `null` until the first team assembly meets
+ * it. `ns` is the settings namespace the switches are written through: the row's own id in the composition,
+ * so the page reads one owner rather than carrying a second copy of the name. A composition that addresses
+ * no row answers `null`, and the page then draws no switch.
  * @param {object} ctx the cordis context
  * @param {object} config the plugin's resolved config
- * @param {(message: string) => void} [warn] where a resolved config that could not be read is said
- * @returns {{mounted: boolean, editable: boolean, maxMembers: number|null, prompt: boolean, review: boolean, policy: string, ns: string|null}} the picture
+ * @returns {{mounted: boolean, prompt: boolean, review: boolean, policy: string|null, ns: string|null}} the picture
  */
-export function stateOf(ctx, config, warn = () => {}) {
-  const editor = ctx.get('configEditor')
-  const entry = editor === undefined ? undefined : rowOf(editor)
-  const fiber = entry?.fiber
-  /* The fiber's own property tells the shapes apart: the getter stands on a fiber whose first activation
-     has not resolved yet (and answers `undefined`), while the shape without it keeps the validated object
-     on `config` and never a raw input. Reading by value would answer the raw input as validated input for
-     a row that failed to activate. */
-  const shaped = fiber !== undefined && fiber !== null && 'effectiveConfig' in fiber
-  const resolved = shaped ? fiber.effectiveConfig : fiber?.config
-  const value = resolved?.maxMembers
-  /* The row's schema defaults the ceiling, so the object the platform validated always carries a number:
-     a missing or non-numeric one means the validated config was not read — the row has not resolved, or
-     its first activation failed — and `null` is then the honest answer, but a silent null reads as
-     "no ceiling in force". */
-  if (entry !== undefined && typeof value !== 'number') {
-    warn(`the "${ROW}" row was found but its resolved config is not readable: the ceiling answers null while the write still validates against the row`)
-  }
+export function stateOf(ctx, config) {
   return {
     mounted: ctx.get('agentTeams') !== undefined,
-    editable: entry !== undefined,
-    maxMembers: typeof value === 'number' ? value : null,
     prompt: live(config?.prompt) === true,
     review: live(config?.review) === true,
     policy: outcomeOf(),
-    /* The settings namespace is the row's own id in the composition — one owner, and the page reads it
-       here rather than carrying a second copy of the name. `null` says this composition addresses no row,
-       and the page then offers no switch. */
     ns: ctx.fiber?.entry?.options?.id ?? null,
   }
 }
 
 /**
- * The row, as the profile's own config editor addresses it.
- *
- * The editor's list is the addressable profile rows: a row of a nested include is not one of them, and
- * a composition that mounts the team from another layer leaves this list without the row — the write
- * then refuses by name instead of editing a file the editor does not own.
- * @param {object} editor the profile's config editor
- * @returns {object|undefined} the entry
- */
-function rowOf(editor) {
-  return editor.entries().find((entry) => entry.options.id === ROW)
-}
-
-/**
- * Write a new ceiling and answer with what the row now carries.
- *
- * The platform's editor does the work: it validates the value against the row's schema, persists the
- * complete config to the active profile's patch, and re-applies the row through the Loader. Its
- * refusals — an entry that went away, a changed entry, a plugin that is no longer active — are marked
- * as the editor's, so a page can tell them from a fault of this door, and travel in its own words.
- * @param {object} ctx the cordis context
- * @param {unknown} value the ceiling the page asked for
- * @param {object} config the plugin's resolved config
- * @param {(message: string) => void} [warn] where the write's pin is said
- * @returns {Promise<object>} the picture after the write, with the pin in its own words
- */
-export async function setCeiling(ctx, value, config, warn = () => {}) {
-  if (!Number.isSafeInteger(value) || value < 1) {
-    throw failure('the ceiling is a whole number of at least 1', 'BAD_REQUEST')
-  }
-  const editor = ctx.get('configEditor')
-  if (editor === undefined) {
-    throw failure("this composition carries no profile config editor, so the ceiling is set in the profile's Cordis config", 'NO_EDITOR')
-  }
-  const entry = rowOf(editor)
-  if (entry === undefined) {
-    throw failure(`the profile carries no "${ROW}" row`, 'NO_ROW')
-  }
-  /* The complete config the row already carries, with the one field replaced: the editor persists what
-     it is given, so a partial object would drop the row's other fields. */
-  try {
-    await editor.edit(entry, (current) => ({ ...current, maxMembers: value }))
-  } catch (error) {
-    throw failure(refusalOf(error), 'EDIT_REFUSED')
-  }
-  warn(`the ceiling was written; the platform's editor persists a complete config, so the row's other fields (today: ${PINNED.join(', ')}) are pinned at their current values`)
-  return {
-    ...stateOf(ctx, config, warn),
-    notice: `The write pinned the row's other platform fields (today: ${PINNED.join(', ')}) at their current values: the editor persists a complete config.`,
-  }
-}
-
-/**
- * The words of an editor refusal, for the case a reader can settle alone.
- *
- * A row configured by two layers — the product's bundle and the platform's own Agent Team bundle — is the
- * one refusal that names a thing to change rather than a mechanism to understand: the platform's sentence
- * for it says `overridden by a home patch or command-line overlay`, which is true and tells a reader
- * nothing they can do. Every other refusal travels in the platform's own words.
- * @param {unknown} error the refusal the editor raised
- * @returns {string} the sentence the console carries
- */
-function refusalOf(error) {
-  const said = messageOf(error)
-  if (said.includes('overridden by a home patch')) {
-    return `The "${ROW}" row is configured by another layer as well — the platform's own Agent Team bundle — so the profile's editor cannot write it: enable one of the two.`
-  }
-  return `the platform's editor refused the write: ${said}`
-}
-
-/**
- * The answer of one request on the route.
+ * The answer of the route's one request: the picture, or a fault said in words.
  *
  * The status is 200 in both cases — `{ok:true, value}` or `{ok:false, error}` — as the product's other
- * routes answer: a refusal is a state of the page, and its words are what the page shows.
+ * routes answer: a refusal is a state of the page, and its words are what the page shows. The route serves
+ * a read alone; the two switches are written through the platform's settings service, and a request with
+ * another method never reaches this handler.
  * @param {object} ctx the cordis context
- * @param {Request} request the request
- * @param {(message: string) => void} warn where a refusal is said
  * @param {object} config the plugin's resolved config
+ * @param {(message: string) => void} [warn] where a fault of this door is said
  * @returns {Promise<Response>} the answer
  */
-export async function answerOf(ctx, request, warn, config) {
+export async function answerOf(ctx, config, warn = () => {}) {
   const json = (payload) => new Response(JSON.stringify(payload), {
     status: 200,
     headers: { 'content-type': 'application/json; charset=utf-8' },
   })
   try {
-    if (request.method === 'GET') return json({ ok: true, value: stateOf(ctx, config, warn) })
-    const body = await bodyOf(request)
-    return json({ ok: true, value: await setCeiling(ctx, body.maxMembers, config, warn) })
+    return json({ ok: true, value: stateOf(ctx, config) })
   } catch (error) {
-    warn(`the team route refused a ${request.method}: ${codeOf(error)} — ${messageOf(error)}`)
+    warn(`the team route could not build its picture: ${codeOf(error)} — ${messageOf(error)}`)
     return json({ ok: false, error: { code: codeOf(error), message: messageOf(error) } })
-  }
-}
-
-/**
- * The body of a request. A body that is not a JSON object is a refusal in words, not a crash; a body
- * that cannot be read at all is a fault of the transport and travels as one.
- * @param {Request} request the request
- * @returns {Promise<object>} the body
- */
-async function bodyOf(request) {
-  const text = await request.text()
-  try {
-    const parsed = JSON.parse(text)
-    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('the body is not an object')
-    return parsed
-  } catch (error) {
-    throw failure(`the team route's body is not a JSON object: ${messageOf(error)}`, 'BAD_REQUEST')
   }
 }

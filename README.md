@@ -40,7 +40,7 @@ Updates go through the application's **Discover** tab: switch *Custom plugin ind
 
   ![The Rate limiter section: the window, the longest wait, and a ceiling per model](https://gist.githubusercontent.com/Vensus137/776e4d247aef014e32bceb810fdeae21/raw/410b202cc83345ebaeac891d46d8b23cb58c93c0/rate-limiter.png)
 
-- **The Agent team, on the General page** — how many teammates a session may hold, written through the platform's own editor, and two switches that put the product's paragraph in place of the platform's last team-policy sentence and add the review paragraph after it; the team is the platform's, and every other line stays as it wrote it.
+- **The Agent team, on the General page** — two switches that put the product's paragraph in place of the platform's wait sentence for the team and add the review paragraph after it; the team is the platform's — enabled per session in the platform's own UI — and every other line stays as it wrote it.
 
   ![The General page: the Agent team card, the Page fetch card, and the Proxy card with the URL line above its two switches](https://gist.githubusercontent.com/Vensus137/776e4d247aef014e32bceb810fdeae21/raw/410b202cc83345ebaeac891d46d8b23cb58c93c0/general.png)
 

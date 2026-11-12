@@ -85,9 +85,6 @@ export const PROBE_ROUTE = '/api/coreness.qoder'
 /** The platform's shared web row: the search and fetch selections both doors write. */
 const WEB_ROW = 'web'
 
-/** The platform's own search id: the standard DeepSeek search, the explicit "off" of the Qoder provider. */
-const PLATFORM_SEARCH = 'deepseek-official'
-
 /**
  * The search selections that name no provider: the null the old switch could leave on its way off, and an
  * empty value treated alike because it names no registered provider. `qoder` is not here — it selects a
@@ -102,17 +99,20 @@ const SELECTS_NOTHING = new Set([null, ''])
 const SETTINGS_CONFLICT = 'SETTINGS_CONFLICT'
 
 /**
- * Rewrite a search selection the move to the search-only switch left stale.
+ * Reset a search selection the move to the search-only switch left stale.
  *
  * A nullish selection resolves through the platform's fallback rules, which with more than one usable search
- * provider is an ambiguous search; an empty value names a provider that is not registered. The write carries
- * the revision the read returned: a row saved through the other door between the two is refused as a
- * conflict rather than overwritten. The fetch package's repair writes the same row at the same mount, so
- * that refusal is not final — the row is read once more and the decision made again: a selection another
- * door has just chosen is fresh and is not overwritten, and a still-stale one is written with the revision
- * just read. A second refusal is said by the mount and left. `qoder` and any other name are another door's
- * decision, and a row whose key is absent never chose: neither is touched. The row's fetch value is left as
- * it stands — the fetch package owns it, and this repair owns the search value alone.
+ * provider is an ambiguous search; an empty value names a provider that is not registered. The repair names no
+ * provider: it unsets the row's selection, and the platform's own settings service resolves the field to the
+ * layer beneath ours, so the composed value is that release's default — `deepseek-official` on 0.2.1-rc.5,
+ * `deepseek-search-api` on 0.2.2-rc.2. The write carries the revision the read returned: a row saved through
+ * the other door between the two is refused as a conflict rather than overwritten. The fetch package's repair
+ * writes the same row at the same mount, so that refusal is not final — the row is read once more and the
+ * decision made again: a selection another door has just chosen is fresh and is not overwritten, and a
+ * still-stale one is unset with the revision just read. A second refusal is said by the mount and left.
+ * `qoder` and any other name are another door's decision, and a row whose key is absent never chose: neither
+ * is touched. The row's fetch value is left as it stands — the fetch package owns it, and this repair owns the
+ * search value alone.
  * @param {object} settings the platform's settings service
  * @param {(message: string) => void} [warn] where the repair is said
  * @returns {Promise<'repaired'|'fresh'|'absent'>} the stale value written away, a selection left as it
@@ -137,8 +137,8 @@ async function repairSearchSelectionOnce(settings, warn) {
   const row = settings.describe().find((one) => one.ns === WEB_ROW)
   if (row === undefined) return 'absent'
   if (!SELECTS_NOTHING.has(row.value?.searchProvider)) return 'fresh'
-  await settings.mutate(WEB_ROW, [{ op: 'set', path: ['searchProvider'], value: PLATFORM_SEARCH }], row.revision)
-  warn(`the shared "${WEB_ROW}" row picked no search provider; its search selection was written to "${PLATFORM_SEARCH}"`)
+  await settings.mutate(WEB_ROW, [{ op: 'unset', path: ['searchProvider'] }], row.revision)
+  warn(`the shared "${WEB_ROW}" row picked no search provider; its search selection was reset to the platform's default`)
   return 'repaired'
 }
 

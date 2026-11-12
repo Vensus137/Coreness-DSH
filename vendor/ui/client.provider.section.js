@@ -263,14 +263,17 @@ window.__ModuleLoader__.load({
           }
         };
 
-        /* One write pair, in the documented order: the flag first on the way on, the search value first on
-           the way off. The web row is re-read before it is written: the write carries the row's revision,
-           and another door — the platform's own Web search page — may have moved it since the section's own
-           read. The control is the answer, so a failed write is followed by the read: the box reports the
-           live value rather than the value the press hoped for, and the press's word stands in the card's
-           strip, its reason in the console. The search value is written explicitly on both ways — a nullish
-           one resolves through the platform's fallback rules and this profile registers more than one usable
-           search provider. */
+        /* One write pair, in the documented order: the flag first on the way on, the search selection first on
+           the way off. The web row is re-read before it is written: the write carries the row's revision, and
+           another door — the platform's own Web search page — may have moved it since the section's own read.
+           The control is the answer, so a failed write is followed by the read: the box reports the live value
+           rather than the value the press hoped for, and the press's word stands in the card's strip, its
+           reason in the console. On the way on the selection is ours (`qoder`); on the way off it is unset,
+           never set to a name: the platform's own settings service resolves the field to the layer beneath
+           ours, so the composed value is that release's default — a pinned `deepseek-official` would instead
+           fix a choice the platform has stopped making by default, while the provider itself still resolves.
+           A nullish `searchProvider` would resolve through the platform's fallback rules, and this profile
+           registers more than one usable search provider, so off is an unset and not a nullish write. */
         const toggleWeb = async (checked) => {
           setWebBusy(true);
           setNote(null);
@@ -294,7 +297,7 @@ window.__ModuleLoader__.load({
               const webNow = await shared.readWeb(ctx.remote);
               if (!webNow.ok) throw new Error(webNow.fault);
               const selected = await shared.writeSettings(ctx.remote, webNow, [
-                { op: 'set', path: ['searchProvider'], value: 'deepseek-official' },
+                { op: 'unset', path: ['searchProvider'] },
               ]);
               if (!selected.wrote) throw new Error(selected.fault);
               const flag = await shared.writeSettings(ctx.remote, qoder, [
@@ -326,9 +329,9 @@ window.__ModuleLoader__.load({
 
         /**
          * A search selection outliving its switch or its token still stands in the row: the Qoder search
-         * selection is cleared on the read, so the platform's search returns. The box is drawn off while
-         * the flag is off or the token is missing; this cleanup is the read's own consequence — no press made
-         * it — so a failure is the console's and is not retried on every read. Only the values this card
+         * selection is unset on the read, so the platform's own default provider returns. The box is drawn off
+         * while the flag is off or the token is missing; this cleanup is the read's own consequence — no press
+         * made it — so a failure is the console's and is not retried on every read. Only the values this card
          * owns are cleared; the fetch selection is the page fetch card's subject.
          */
         const clearStaleWeb = async () => {
@@ -338,7 +341,7 @@ window.__ModuleLoader__.load({
             const webNow = await shared.readWeb(ctx.remote);
             if (!webNow.ok) throw new Error(webNow.fault);
             const stale = [];
-            if (webNow.value?.searchProvider === 'qoder') stale.push({ op: 'set', path: ['searchProvider'], value: 'deepseek-official' });
+            if (webNow.value?.searchProvider === 'qoder') stale.push({ op: 'unset', path: ['searchProvider'] });
             if (stale.length === 0) {
               await read();
               return;

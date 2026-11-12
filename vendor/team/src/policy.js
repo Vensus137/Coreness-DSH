@@ -2,19 +2,26 @@
  * The team policy's one paragraph, and the product's replacement.
  *
  * The platform's team tools register a system-prompt section named `team:policy` for the Lead and every
- * teammate. Its text is one paragraph shared by the whole team, and its last sentence asks the Lead to
+ * teammate. Its text is one paragraph shared by the whole team, and one sentence in it asks the Lead to
  * wait — `wait_agent` blocks the step until its timeout, a human's message lands only at a step boundary,
  * and the Lead cannot be interrupted, so that sentence stalls a team. The runtime does not require the
  * wait: on settlement the manager delivers the report to an idle parent as a queued message, which starts
  * its next turn.
  *
- * The product owns exactly that sentence and nothing else: with the switch on, the anchor is replaced by
- * the approved text and every other byte of the section stays as the platform wrote it. The review
- * paragraph is the second switch's: it follows the approved text in the same substitution, so it stands
- * only while the first switch supplies the paragraph it belongs to. With the switch off the section is
- * untouched. A section without the anchor is left as it is, said once in words — the platform may reword
- * the sentence in any release, and a patch that silently found nothing would be a claim the page could
- * not check.
+ * The product owns exactly that sentence and nothing else: with the switch on, the first occurrence of the
+ * sentence is replaced by the approved text wherever it stands in the section, and every other byte of the
+ * section stays as the platform wrote it — a closing paragraph after the sentence included. Two wordings
+ * are known: the older release asks the Lead to wait, the newer one the root agent, and either is
+ * replaced. A section whose sentence occurs again keeps the later copies: only the first is the product's.
+ * The review paragraph is the second switch's: it follows the approved text in the same substitution, so
+ * it stands only while the first switch supplies the paragraph it belongs to. With the switch off the
+ * section is untouched.
+ *
+ * An empty section is the platform's way of saying Team mode is off: the section is registered with no
+ * text and dropped only when the prompt is rendered, so an empty text reports `off` rather than a missing
+ * sentence. A non-empty section without either known sentence is left as it is, said once in words — the
+ * platform may reword the sentence in any release, and a patch that silently found nothing would be a
+ * claim the page could not check.
  *
  * @module @coreness/team/policy
  */
@@ -22,21 +29,39 @@
 /** The section the platform's team tools register, shared by the Lead and every teammate. */
 export const SECTION = 'team:policy'
 
-/** The platform's last sentence: the one sentence this product replaces. The version it was taken from ages
- * faster than the sentence does, so the check and the finder name the version they meet at run time. */
-export const ANCHOR = 'The Lead must wait for required teammates before giving the final answer.'
+/**
+ * The platform's wait sentence, as each known release words it: the one sentence this product replaces.
+ * The older wording leads, the newer one the root agent follows. The sentence is replaced wherever it
+ * stands in the section, first occurrence first; a release that rewords it makes the patch report a
+ * missing sentence rather than guessing, and the check and the finder name the version they meet at run
+ * time.
+ */
+export const WAIT_SENTENCES = [
+  'The Lead must wait for required teammates before giving the final answer.',
+  'The root agent must wait for required teammates before giving the final answer.',
+]
 
 /**
- * The platform's identity line for a teammate: the one role-aware piece of an assembly, and the seam this
- * patch depends on. The platform writes it into a teammate's prompt as `You are teammate "<name>".`; the
- * Lead gets a different line, and an assembly that carries neither is a role this product cannot decide —
- * the platform's text is then left alone and the outcome says so, because guessing "Lead" is how every
- * teammate would read the Lead's duties as its own.
+ * The platform's identity prefix for the Lead, as each known release words it: the older one names the
+ * Team Lead, the newer one the root agent of the collaboration tree. The identity context is the one
+ * role-aware piece of an assembly, and the seam this patch depends on.
  */
-export const IDENTITY = 'You are teammate'
+export const LEAD_IDENTITY = [
+  'You are the Team Lead named',
+  'You are the root agent',
+]
 
-/** The platform's identity line for the Lead: the other half of the role decision. */
-export const LEAD_IDENTITY = 'You are the Team Lead named'
+/**
+ * The platform's identity prefix for a teammate, as each known release words it: the older one names a
+ * teammate, the newer one a subagent delegated by an agent. An assembly that carries neither the Lead's
+ * line nor one of these is a role this product cannot decide — the platform's text is then left alone and
+ * the outcome says so, because guessing "Lead" is how every teammate would read the Lead's duties as its
+ * own.
+ */
+export const MEMBER_IDENTITY = [
+  'You are teammate',
+  'You are a subagent delegated by agent',
+]
 
 /**
  * The approved text: the owner's own wording, shipped only after his word. The Lead's work is to lead —
@@ -62,16 +87,19 @@ export const REVIEW =
   'A reviewer is a fresh agent with a clean eye — it did not build the work and has no stake in how it looks — and the Lead spawns it wherever it sees fit: the review finds the weak spot, catches a bug early, names the pitfall the author has stopped seeing, and keeps the quality of the work from drifting. A review is the normal step of every circle of work; a small task does not need it. The reviewer holds the work against the spec and the traces it is given and asks where it is weak, where it is extra, and what is missing; every finding carries a path and a quote, and a finding without an address is not taken. It does not edit the work and does not accept it: the findings return to whoever did the work, and the review does not replace the acceptance that closes the task — a word that belongs to the criterion or to the user, never to the author.'
 
 /**
- * What the last team assembly left: `off` (the switch is off), `active` (the text stands in place of the
- * anchor), `missing` (the section stands without the anchor) or `unknown` (the section stands and the
- * identity says neither the Lead nor a teammate, so the patch was not made). An assembly without the
- * section is not team's — a subagent carries none — and leaves this value alone, so `absent` is a patch
- * result the listener does not store. The page reads it; the value is written by the listener, so it
- * describes the last assembly that carried the team's section, never a guess.
+ * What the last team assembly left: `off` (the switch is off, or the section arrived empty because the
+ * platform's Team mode is off), `active` (the text stands in place of the wait sentence), `missing` (the
+ * section stands without either known sentence) or `unknown` (the section stands and the identity says
+ * neither the Lead nor a teammate, so the patch was not made). `null` stands before the first team
+ * assembly meets the patch: a fresh process has not seen the team's section, and its state must not read
+ * as the platform's Team mode being off. An assembly without the section is not team's — a subagent
+ * carries none — and leaves this value alone, so `absent` is a patch result the listener does not store.
+ * The page reads it; the value is written by the listener, so it describes the last assembly that carried
+ * the team's section, never a guess.
  */
-let outcome = 'off'
+let outcome = null
 
-/** What the last assembly left. */
+/** What the last assembly left, or `null` before the first team assembly. */
 export function outcomeOf() {
   return outcome
 }
@@ -82,7 +110,7 @@ export function outcomeOf() {
  * not on the team, and letting it through would wipe the team's outcome and turn the page's "patch is
  * inactive" line off.
  * @param {string} next the outcome just reached
- * @returns {string} the outcome it replaced
+ * @returns {string|null} the outcome it replaced, or `null` before the first team assembly
  */
 export function noteOutcome(next) {
   if (next === 'absent' || next === 'member') return outcome
@@ -92,10 +120,10 @@ export function noteOutcome(next) {
 }
 
 /**
- * Whether a missing anchor or an undecidable role is news this assembly. A section that left as the platform
- * wrote it is news once, not once per step — and an assembly without the section says nothing at all,
- * because it is not about the team.
- * @param {string} previous the outcome the last assembly carried
+ * Whether a missing sentence or an undecidable role is news this assembly. A section that left as the
+ * platform wrote it is news once, not once per step — and an assembly without the section says nothing at
+ * all, because it is not about the team.
+ * @param {string|null} previous the outcome the last assembly carried, or `null` before the first team assembly
  * @param {string} next the outcome this one carries
  * @returns {boolean} true when the line is owed
  */
@@ -109,12 +137,15 @@ export function shouldWarn(previous, next) {
  * The section is looked up first, whatever the switch says: an assembly without it belongs to an agent
  * that is not on the team, and its outcome must not overwrite what the last team assembly left — the
  * page would then lose the "patch is inactive" line to a subagent's step. With the switch off, a
- * section that stands is reported as `off`; it is found and left untouched. The review flag is read only
- * after the anchor held and only while the first switch is on: the review paragraph lives inside the
- * text that switch supplies, so it can neither stand alone nor keep a missing anchor from being reported.
+ * section that stands is reported as `off`; it is found and left untouched, and so is an empty section,
+ * which is the platform's own way of saying Team mode is off. The review flag is read only after the
+ * wait sentence held and only while the first switch is on: the review paragraph lives inside the text
+ * that switch supplies, so it can neither stand alone nor keep a missing sentence from being reported.
  *
  * The section is copied, never mutated: the assembly the platform built is shared with the rest of the
  * waterfall and with the caller, and an edit in place would leak into a later assembly of the same step.
+ * The first known wait sentence is replaced wherever it stands; what follows it — a closing paragraph, a
+ * second copy of the sentence — stays as the platform wrote it.
  * @param {{sections: Array<{name: string, text: string}>}} assembly the presentation the platform assembled
  * @param {boolean} enabled whether the switch is on
  * @param {boolean} review whether the review paragraph is appended
@@ -125,12 +156,18 @@ export function patchPolicy(assembly, enabled, review) {
   if (index < 0) return { assembly, outcome: 'absent' }
   if (!enabled) return { assembly, outcome: 'off' }
   const section = assembly.sections[index]
-  /* The sentence is the section's last one: an anchor anywhere else would put the product's paragraph in
-     the middle of the platform's text, so a release that adds a sentence after it is a missing anchor. */
-  if (!section.text.endsWith(ANCHOR)) return { assembly, outcome: 'missing' }
+  if (section.text.trim() === '') return { assembly, outcome: 'off' }
+  const found = WAIT_SENTENCES
+    .map((sentence) => ({ sentence, at: section.text.indexOf(sentence) }))
+    .filter(({ at }) => at >= 0)
+    .sort((left, right) => left.at - right.at)[0]
+  if (found === undefined) return { assembly, outcome: 'missing' }
   const body = review === true ? `${TEXT}\n\n${REVIEW}` : TEXT
   const sections = assembly.sections.slice()
-  sections[index] = { ...section, text: `${section.text.slice(0, -ANCHOR.length)}${body}` }
+  sections[index] = {
+    ...section,
+    text: `${section.text.slice(0, found.at)}${body}${section.text.slice(found.at + found.sentence.length)}`,
+  }
   return { assembly: { ...assembly, sections }, outcome: 'active' }
 }
 
@@ -139,10 +176,11 @@ export function patchPolicy(assembly, enabled, review) {
  *
  * The platform installs one policy section per team agent, so a member reads the same section text as the
  * Lead — byte for byte, which the night logs confirmed. The identity context is the one role-aware piece of
- * an assembly: the platform writes "You are the Team Lead named …" for the Lead and "You are teammate …" for
- * everyone else. `unknown` is not a refusal but a fact about the platform: a release that rewords either
- * line makes the role undecidable, and the caller leaves the section as the platform wrote it rather than
- * deciding the role by the absence of the word "teammate".
+ * an assembly: the older release writes "You are the Team Lead named …" for the Lead and "You are teammate …"
+ * for everyone else, the newer one "You are the root agent …" and "You are a subagent delegated by agent …"
+ * from the subagent tooling. `unknown` is not a refusal but a fact about the platform: a release that rewords
+ * either line makes the role undecidable, and the caller leaves the section as the platform wrote it rather
+ * than deciding the role by the absence of the word "teammate".
  * @param {{contexts?: Array<{text?: unknown}>}} assembly the presentation the platform assembled
  * @returns {'member'|'lead'|'unknown'} the role the identity names
  */
@@ -150,8 +188,8 @@ export function roleOf(assembly) {
   for (const context of assembly.contexts ?? []) {
     if (typeof context.text !== 'string') continue
     const text = context.text.trimStart()
-    if (text.startsWith(IDENTITY)) return 'member'
-    if (text.startsWith(LEAD_IDENTITY)) return 'lead'
+    if (MEMBER_IDENTITY.some((prefix) => text.startsWith(prefix))) return 'member'
+    if (LEAD_IDENTITY.some((prefix) => text.startsWith(prefix))) return 'lead'
   }
   return 'unknown'
 }
@@ -162,7 +200,8 @@ export function roleOf(assembly) {
  * The role is decided here rather than in the listener, so the branch the page depends on — a member's
  * assembly never carries the Lead's paragraph and never overwrites the Lead's outcome — is one function a
  * fixture can exercise; a listener that forgot it would otherwise keep every other check green. The section
- * is looked up first: an assembly without it is not the team's, whatever its identity says. With the switch
+ * is looked up first: an assembly without it is not the team's, whatever its identity says. An empty section
+ * reports `off` — the platform's Team mode is off, and that is not a missing sentence — and with the switch
  * off the section is found and reported off; the role is read only when a patch would be made, because a
  * role this product cannot decide must not stop a switched-off patch from saying it is off.
  * @param {{sections: Array<{name: string, text: string}>, contexts?: Array<{text?: unknown}>}} assembly the presentation the platform assembled
@@ -173,6 +212,7 @@ export function roleOf(assembly) {
 export function patchFor(assembly, enabled, review) {
   const index = assembly.sections.findIndex((section) => section.name === SECTION)
   if (index < 0) return { assembly, outcome: 'absent' }
+  if (assembly.sections[index].text.trim() === '') return { assembly, outcome: 'off' }
   if (!enabled) return { assembly, outcome: 'off' }
   const role = roleOf(assembly)
   if (role === 'member') return { assembly, outcome: 'member' }

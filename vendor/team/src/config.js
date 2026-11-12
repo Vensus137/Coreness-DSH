@@ -13,7 +13,7 @@
 import z from '@deepseek-ai/schemastery'
 
 export const Config = z.object({
-  /** Whether the product's own text replaces the platform's last sentence of the team policy. */
+  /** Whether the product's own text replaces the platform's wait sentence in the team policy. */
   prompt: z.boolean().default(false).volatile(),
   /** Whether the review paragraph follows that text, inside the same substitution. */
   review: z.boolean().default(false).volatile(),

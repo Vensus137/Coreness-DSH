@@ -2,12 +2,12 @@
  * The General page: the product's small settings, one subject per card.
  *
  * The page exists for a setting that deserves a control but not a page of its own, and it carries three
- * subjects. The Agent Team's card is the ceiling the team row carries and the two switches that let the
- * product's own text — and the review paragraph that rides inside it — stand in place of the platform's last
- * sentence of the team policy. The Page fetch card is one check over the platform's shared `web` row: on,
- * page fetches are served by the product's own provider; off, the platform's own fetch stands untouched. The
- * proxy card writes the product row's two switches and its URL, shows the URL back in its field and asks
- * the proxy's own route to check it.
+ * subjects. The Agent Team's card is the two switches that let the product's own text — and the review
+ * paragraph that rides inside it — stand in place of the platform's wait sentence of the team policy, and
+ * it says when the team is not mounted. The Page fetch card is one check over the platform's shared `web`
+ * row: on, page fetches are served by the product's own provider; off, the platform's own fetch stands
+ * untouched. The proxy card writes the product row's two switches and its URL, shows the URL back in its
+ * field and asks the proxy's own route to check it.
  *
  * The namespace each switch writes is the host's own answer (`ns`): the row's id in the composition lives in
  * the composition, and a copy of it here would drift. Every write is followed by a read of what it wrote —
@@ -32,7 +32,7 @@ window.__ModuleLoader__.load({
     const ID = 'general';
     /** The locale namespace of the page's words. */
     const NS = 'coreness.general';
-    /** The host route that reads and writes the team's ceiling, and reports the policy's outcome. */
+    /** The host route that reads the team's picture and reports the policy's outcome. */
     const ROUTE = '/api/coreness.team';
     /** The host route that answers the proxy's picture and runs its check. */
     const PROXY_ROUTE = '/api/coreness.proxy';
@@ -54,15 +54,11 @@ window.__ModuleLoader__.load({
     const EN = {
       section: 'General',
       'team.title': 'Agent team',
-      'team.field': 'Teammates',
-      'team.save': 'Save',
-      'team.remark': 'A change re-applies the team row: running teammates stop, and the roster and the board recover from the Lead\'s session log.',
       'team.prompt': 'Team prompt',
-      'team.promptHint': 'On, the product\'s paragraph stands in the Lead\'s prompt in place of the policy\'s last sentence: the Lead leads and sets the plan, hands the work out as shared tasks, takes none of the members\' work over, and answers for the result — it closes the task while the user judges the surface they see, and it never holds a turn open: no wait_agent, no sleep or poll inside a command; when time must pass it sets a reminder and ends the turn. Every other line of the policy stays as the platform wrote it, and a teammate\'s prompt keeps the platform\'s text. Off, the text is the platform\'s, untouched. When the policy\'s last sentence is not the one the switch replaces, it changes nothing until it is. Applies from the session\'s next step; a change may invalidate the provider\'s cached prefix.',
+      'team.promptHint': 'On, the product\'s paragraph stands in the Lead\'s prompt in place of the policy\'s wait sentence, wherever that sentence stands: the Lead leads and sets the plan, hands the work out as shared tasks, takes none of the members\' work over, and answers for the result — it closes the task while the user judges the surface they see, and it never holds a turn open: no wait_agent, no sleep or poll inside a command; when time must pass it sets a reminder and ends the turn. Every other line of the policy stays as the platform wrote it, and a teammate\'s prompt keeps the platform\'s text. Off, the text is the platform\'s, untouched. When the policy\'s wait sentence is not one the switch knows, it changes nothing until it is. Applies from the session\'s next step; a change may invalidate the provider\'s cached prefix.',
       'team.review': 'Review pass',
       'team.reviewHint': 'On, the paragraph about reviews follows the team text in the Lead\'s prompt: a reviewer is a fresh agent with a clean eye, called on every circle of work and not on small tasks; it holds the work against the spec and the traces, asks where it is weak, where it is extra and what is missing, and every finding carries a path and a quote; it does not edit and does not accept, and the review does not replace the acceptance that closes the task. The paragraph stands inside the text the Team prompt switch supplies, so it changes nothing while that switch is off.',
       'team.off': 'Enable Agent Teams',
-      'team.unwritable': 'Not writable',
       /* The fetch feature's two cards. A hint is one paragraph; a verdict is one word, because the reason
          behind it names the proxy's address and belongs to the console. */
       'fetch.title': 'Page fetch',
@@ -97,7 +93,6 @@ window.__ModuleLoader__.load({
       'state.unread': 'Not read',
       'state.saved': 'Saved',
       'state.refused': 'Not saved',
-      'reason.invalid': 'The ceiling is a whole number of at least 1.',
       'reason.unreachable': 'The team route could not be reached.',
       'reason.unreadable': 'The value in force could not be re-read',
     };
@@ -151,17 +146,14 @@ window.__ModuleLoader__.load({
     /** The message of a thrown value. */
     const reasonOf = (error) => (error instanceof Error ? error.message : String(error));
 
-    /** The box's text for a picture: empty when no ceiling is in force. */
-    const draftOf = (value) => (value?.maxMembers === null || value?.maxMembers === undefined ? '' : String(value.maxMembers));
-
     let t = (key) => key;
 
     /**
-     * The team as the host answers it: `{mounted, editable, maxMembers, prompt, review, policy, ns}`.
+     * The team as the host answers it: `{mounted, prompt, review, policy, ns}`.
      *
      * A refusal is read from the payload, never guessed from a status: the route answers `{ok:false}` with
-     * status 200 for a state it could not build, and a card that drew "no ceiling" there would be showing
-     * a failure as an empty row.
+     * status 200 for a state it could not build, and a card that drew "no team" there would be showing a
+     * failure as an absent service.
      */
     /**
      * One request to one of the host's routes. A transport failure — the route gone, the page's own
@@ -186,22 +178,6 @@ window.__ModuleLoader__.load({
       if (!answer.ok) throw new Error(`${ROUTE} answered ${answer.status} ${answer.statusText}`);
       const payload = await answer.json();
       if (payload?.ok !== true) throw new Error(payload?.error?.message ?? `${ROUTE} refused the read`);
-      return payload.value;
-    }
-
-    /**
-     * One write of the ceiling. The refusal travels with the platform's own words when the editor refused
-     * it, and with the route's own when the value was not a whole number of at least 1.
-     */
-    async function write(value) {
-      const answer = await reach({
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ maxMembers: value }),
-      });
-      if (!answer.ok) throw new Error(`${ROUTE} answered ${answer.status} ${answer.statusText}`);
-      const payload = await answer.json();
-      if (payload?.ok !== true) throw new Error(payload?.error?.message ?? `${ROUTE} refused the write`);
       return payload.value;
     }
 
@@ -383,22 +359,22 @@ window.__ModuleLoader__.load({
      * What the last settled read answered: the browser half is materialised once per application session, so a
      * section left and entered again has this beside it, and the mount paints it at once while the read
      * corrects it behind. It holds the cards' pictures — the route's, the two switches' rows and the proxy's —
-     * never the visit's own state, the draft, a note, a press in flight or a read that failed — and the
-     * session's first mount has nothing, which is the honest skeleton.
+     * never the visit's own state, a note, a press in flight or a read that failed — and the session's first
+     * mount has nothing, which is the honest skeleton.
      */
     let lastRead = null;
 
     /** The state a mount starts from: the last picture when one stands, and the skeleton when none does. */
     const startState = () => (lastRead === null
       ? {
-          status: 'loading', value: null, draft: '', note: null, busy: false,
+          status: 'loading', value: null, note: null,
           prompt: null, promptBusy: false, promptFault: false, beatFault: false, readFault: false,
           fetch: null, fetchBusy: false, fetchRead: 'loading', fetchNote: null,
           proxy: null, proxyMissing: false, proxyFault: false, proxyBusy: null, proxyNote: null,
           proxyField: '', proxyInvalid: false,
         }
       : {
-          status: 'ready', value: lastRead.value, draft: draftOf(lastRead.value), note: null, busy: false,
+          status: 'ready', value: lastRead.value, note: null,
           prompt: lastRead.prompt, promptBusy: false, promptFault: false, beatFault: false, readFault: false,
           fetch: lastRead.fetch, fetchBusy: false, fetchRead: 'loading', fetchNote: null,
           proxy: lastRead.proxy, proxyMissing: lastRead.proxyMissing, proxyFault: false, proxyBusy: null,
@@ -467,8 +443,8 @@ window.__ModuleLoader__.load({
       }, [state.status, state.value, state.prompt, state.fetch, state.proxy, state.proxyMissing]);
 
       /** The team card's read: the route's picture, and the switch's row in the namespace it names. The
-       * settings row failing is said on the console and costs only the switch: the ceiling was read, and a card
-       * that failed whole there would hide a value the route carries. A route that names no namespace has no
+       * settings row failing is said on the console and costs only the switch: the team was read, and a card
+       * that failed whole there would hide what the route carries. A route that names no namespace has no
        * row to ask for: a read there would put a fault on the card for a row the composition never carried. */
       const readTeam = React.useCallback(async () => {
         const value = await read();
@@ -550,10 +526,6 @@ window.__ModuleLoader__.load({
               status: 'ready',
               readFault: false,
               value: answer.value,
-              /* The mount's read keeps the guard the reread and the beat keep: a draft the reader has changed
-                 is theirs; an unedited one follows the read. The controls stand live while this read runs, so
-                 a value typed into the field before the answer lands must not be replaced by it. */
-              draft: now.draft !== draftOf(now.value) ? now.draft : draftOf(answer.value),
               prompt: answer.prompt,
               promptFault: answer.promptFault,
             }));
@@ -594,8 +566,6 @@ window.__ModuleLoader__.load({
                 value: answer.value,
                 /* A settings half that could not be read keeps the view the card already holds. */
                 prompt: answer.prompt ?? now.prompt,
-                /* A draft the reader has changed is theirs; an unedited one follows the read. */
-                draft: now.draft !== draftOf(now.value) ? now.draft : draftOf(answer.value),
               }));
             },
             (error) => {
@@ -673,7 +643,6 @@ window.__ModuleLoader__.load({
                     promptFault: answer.promptFault,
                     beatFault: false,
                     readFault: false,
-                    draft: now.draft !== draftOf(now.value) ? now.draft : draftOf(answer.value),
                   }
                 : {
                     ...now,
@@ -681,7 +650,6 @@ window.__ModuleLoader__.load({
                     beatFault: false,
                     readFault: false,
                     status: 'ready',
-                    draft: now.draft !== draftOf(now.value) ? now.draft : draftOf(answer),
                   }));
             },
             (error) => {
@@ -724,7 +692,6 @@ window.__ModuleLoader__.load({
                   readFault: false,
                   prompt: prompt ?? now.prompt,
                   promptFault,
-                  draft: now.draft !== draftOf(now.value) ? now.draft : draftOf(value),
                 }));
               },
               (error) => {
@@ -895,65 +862,6 @@ window.__ModuleLoader__.load({
       };
 
       const act = {
-        draft: (text) => setState((now) => ({ ...now, draft: text, note: null, })),
-        save: () => {
-          /* The card refuses a value the row's schema would refuse, before anything is sent: the acceptance
-             is the card's own, and the route's refusal stays for a hand that writes the route directly. */
-          const value = Number(state.draft);
-          if (!Number.isSafeInteger(value) || value < 1) {
-            say(t('reason.invalid'));
-            setState((now) => ({
-              ...now,
-              note: { tone: 'fault', text: t('state.refused'), subject: 'ceiling' },
-            }));
-            armHold();
-            return;
-          }
-          setState((now) => ({ ...now, busy: true, note: null }));
-          write(value).then(
-            (picture) => {
-              setState((now) => ({
-                ...now,
-                busy: false,
-                value: picture,
-                draft: draftOf(picture),
-                note: { tone: 'done', text: t('state.saved'), subject: 'ceiling' },
-              }));
-              armHold();
-            },
-            (error) => {
-              /* The platform's words stand in the console: the word alone would leave the reader without the
-                 cause, as an overridden row proved. */
-              const reason = reasonOf(error);
-              say(reason);
-              setState((now) => ({
-                ...now,
-                busy: false,
-                note: { tone: 'fault', text: t('state.refused'), subject: 'ceiling' },
-              }));
-              armHold();
-              const ticket = nextRead('team');
-              void readTeam().then(
-                ({ value: picture, prompt, promptFault }) => {
-                  if (newestRead.current.team !== ticket) return;
-                  setState((now) => ({
-                    ...now,
-                    value: picture,
-                    readFault: false,
-                    prompt: prompt ?? now.prompt,
-                    promptFault,
-                    draft: now.draft !== draftOf(now.value) ? now.draft : draftOf(picture),
-                  }));
-                },
-                (error) => {
-                  if (newestRead.current.team !== ticket) return;
-                  say(`${t('reason.unreadable')}: ${reasonOf(error)}`);
-                  setState((now) => ({ ...now, readFault: true }));
-                },
-              );
-            },
-          );
-        },
         prompt: (on) => flip('prompt', on),
         review: (on) => flip('review', on),
         fetch: (on) => void setFetch(on),

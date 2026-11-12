@@ -292,6 +292,10 @@ window.__ModuleLoader__.load({
           role: 'dialog',
           'aria-modal': 'true',
           'aria-labelledby': titleId,
+          /* A full-window layer inside the page is neither a [data-window-drag] surface nor a body portal, and
+             the desktop subtracts window drag from those alone: the mask names itself exempt (inert without
+             that rule). */
+          'data-window-drag-exclude': '',
         }, [
           h('div', { key: 'dialog', className: 'coreness-mcp-dialog' }, [
             h('h4', { key: 'title', id: titleId, className: 'coreness-mcp-dialogTitle' }, t('confirm.title', { server: row.server ?? row.id })),

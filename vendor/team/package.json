@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "The Agent Team's product side: the ceiling door on the platform's team row, and the one place the product owns in the team policy.",
+  "description": "The Agent Team's product side: the two switches a page draws and the one place the product owns in the team policy.",
   "exports": {
     ".": "./src/index.js"
   },
@@ -20,7 +20,15 @@
   "peerDependencies": {
     "@deepseek-ai/cordis": "*",
     "@deepseek-ai/dsh-client-connection": "*",
+    "@deepseek-ai/dsh-agent-team": "*",
+    "@deepseek-ai/dsh-tool-agent-team": "*",
     "@deepseek-ai/dsh-experimental-agent-team": "*",
     "@deepseek-ai/dsh-experimental-tool-agent-team": "*"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-agent-team": { "optional": true },
+    "@deepseek-ai/dsh-tool-agent-team": { "optional": true },
+    "@deepseek-ai/dsh-experimental-agent-team": { "optional": true },
+    "@deepseek-ai/dsh-experimental-tool-agent-team": { "optional": true }
   }
 }
