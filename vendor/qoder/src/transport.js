@@ -432,7 +432,7 @@ export function createTransport(options) {
     // answer, and saying so here is what keeps a wrong signature from looking like a silent turn.
     // Every complete line of the chunk is looked at, because where a chunk ends is the network's
     // business and not a property of the wire.
-    const refused = refusalInText(new TextDecoder().decode(first.value), 'the Qoder chat turn')
+    const refused = refusalInText(new TextDecoder().decode(first.value), 'the Qoder chat turn', warn)
     if (refused !== undefined) throw refused
     return { url, body, response: bodyFrom(response, first.value, reader) }
   }
@@ -477,6 +477,7 @@ export function createTransport(options) {
       firstByteCeilingMs,
       idleCeilingMs,
       strike,
+      warn,
       ...options,
     })
     // A refusal that arrives **after** the first chunk is thrown here, at the reader, where `chat` has

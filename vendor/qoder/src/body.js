@@ -8,6 +8,7 @@
  */
 
 import crypto from 'node:crypto'
+import { rewordIdentity } from './identity.js'
 import { DEFAULT_MODEL_MAX_TOKENS } from './models.js'
 
 export const QODER_ALPHABET = '_doRTgHZBKcGVjlvpC,@aFSx#DPuNJme&i*MzLOEn)sUrthbf%Y^w.(kIQyXqWA!'
@@ -346,7 +347,7 @@ export function toWireMessages(messages, options = {}) {
   // tokens and its cache by zero blocks, and a passphrase standing in it and asked for by name was
   // answered "none was provided in my context". An empty prompt emits nothing, which is their own
   // condition.
-  const flat = system.join(BLANK_LINE)
+  const flat = rewordIdentity(system.join(BLANK_LINE))
   return {
     system: flat,
     messages: flat === '' ? wire : [{ role: 'system', content: flat }, ...wire],

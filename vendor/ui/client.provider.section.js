@@ -270,10 +270,12 @@ window.__ModuleLoader__.load({
            rather than the value the press hoped for, and the press's word stands in the card's strip, its
            reason in the console. On the way on the selection is ours (`qoder`); on the way off it is unset,
            never set to a name: the platform's own settings service resolves the field to the layer beneath
-           ours, so the composed value is that release's default — a pinned `deepseek-official` would instead
-           fix a choice the platform has stopped making by default, while the provider itself still resolves.
-           A nullish `searchProvider` would resolve through the platform's fallback rules, and this profile
-           registers more than one usable search provider, so off is an unset and not a nullish write. */
+           ours, so the composed value is the release's own default — a pinned name would instead fix a
+           choice the platform makes on its own, while the provider itself still resolves. From 0.2.2-rc.5
+           the composition names no search provider and the seam prefers the provider of the model route —
+           `deepseek-official` on the DeepSeek routes, `deepseek-search-api` on every other; a nullish
+           `searchProvider` is resolved then, but an unset is still the write that leaves the platform's
+           choice untouched. */
         const toggleWeb = async (checked) => {
           setWebBusy(true);
           setNote(null);

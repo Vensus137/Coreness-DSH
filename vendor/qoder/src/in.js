@@ -145,8 +145,19 @@ export function requestIdOf(text) {
   return typeof id === 'string' && id !== '' ? id : null
 }
 
-/** The room a drawn sentence gives the vendor's own words: a line's budget, not a measured constant. */
-const VENDOR_WORDS_LIMIT = 160
+/**
+ * The room a drawn sentence gives the vendor's own words: a line's budget with room for the vendor's
+ * nested envelope. The measured refusal's words are 237 characters — the queue JSON nested inside the
+ * vendor's two outer envelopes — and the former 160-character bound cut inside the queue, before the
+ * `subCode` and `waitTime` a reader acts on.
+ */
+const VENDOR_WORDS_LIMIT = 512
+
+/**
+ * The room the log keeps of a refusal's raw body: a vendor envelope or a proxy's error page, whole
+ * within a bound that keeps an unexpectedly long body from filling the line.
+ */
+const VENDOR_BODY_LIMIT = 4096
 
 /**
  * The vendor's own words out of a refusal body, for the shape that carries no request id.
@@ -154,8 +165,9 @@ const VENDOR_WORDS_LIMIT = 160
  * The second measured shape — `403 {"code":"105","message":"Login expired"}` — where the message is all
  * a user can act on. Read only where the id is absent: a body with both shows the id alone, because the
  * id is what asks for a trace and the message is a formality (`Bad request` is the measured one). The
- * bound is a line's budget; the cut ends at a word and the ellipsis says it was cut. A body that is not
- * JSON, or one without words, answers `null`.
+ * bound is a line's budget; the cut ends at a word where the head carries one and at the bound itself
+ * where it does not — the measured JSON envelope has no space — and the ellipsis says it was cut either
+ * way. A body that is not JSON, or one without words, answers `null`.
  * @param {string} text the refusal's own words, as `refusalOf` read them
  * @returns {string|null} the vendor's words, one line and bounded, or null
  */
@@ -269,10 +281,10 @@ export function sessionExpired(text) {
  * move. What lets a user act stays: the status is what a dead credential is met by, and the code
  * `codeFor` read of the body is what a caller routes on.
  *
- * The vendor's detail is not dropped, it moves: the whole body, the id inside it, goes out through
- * `warn` — the door this half keeps for reasons — and stands verbatim on `QoderError.vendor` for a
- * reader that routes by it. The price is named here rather than discovered later: `warn` is the
- * platform's logger, and that logger has no sink beyond its own in-memory ring, so this
+ * The vendor's detail is not dropped, it moves: the body, the id inside it, goes out through
+ * `warn` — the door this half keeps for reasons — and stands verbatim, up to the body's own bound, on
+ * `QoderError.vendor` for a reader that routes by it. The price is named here rather than discovered
+ * later: `warn` is the platform's logger, and that logger has no sink beyond its own in-memory ring, so this
  * is the right home for the vendor's detail and not yet a place a user can open. Their copy of it is
  * whatever a caller of this module publishes beside the state.
  * @param {Response} response the refused answer
@@ -281,7 +293,7 @@ export function sessionExpired(text) {
  * @returns {Promise<QoderError>} the error to throw
  */
 export async function refusalOf(response, what, warn) {
-  const text = await response.text().then((value) => value.slice(0, 300), () => '')
+  const text = await response.text().then((value) => value.slice(0, VENDOR_BODY_LIMIT), () => '')
   const detail = text.replace(/\s+/gu, ' ').trim()
   warn?.(`${what}: the vendor answered ${response.status}${detail === '' ? '' : ` — ${detail}`}`)
   return new QoderError(`${what} failed: ${response.status}`, codeFor(response.status, detail, { credentialDoor: true }), { status: response.status, vendor: detail, vendorCode: vendorCodeOf(detail) })
@@ -296,9 +308,10 @@ export async function refusalOf(response, what, warn) {
  * an end that never comes — which is exactly how this contour's refusals were mistaken for silence.
  * @param {string} line one line of the stream
  * @param {string} what the reader's name for its own message
+ * @param {(message: string) => void} [warn] where the refusal's own body is reported
  * @returns {QoderError | undefined} the refusal, or nothing when the line is ordinary
  */
-export function refusalIn(line, what) {
+export function refusalIn(line, what, warn) {
   let read
   try {
     read = readLine(line)
@@ -308,7 +321,7 @@ export function refusalIn(line, what) {
     // the same defect is not reported twice in two vocabularies.
     return undefined
   }
-  return refusalOfRead(read, what)
+  return refusalOfRead(read, what, warn)
 }
 
 /**
@@ -326,16 +339,19 @@ export function refusalIn(line, what) {
  * marked as the vendor's and bounded to a line: `Login expired` is the measured one, and it is what a
  * user acts on. The body does not stand on it, and neither does a request id out of it: a JSON blob is
  * not a state, and a value fresh on every call would differ between two runs of a turn that did not
- * move. The body stays verbatim on `QoderError.vendor` for a reader that routes by it; this road keeps
- * no log door of its own, so a caller that wants it written down reports it.
+ * move. The body goes out whole through `warn` — the platform's logger, the same door `refusalOf` uses —
+ * because a refusal carried inside the stream is the only trace a future break leaves, and it stands
+ * verbatim on `QoderError.vendor` for a reader that routes by it.
  * @param {{kind?: string, status?: number, text?: string}} read the line as `readLine` read it
  * @param {string} what the reader's name for its own message
+ * @param {(message: string) => void} [warn] where the refusal's own body is reported
  * @returns {QoderError | undefined} the refusal, or nothing when the line is ordinary
  */
-export function refusalOfRead(read, what) {
+export function refusalOfRead(read, what, warn) {
   if (read?.kind !== 'refusal') return undefined
   const detail = String(read.text ?? '').replace(/\s+/gu, ' ').trim()
   const words = vendorWordsOf(detail)
+  warn?.(`${what}: the vendor refused ${read.status}${detail === '' ? '' : ` — ${detail}`}`)
   return new QoderError(`${what} was refused: ${read.status}${words === null ? '' : ` · the vendor says: ${words}`}`, codeFor(read.status, detail), { status: read.status, vendor: detail })
 }
 
@@ -349,11 +365,12 @@ export function refusalOfRead(read, what) {
  * reader that parses the frames names it (`readFrames`).
  * @param {string} text the text of one chunk
  * @param {string} what the reader's name for its own message
+ * @param {(message: string) => void} [warn] where the refusal's own body is reported
  * @returns {QoderError | undefined} the refusal, or nothing
  */
-export function refusalInText(text, what) {
+export function refusalInText(text, what, warn) {
   for (const line of String(text).split('\n')) {
-    const refused = refusalIn(line, what)
+    const refused = refusalIn(line, what, warn)
     if (refused !== undefined) return refused
   }
   return undefined

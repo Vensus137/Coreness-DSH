@@ -26,12 +26,14 @@ import { CEILING_SETTINGS, DEFAULT_CONTROL_CEILING_MS, DEFAULT_FIRST_BYTE_CEILIN
  * @param {number} [options.idleCeilingMs] how long it may stay silent once it has
  * @param {AbortSignal} [options.signal] the caller's cancellation
  * @param {string} [options.what] the reader's name for its own messages
+ * @param {(message: string) => void} [options.warn] where a refusal's own body is reported
  * @param {(strike: object) => void} [options.strike] where a firing is counted
  * @yields {string} one line of the stream-encoded answer
  * @throws {QoderError} `TIMEOUT` on either ceiling, `ABORTED` on a caller's cancellation
  */
 export async function* readFrames(response, options = {}) {
   const what = options.what ?? 'the Qoder answer'
+  const warn = options.warn
   const firstByteCeilingMs = options.firstByteCeilingMs ?? DEFAULT_FIRST_BYTE_CEILING_MS
   const idleCeilingMs = options.idleCeilingMs ?? DEFAULT_IDLE_CEILING_MS
   const caller = options.signal
@@ -82,7 +84,7 @@ export async function* readFrames(response, options = {}) {
           // A stream can end without a newline, and the contour's refusal then *is* this leftover: a
           // reader that yields it unjudged turns the vendor's own words into an empty answer (measured,
           // `403 {"code":"110","message":"Billing daily count exceeded"}` settling as EMPTY_RESPONSE).
-          const refused = refusalIn(buffer, what)
+          const refused = refusalIn(buffer, what, warn)
           if (refused !== undefined) throw refused
           yield buffer
         }
@@ -102,7 +104,7 @@ export async function* readFrames(response, options = {}) {
         const line = buffer.slice(0, end).replace(/\r$/u, '')
         // A refusal inside the stream is a refusal, not a line of data: handing it up as content
         // would make the caller wait for an answer the contour has already declined to give.
-        const refused = refusalIn(line, what)
+        const refused = refusalIn(line, what, warn)
         if (refused !== undefined) throw refused
         yield line
         buffer = buffer.slice(end + 1)

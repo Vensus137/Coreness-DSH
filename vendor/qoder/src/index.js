@@ -101,14 +101,17 @@ const SETTINGS_CONFLICT = 'SETTINGS_CONFLICT'
 /**
  * Reset a search selection the move to the search-only switch left stale.
  *
- * A nullish selection resolves through the platform's fallback rules, which with more than one usable search
- * provider is an ambiguous search; an empty value names a provider that is not registered. The repair names no
- * provider: it unsets the row's selection, and the platform's own settings service resolves the field to the
- * layer beneath ours, so the composed value is that release's default — `deepseek-official` on 0.2.1-rc.5,
- * `deepseek-search-api` on 0.2.2-rc.2. The write carries the revision the read returned: a row saved through
- * the other door between the two is refused as a conflict rather than overwritten. The fetch package's repair
- * writes the same row at the same mount, so that refusal is not final — the row is read once more and the
- * decision made again: a selection another door has just chosen is fresh and is not overwritten, and a
+ * Before 0.2.2-rc.5 a nullish selection resolved through the platform's fallback rules, which with more than
+ * one usable search provider was an ambiguous search; from 0.2.2-rc.5 the fallback prefers the provider of the
+ * model route, so the value resolves; an empty value names a provider that is not registered. The repair names
+ * no provider: it unsets the row's selection, and the platform's own settings service resolves the field to the
+ * layer beneath ours, so the composed value is the release's own default — `deepseek-official` on 0.2.1-rc.5,
+ * `deepseek-search-api` on 0.2.2-rc.2, and on 0.2.2-rc.5 the route's preferred provider (`deepseek-official` on
+ * the DeepSeek routes, `deepseek-search-api` on every other). The write carries the revision the read returned:
+ * a row saved through the other door between the two is refused as a conflict rather than overwritten. The
+ * fetch package's repair writes the same row at the same mount, so that refusal is not final — the row is
+ * read once more and the decision made again: a selection another door has just chosen is fresh and is not
+ * overwritten, and a
  * still-stale one is unset with the revision just read. A second refusal is said by the mount and left.
  * `qoder` and any other name are another door's decision, and a row whose key is absent never chose: neither
  * is touched. The row's fetch value is left as it stands — the fetch package owns it, and this repair owns the
